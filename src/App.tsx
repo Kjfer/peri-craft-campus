@@ -7,6 +7,12 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import Home from "./pages/Home";
 import Auth from "./pages/Auth";
+import Courses from "./pages/Courses";
+import CourseDetail from "./pages/CourseDetail";
+import Plans from "./pages/Plans";
+import About from "./pages/About";
+import Contact from "./pages/Contact";
+import VerifyCertificate from "./pages/VerifyCertificate";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,6 +29,12 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/cursos" element={<Courses />} />
+              <Route path="/curso/:id" element={<CourseDetail />} />
+              <Route path="/planes" element={<Plans />} />
+              <Route path="/nosotros" element={<About />} />
+              <Route path="/contacto" element={<Contact />} />
+              <Route path="/verificar-certificado" element={<VerifyCertificate />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
