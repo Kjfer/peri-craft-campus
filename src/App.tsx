@@ -14,6 +14,9 @@ import About from "./pages/About";
 import Contact from "./pages/Contact";
 import VerifyCertificate from "./pages/VerifyCertificate";
 import NotFound from "./pages/NotFound";
+import AdminDashboard from "./pages/admin/Dashboard";
+import CourseManagement from "./pages/admin/CourseManagement";
+import CreateCourse from "./pages/admin/CreateCourse";
 
 const queryClient = new QueryClient();
 
@@ -35,6 +38,12 @@ const App = () => (
               <Route path="/nosotros" element={<About />} />
               <Route path="/contacto" element={<Contact />} />
               <Route path="/verificar-certificado" element={<VerifyCertificate />} />
+              
+              {/* Admin Routes */}
+              <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/admin/cursos" element={<CourseManagement />} />
+              <Route path="/admin/cursos/crear" element={<CreateCourse />} />
+              
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
