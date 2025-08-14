@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, User, LogOut, BookOpen, Award } from "lucide-react";
+import { Menu, User, LogOut, BookOpen, Award, Settings } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -108,6 +108,15 @@ export function Header() {
                       <Award className="mr-2 h-4 w-4" />
                       <span>Certificados</span>
                     </DropdownMenuItem>
+                    {profile?.role === 'admin' && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => navigate("/admin")}>
+                          <Settings className="mr-2 h-4 w-4" />
+                          <span>Panel de Administración</span>
+                        </DropdownMenuItem>
+                      </>
+                    )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleSignOut}>
                       <LogOut className="mr-2 h-4 w-4" />
@@ -150,7 +159,34 @@ export function Header() {
                       {item.name}
                     </Link>
                   ))}
-                  {!user && (
+                  {user ? (
+                    <>
+                      {profile?.role === 'admin' && (
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            navigate("/admin");
+                            setIsOpen(false);
+                          }}
+                          className="justify-start"
+                        >
+                          <Settings className="mr-2 h-4 w-4" />
+                          Panel de Administración
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        onClick={() => {
+                          handleSignOut();
+                          setIsOpen(false);
+                        }}
+                        className="justify-start"
+                      >
+                        <LogOut className="mr-2 h-4 w-4" />
+                        Cerrar Sesión
+                      </Button>
+                    </>
+                  ) : (
                     <>
                       <Button
                         variant="ghost"
