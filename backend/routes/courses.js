@@ -74,8 +74,8 @@ router.get('/:id', async (req, res, next) => {
     const { id } = req.params;
     console.log(`🔍 Fetching course with ID: ${id}`);
 
-    // Get course from database
-    const { data: course, error: courseError } = await supabase
+    // Get course from database using supabaseAdmin to bypass RLS
+    const { data: course, error: courseError } = await supabaseAdmin
       .from('courses')
       .select(`
         id,
@@ -117,8 +117,8 @@ router.get('/:id', async (req, res, next) => {
 
     console.log(`✅ Course found: ${course.title}`);
 
-    // Get lessons for this course
-    const { data: lessons, error: lessonsError } = await supabase
+    // Get lessons for this course using supabaseAdmin to bypass RLS
+    const { data: lessons, error: lessonsError } = await supabaseAdmin
       .from('lessons')
       .select(`
         id,
@@ -143,6 +143,7 @@ router.get('/:id', async (req, res, next) => {
       lessons: lessons || []
     };
 
+    console.log(`✅ Returning course data successfully`);
     res.json({
       success: true,
       course: courseWithLessons

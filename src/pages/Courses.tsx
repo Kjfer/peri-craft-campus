@@ -39,13 +39,16 @@ export default function Courses() {
   }, [courses, searchTerm, selectedCategory, selectedLevel]);
 
   const fetchCourses = async () => {
+    console.log('🎯 Fetching courses...');
     try {
       const { data, error } = await coursesService.getCourses({});
+      console.log('📚 Courses service response:', { data, error });
 
       if (error) throw new Error(error.message);
+      console.log('✅ Setting courses:', data);
       setCourses(data || []);
     } catch (error) {
-      console.error('Error fetching courses:', error);
+      console.error('❌ Error fetching courses:', error);
     } finally {
       setLoading(false);
     }
