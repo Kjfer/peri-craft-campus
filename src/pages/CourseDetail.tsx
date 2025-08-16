@@ -32,6 +32,15 @@ interface Course {
   price: number;
   requirements?: string[];
   what_you_learn?: string[];
+  modules?: Module[];
+}
+
+interface Module {
+  id: string;
+  title: string;
+  description?: string;
+  order_number: number;
+  lessons: Lesson[];
 }
 
 interface Lesson {
@@ -41,6 +50,8 @@ interface Lesson {
   duration_minutes: number;
   order_number: number;
   is_free: boolean;
+  video_url?: string;
+  content?: string;
 }
 
 export default function CourseDetail() {
@@ -50,7 +61,7 @@ export default function CourseDetail() {
   const { toast } = useToast();
   
   const [course, setCourse] = useState<Course | null>(null);
-  const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [modules, setModules] = useState<Module[]>([]);
   const [isEnrolled, setIsEnrolled] = useState(false);
   const [loading, setLoading] = useState(true);
   const [enrolling, setEnrolling] = useState(false);
@@ -68,7 +79,7 @@ export default function CourseDetail() {
       
       if (courseResponse.success && courseResponse.course) {
         setCourse(courseResponse.course);
-        setLessons(courseResponse.course.lessons || []);
+        setModules(courseResponse.course.modules || []);
       } else {
         throw new Error('Course not found');
       }
@@ -137,7 +148,7 @@ export default function CourseDetail() {
   };
 
   const handleStartCourse = () => {
-    if (isEnrolled || lessons.some(lesson => lesson.is_free)) {
+    if (isEnrolled || allLessons.some(lesson => lesson.is_free)) {
       navigate(`/curso/${id}/lecciones`);
     }
   };
@@ -164,8 +175,10 @@ export default function CourseDetail() {
     );
   }
 
-  const totalLessons = lessons.length;
-  const freeLessons = lessons.filter(lesson => lesson.is_free).length;
+  // Calculate lessons from modules
+  const allLessons = modules.flatMap(module => module.lessons);
+  const totalLessons = allLessons.length;
+  const freeLessons = allLessons.filter(lesson => lesson.is_free).length;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted/30">
@@ -301,44 +314,81 @@ export default function CourseDetail() {
                 <CardHeader>
                   <CardTitle>Contenido del curso</CardTitle>
                   <CardDescription>
-                    {totalLessons} lecciones • {course.duration_hours} horas total
+                    {modules.length} módulo{modules.length !== 1 ? 's' : ''} • {totalLessons} lecciones • {course.duration_hours} horas total
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {lessons.map((lesson, index) => (
-                      <div key={lesson.id}>
-                        <div className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors">
-                          <div className="flex items-center space-x-4">
-                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium">
-                              {lesson.order_number}
+                  <div className="space-y-6">
+                    {modules.length > 0 ? (
+                      modules.map((module, moduleIndex) => (
+                        <div key={module.id} className="space-y-4">
+                          {/* Module Header */}
+                          <div className="flex items-center space-x-3 p-4 bg-primary/5 rounded-lg border">
+                            <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold">
+                              {module.order_number}
                             </div>
-                            <div>
-                              <h4 className="font-medium">{lesson.title}</h4>
-                              {lesson.description && (
+                            <div className="flex-1">
+                              <h3 className="font-semibold text-lg">{module.title}</h3>
+                              {module.description && (
                                 <p className="text-sm text-muted-foreground mt-1">
-                                  {lesson.description}
+                                  {module.description}
                                 </p>
                               )}
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {module.lessons.length} lección{module.lessons.length !== 1 ? 'es' : ''}
+                              </p>
                             </div>
                           </div>
-                          <div className="flex items-center space-x-4">
-                            <span className="text-sm text-muted-foreground">
-                              {lesson.duration_minutes} min
-                            </span>
-                            {lesson.is_free && (
-                              <Badge variant="secondary">Gratis</Badge>
-                            )}
-                            {(isEnrolled || lesson.is_free) ? (
-                              <Play className="w-4 h-4 text-primary" />
-                            ) : (
-                              <div className="w-4 h-4 rounded-full border-2 border-muted" />
-                            )}
-                          </div>
+
+                          {/* Module Lessons */}
+                          {module.lessons.length > 0 && (
+                            <div className="ml-4 space-y-2">
+                              {module.lessons.map((lesson, lessonIndex) => (
+                                <div key={lesson.id}>
+                                  <div className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors">
+                                    <div className="flex items-center space-x-4">
+                                      <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
+                                        {lesson.order_number}
+                                      </div>
+                                      <div>
+                                        <h4 className="font-medium text-sm">{lesson.title}</h4>
+                                        {lesson.description && (
+                                          <p className="text-xs text-muted-foreground mt-1">
+                                            {lesson.description}
+                                          </p>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center space-x-3">
+                                      <span className="text-xs text-muted-foreground">
+                                        {lesson.duration_minutes} min
+                                      </span>
+                                      {lesson.is_free && (
+                                        <Badge variant="secondary" className="text-xs">Gratis</Badge>
+                                      )}
+                                      {(isEnrolled || lesson.is_free) ? (
+                                        <Play className="w-3 h-3 text-primary" />
+                                      ) : (
+                                        <div className="w-3 h-3 rounded-full border-2 border-muted" />
+                                      )}
+                                    </div>
+                                  </div>
+                                  {lessonIndex < module.lessons.length - 1 && <Separator className="ml-10" />}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {moduleIndex < modules.length - 1 && <Separator className="my-6" />}
                         </div>
-                        {index < lessons.length - 1 && <Separator />}
+                      ))
+                    ) : (
+                      <div className="text-center py-8">
+                        <BookOpen className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                        <p className="text-muted-foreground">
+                          El contenido del curso se está preparando. Pronto estará disponible.
+                        </p>
                       </div>
-                    ))}
+                    )}
                   </div>
                 </CardContent>
               </Card>

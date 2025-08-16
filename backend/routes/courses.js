@@ -117,36 +117,44 @@ router.get('/:id', async (req, res, next) => {
 
     console.log(`✅ Course found: ${course.title}`);
 
-    // Get lessons for this course using supabaseAdmin to bypass RLS
-    const { data: lessons, error: lessonsError } = await supabaseAdmin
-      .from('lessons')
+    // Get modules for this course with their lessons using supabaseAdmin to bypass RLS
+    const { data: modules, error: modulesError } = await supabaseAdmin
+      .from('modules')
       .select(`
         id,
         title,
         description,
-        duration_minutes,
         order_number,
-        is_free
+        lessons (
+          id,
+          title,
+          description,
+          duration_minutes,
+          order_number,
+          is_free,
+          video_url,
+          content
+        )
       `)
       .eq('course_id', id)
       .order('order_number', { ascending: true });
 
-    if (lessonsError) {
-      console.warn('Error fetching lessons:', lessonsError.message);
+    if (modulesError) {
+      console.warn('Error fetching modules:', modulesError.message);
     }
 
-    console.log(`📚 Found ${lessons?.length || 0} lessons for course`);
+    console.log(`📚 Found ${modules?.length || 0} modules for course`);
 
-    // Include lessons in the response
-    const courseWithLessons = {
+    // Return simplified response without complex statistics for now
+    const courseWithModules = {
       ...course,
-      lessons: lessons || []
+      modules: modules || []
     };
 
     console.log(`✅ Returning course data successfully`);
     res.json({
       success: true,
-      course: courseWithLessons
+      course: courseWithModules
     });
 
   } catch (error) {
@@ -172,7 +180,8 @@ router.post('/', authenticateToken, requireInstructor, async (req, res, next) =>
       price = 0,
       requirements = [],
       what_you_learn = [],
-      featured = false
+      featured = false,
+      modules = []
     } = req.body;
 
     if (!title || !description || !instructor_name || !category) {
@@ -182,7 +191,10 @@ router.post('/', authenticateToken, requireInstructor, async (req, res, next) =>
       });
     }
 
-    const { data, error } = await supabaseAdmin
+    console.log(`🔄 Creating course with ${modules.length} modules`);
+
+    // First, create the course
+    const { data: courseData, error: courseError } = await supabaseAdmin
       .from('courses')
       .insert([{
         title,
@@ -202,20 +214,97 @@ router.post('/', authenticateToken, requireInstructor, async (req, res, next) =>
       .select()
       .single();
 
-    if (error) {
+    if (courseError) {
+      console.error('❌ Error creating course:', courseError);
       return res.status(400).json({
         success: false,
-        error: error.message
+        error: courseError.message
       });
     }
+
+    console.log(`✅ Course created with ID: ${courseData.id}`);
+
+    // Create modules if provided
+    const createdModules = [];
+    if (modules && modules.length > 0) {
+      for (let i = 0; i < modules.length; i++) {
+        const module = modules[i];
+        console.log(`🔄 Creating module ${i + 1}: ${module.title}`);
+        
+        // Create the module
+        const { data: moduleData, error: moduleError } = await supabaseAdmin
+          .from('modules')
+          .insert([{
+            course_id: courseData.id,
+            title: module.title,
+            description: module.description || '',
+            order_number: i + 1
+          }])
+          .select()
+          .single();
+
+        if (moduleError) {
+          console.error('❌ Error creating module:', moduleError);
+          // Continue with other modules even if one fails
+          continue;
+        }
+
+        console.log(`✅ Module created with ID: ${moduleData.id}`);
+
+        // Create lessons for this module
+        const createdLessons = [];
+        if (module.lessons && module.lessons.length > 0) {
+          for (let j = 0; j < module.lessons.length; j++) {
+            const lesson = module.lessons[j];
+            console.log(`🔄 Creating lesson ${j + 1} for module ${moduleData.id}: ${lesson.title}`);
+            
+            const { data: lessonData, error: lessonError } = await supabaseAdmin
+              .from('lessons')
+              .insert([{
+                module_id: moduleData.id,
+                title: lesson.title,
+                description: lesson.description || '',
+                content: lesson.content || '',
+                video_url: lesson.video_url || null,
+                duration_minutes: lesson.duration_minutes || 0,
+                order_number: j + 1,
+                is_free: lesson.is_free || false
+              }])
+              .select()
+              .single();
+
+            if (lessonError) {
+              console.error('❌ Error creating lesson:', lessonError);
+              continue;
+            }
+
+            console.log(`✅ Lesson created with ID: ${lessonData.id}`);
+            createdLessons.push(lessonData);
+          }
+        }
+
+        createdModules.push({
+          ...moduleData,
+          lessons: createdLessons
+        });
+      }
+    }
+
+    const courseWithModules = {
+      ...courseData,
+      modules: createdModules
+    };
+
+    console.log(`✅ Course created successfully with ${createdModules.length} modules`);
 
     res.status(201).json({
       success: true,
       message: 'Course created successfully',
-      course: data
+      course: courseWithModules
     });
 
   } catch (error) {
+    console.error('❌ Unexpected error creating course:', error);
     next(error);
   }
 });
@@ -226,41 +315,146 @@ router.post('/', authenticateToken, requireInstructor, async (req, res, next) =>
 router.put('/:id', authenticateToken, requireInstructor, async (req, res, next) => {
   try {
     const { id } = req.params;
-    const updateData = { ...req.body };
-    updateData.updated_at = new Date().toISOString();
+    const { modules = [], ...courseData } = req.body;
+    courseData.updated_at = new Date().toISOString();
 
     // Remove fields that shouldn't be updated directly
-    delete updateData.id;
-    delete updateData.created_at;
+    delete courseData.id;
+    delete courseData.created_at;
 
-    const { data, error } = await supabaseAdmin
+    console.log(`🔄 Updating course ${id} with ${modules.length} modules`);
+
+    // First, update the course
+    const { data: courseUpdateData, error: courseError } = await supabaseAdmin
       .from('courses')
-      .update(updateData)
+      .update(courseData)
       .eq('id', id)
       .select()
       .single();
 
-    if (error) {
+    if (courseError) {
+      console.error('❌ Error updating course:', courseError);
       return res.status(400).json({
         success: false,
-        error: error.message
+        error: courseError.message
       });
     }
 
-    if (!data) {
+    if (!courseUpdateData) {
       return res.status(404).json({
         success: false,
         error: 'Course not found'
       });
     }
 
+    console.log(`✅ Course updated successfully`);
+
+    // Handle modules update if provided
+    let updatedModules = [];
+    if (modules && modules.length > 0) {
+      // First, get existing modules to know which ones to delete
+      const { data: existingModules } = await supabaseAdmin
+        .from('modules')
+        .select('id')
+        .eq('course_id', id);
+
+      // Delete existing modules and their lessons (cascade should handle lessons)
+      if (existingModules && existingModules.length > 0) {
+        console.log(`🔄 Deleting ${existingModules.length} existing modules`);
+        
+        // First delete lessons
+        for (const existingModule of existingModules) {
+          await supabaseAdmin
+            .from('lessons')
+            .delete()
+            .eq('module_id', existingModule.id);
+        }
+        
+        // Then delete modules
+        await supabaseAdmin
+          .from('modules')
+          .delete()
+          .eq('course_id', id);
+      }
+
+      // Create new modules with lessons
+      for (let i = 0; i < modules.length; i++) {
+        const module = modules[i];
+        console.log(`🔄 Creating/updating module ${i + 1}: ${module.title}`);
+        
+        // Create the module
+        const { data: moduleData, error: moduleError } = await supabaseAdmin
+          .from('modules')
+          .insert([{
+            course_id: id,
+            title: module.title,
+            description: module.description || '',
+            order_number: i + 1
+          }])
+          .select()
+          .single();
+
+        if (moduleError) {
+          console.error('❌ Error creating module:', moduleError);
+          continue;
+        }
+
+        console.log(`✅ Module created with ID: ${moduleData.id}`);
+
+        // Create lessons for this module
+        const createdLessons = [];
+        if (module.lessons && module.lessons.length > 0) {
+          for (let j = 0; j < module.lessons.length; j++) {
+            const lesson = module.lessons[j];
+            console.log(`🔄 Creating lesson ${j + 1} for module ${moduleData.id}: ${lesson.title}`);
+            
+            const { data: lessonData, error: lessonError } = await supabaseAdmin
+              .from('lessons')
+              .insert([{
+                module_id: moduleData.id,
+                title: lesson.title,
+                description: lesson.description || '',
+                content: lesson.content || '',
+                video_url: lesson.video_url || null,
+                duration_minutes: lesson.duration_minutes || 0,
+                order_number: j + 1,
+                is_free: lesson.is_free || false
+              }])
+              .select()
+              .single();
+
+            if (lessonError) {
+              console.error('❌ Error creating lesson:', lessonError);
+              continue;
+            }
+
+            console.log(`✅ Lesson created with ID: ${lessonData.id}`);
+            createdLessons.push(lessonData);
+          }
+        }
+
+        updatedModules.push({
+          ...moduleData,
+          lessons: createdLessons
+        });
+      }
+    }
+
+    const courseWithModules = {
+      ...courseUpdateData,
+      modules: updatedModules
+    };
+
+    console.log(`✅ Course updated successfully with ${updatedModules.length} modules`);
+
     res.json({
       success: true,
       message: 'Course updated successfully',
-      course: data
+      course: courseWithModules
     });
 
   } catch (error) {
+    console.error('❌ Unexpected error updating course:', error);
     next(error);
   }
 });

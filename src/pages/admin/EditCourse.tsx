@@ -8,9 +8,26 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Save, Plus, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { courseAPI, adminAPI } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+
+interface Lesson {
+  id?: number;
+  title: string;
+  description: string;
+  content: string;
+  video_url: string;
+  duration_minutes: number;
+  is_free: boolean;
+}
+
+interface Module {
+  id?: number;
+  title: string;
+  description: string;
+  lessons: Lesson[];
+}
 
 interface CourseFormData {
   title: string;
@@ -20,6 +37,7 @@ interface CourseFormData {
   thumbnail_url?: string;
   featured: boolean;
   status: string;
+  modules: Module[];
 }
 
 export default function EditCourse() {
@@ -29,6 +47,7 @@ export default function EditCourse() {
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [expandedModules, setExpandedModules] = useState<{ [key: number]: boolean }>({});
   const [formData, setFormData] = useState<CourseFormData>({
     title: "",
     description: "",
@@ -36,7 +55,8 @@ export default function EditCourse() {
     discounted_price: undefined,
     thumbnail_url: "",
     featured: false,
-    status: "active"
+    status: "active",
+    modules: []
   });
 
   useEffect(() => {
@@ -59,7 +79,8 @@ export default function EditCourse() {
           discounted_price: course.discounted_price || undefined,
           thumbnail_url: course.thumbnail_url || "",
           featured: course.featured || false,
-          status: course.status || "active"
+          status: course.status || "active",
+          modules: course.modules || []
         });
       }
     } catch (error: any) {
@@ -105,7 +126,8 @@ export default function EditCourse() {
         discounted_price: formData.discounted_price || null,
         thumbnail_url: formData.thumbnail_url?.trim() || null,
         featured: formData.featured,
-        status: formData.status
+        status: formData.status,
+        modules: formData.modules
       };
 
       const data = await adminAPI.updateCourse(id!, updateData);
@@ -133,6 +155,88 @@ export default function EditCourse() {
     setFormData(prev => ({
       ...prev,
       [field]: value
+    }));
+  };
+
+  // Module Management Functions
+  const addModule = () => {
+    const newModule: Module = {
+      title: "",
+      description: "",
+      lessons: []
+    };
+    setFormData(prev => ({
+      ...prev,
+      modules: [...prev.modules, newModule]
+    }));
+  };
+
+  const updateModule = (index: number, field: keyof Module, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      modules: prev.modules.map((module, i) => 
+        i === index ? { ...module, [field]: value } : module
+      )
+    }));
+  };
+
+  const removeModule = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      modules: prev.modules.filter((_, i) => i !== index)
+    }));
+  };
+
+  const addLesson = (moduleIndex: number) => {
+    const newLesson: Lesson = {
+      title: "",
+      description: "",
+      content: "",
+      video_url: "",
+      duration_minutes: 0,
+      is_free: false
+    };
+    setFormData(prev => ({
+      ...prev,
+      modules: prev.modules.map((module, i) => 
+        i === moduleIndex 
+          ? { ...module, lessons: [...module.lessons, newLesson] }
+          : module
+      )
+    }));
+  };
+
+  const updateLesson = (moduleIndex: number, lessonIndex: number, field: keyof Lesson, value: string | number | boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      modules: prev.modules.map((module, i) => 
+        i === moduleIndex 
+          ? {
+              ...module,
+              lessons: module.lessons.map((lesson, j) => 
+                j === lessonIndex ? { ...lesson, [field]: value } : lesson
+              )
+            }
+          : module
+      )
+    }));
+  };
+
+  const removeLesson = (moduleIndex: number, lessonIndex: number) => {
+    setFormData(prev => ({
+      ...prev,
+      modules: prev.modules.map((module, i) => 
+        i === moduleIndex 
+          ? { ...module, lessons: module.lessons.filter((_, j) => j !== lessonIndex) }
+          : module
+      )
+    }));
+  };
+
+  const toggleModuleExpansion = (index: number) => {
+    setExpandedModules(prev => ({
+      ...prev,
+      [index]: !prev[index]
     }));
   };
 
@@ -269,6 +373,173 @@ export default function EditCourse() {
                   />
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Modules Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Módulos del Curso</CardTitle>
+              <CardDescription>
+                Organiza el contenido del curso en módulos y lecciones
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {formData.modules.length === 0 ? (
+                <p className="text-muted-foreground text-center py-4">
+                  No hay módulos creados. Agrega el primer módulo.
+                </p>
+              ) : (
+                formData.modules.map((module, moduleIndex) => (
+                  <Card key={moduleIndex} className="border-l-4 border-l-primary">
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label>Nombre del Módulo</Label>
+                              <Input
+                                value={module.title}
+                                onChange={(e) => updateModule(moduleIndex, 'title', e.target.value)}
+                                placeholder="Ej: Introducción a React"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Descripción del Módulo</Label>
+                              <Input
+                                value={module.description}
+                                onChange={(e) => updateModule(moduleIndex, 'description', e.target.value)}
+                                placeholder="Descripción breve del módulo"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 ml-4">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={() => toggleModuleExpansion(moduleIndex)}
+                          >
+                            {expandedModules[moduleIndex] ? (
+                              <ChevronUp className="h-4 w-4" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4" />
+                            )}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => removeModule(moduleIndex)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    
+                    {expandedModules[moduleIndex] && (
+                      <CardContent>
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-medium">Lecciones del Módulo</h4>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => addLesson(moduleIndex)}
+                            >
+                              <Plus className="h-4 w-4 mr-2" />
+                              Agregar Lección
+                            </Button>
+                          </div>
+                          
+                          {module.lessons.length === 0 ? (
+                            <p className="text-muted-foreground text-center py-2">
+                              No hay lecciones. Agrega la primera lección.
+                            </p>
+                          ) : (
+                            <div className="space-y-3">
+                              {module.lessons.map((lesson, lessonIndex) => (
+                                <Card key={lessonIndex} className="bg-muted/50">
+                                  <CardContent className="p-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                      <div className="space-y-2">
+                                        <Label>Título de la Lección</Label>
+                                        <Input
+                                          value={lesson.title}
+                                          onChange={(e) => updateLesson(moduleIndex, lessonIndex, 'title', e.target.value)}
+                                          placeholder="Ej: ¿Qué es React?"
+                                        />
+                                      </div>
+                                      <div className="space-y-2">
+                                        <Label>Descripción</Label>
+                                        <Input
+                                          value={lesson.description}
+                                          onChange={(e) => updateLesson(moduleIndex, lessonIndex, 'description', e.target.value)}
+                                          placeholder="Descripción de la lección"
+                                        />
+                                      </div>
+                                      <div className="space-y-2">
+                                        <Label>URL del Video</Label>
+                                        <Input
+                                          value={lesson.video_url}
+                                          onChange={(e) => updateLesson(moduleIndex, lessonIndex, 'video_url', e.target.value)}
+                                          placeholder="https://youtube.com/watch?v=..."
+                                        />
+                                      </div>
+                                      <div className="space-y-2">
+                                        <Label>Duración (minutos)</Label>
+                                        <Input
+                                          type="number"
+                                          value={lesson.duration_minutes}
+                                          onChange={(e) => updateLesson(moduleIndex, lessonIndex, 'duration_minutes', parseInt(e.target.value) || 0)}
+                                          placeholder="0"
+                                        />
+                                      </div>
+                                    </div>
+                                    <div className="mt-4">
+                                      <Label>Contenido de la Lección</Label>
+                                      <Textarea
+                                        value={lesson.content}
+                                        onChange={(e) => updateLesson(moduleIndex, lessonIndex, 'content', e.target.value)}
+                                        placeholder="Contenido detallado de la lección..."
+                                        rows={3}
+                                      />
+                                    </div>
+                                    <div className="flex items-center justify-between mt-4">
+                                      <div className="flex items-center space-x-2">
+                                        <Switch
+                                          id={`lesson-${moduleIndex}-${lessonIndex}-free`}
+                                          checked={lesson.is_free}
+                                          onCheckedChange={(checked) => updateLesson(moduleIndex, lessonIndex, 'is_free', checked)}
+                                        />
+                                        <Label htmlFor={`lesson-${moduleIndex}-${lessonIndex}-free`}>
+                                          Lección Gratuita
+                                        </Label>
+                                      </div>
+                                      <Button
+                                        type="button"
+                                        variant="destructive"
+                                        onClick={() => removeLesson(moduleIndex, lessonIndex)}
+                                      >
+                                        <Trash2 className="h-4 w-4 mr-2" />
+                                        Eliminar Lección
+                                      </Button>
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    )}
+                  </Card>
+                ))
+              )}
+              <Button type="button" onClick={addModule} variant="outline" className="w-full">
+                <Plus className="h-4 w-4 mr-2" />
+                Agregar Módulo
+              </Button>
             </CardContent>
           </Card>
 

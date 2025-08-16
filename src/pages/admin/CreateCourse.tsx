@@ -25,6 +25,22 @@ interface CourseFormData {
   what_you_learn: string[];
   requirements: string[];
   featured: boolean;
+  modules: Module[];
+}
+
+interface Module {
+  title: string;
+  description: string;
+  order_number: number;
+  lessons: Lesson[];
+}
+
+interface Lesson {
+  title: string;
+  description: string;
+  duration_minutes: number;
+  order_number: number;
+  is_free: boolean;
 }
 
 export default function CreateCourse() {
@@ -46,7 +62,8 @@ export default function CreateCourse() {
     thumbnail_url: "",
     what_you_learn: [],
     requirements: [],
-    featured: false
+    featured: false,
+    modules: []
   });
 
   const categories = [
@@ -99,6 +116,92 @@ export default function CreateCourse() {
     setFormData(prev => ({
       ...prev,
       requirements: prev.requirements.filter((_, i) => i !== index)
+    }));
+  };
+
+  // Module management functions
+  const addModule = () => {
+    const newModule: Module = {
+      title: "",
+      description: "",
+      order_number: formData.modules.length + 1,
+      lessons: []
+    };
+    
+    setFormData(prev => ({
+      ...prev,
+      modules: [...prev.modules, newModule]
+    }));
+  };
+
+  const updateModule = (index: number, field: keyof Module, value: string | number) => {
+    setFormData(prev => ({
+      ...prev,
+      modules: prev.modules.map((module, i) => 
+        i === index ? { ...module, [field]: value } : module
+      )
+    }));
+  };
+
+  const removeModule = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      modules: prev.modules.filter((_, i) => i !== index).map((module, i) => ({
+        ...module,
+        order_number: i + 1
+      }))
+    }));
+  };
+
+  const addLesson = (moduleIndex: number) => {
+    const newLesson: Lesson = {
+      title: "",
+      description: "",
+      duration_minutes: 0,
+      order_number: formData.modules[moduleIndex].lessons.length + 1,
+      is_free: false
+    };
+
+    setFormData(prev => ({
+      ...prev,
+      modules: prev.modules.map((module, i) => 
+        i === moduleIndex 
+          ? { ...module, lessons: [...module.lessons, newLesson] }
+          : module
+      )
+    }));
+  };
+
+  const updateLesson = (moduleIndex: number, lessonIndex: number, field: keyof Lesson, value: string | number | boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      modules: prev.modules.map((module, i) => 
+        i === moduleIndex 
+          ? {
+              ...module,
+              lessons: module.lessons.map((lesson, j) => 
+                j === lessonIndex ? { ...lesson, [field]: value } : lesson
+              )
+            }
+          : module
+      )
+    }));
+  };
+
+  const removeLesson = (moduleIndex: number, lessonIndex: number) => {
+    setFormData(prev => ({
+      ...prev,
+      modules: prev.modules.map((module, i) => 
+        i === moduleIndex 
+          ? {
+              ...module,
+              lessons: module.lessons.filter((_, j) => j !== lessonIndex).map((lesson, j) => ({
+                ...lesson,
+                order_number: j + 1
+              }))
+            }
+          : module
+      )
     }));
   };
 
@@ -364,6 +467,172 @@ export default function CreateCourse() {
                     </Button>
                   </div>
                 ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Modules */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Módulos del Curso</CardTitle>
+              <CardDescription>
+                Organiza el contenido en módulos y lecciones
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <Button type="button" onClick={addModule} variant="outline" className="w-full">
+                <Plus className="h-4 w-4 mr-2" />
+                Agregar Módulo
+              </Button>
+
+              <div className="space-y-6">
+                {formData.modules.map((module, moduleIndex) => (
+                  <Card key={moduleIndex} className="border-l-4 border-l-primary">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-lg">
+                          Módulo {module.order_number}
+                        </CardTitle>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeModule(moduleIndex)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor={`module-title-${moduleIndex}`}>Título del Módulo *</Label>
+                          <Input
+                            id={`module-title-${moduleIndex}`}
+                            value={module.title}
+                            onChange={(e) => updateModule(moduleIndex, 'title', e.target.value)}
+                            placeholder="Ej: Introducción al Patronaje"
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor={`module-description-${moduleIndex}`}>Descripción del Módulo</Label>
+                        <Textarea
+                          id={`module-description-${moduleIndex}`}
+                          value={module.description}
+                          onChange={(e) => updateModule(moduleIndex, 'description', e.target.value)}
+                          placeholder="Describe brevemente lo que se aprenderá en este módulo"
+                          rows={2}
+                        />
+                      </div>
+
+                      {/* Lessons for this module */}
+                      <div className="space-y-3 pt-4 border-t">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm font-semibold">Lecciones del Módulo</Label>
+                          <Button
+                            type="button"
+                            onClick={() => addLesson(moduleIndex)}
+                            variant="outline"
+                            size="sm"
+                          >
+                            <Plus className="h-3 w-3 mr-1" />
+                            Agregar Lección
+                          </Button>
+                        </div>
+
+                        <div className="space-y-3">
+                          {module.lessons.map((lesson, lessonIndex) => (
+                            <Card key={lessonIndex} className="bg-muted/50">
+                              <CardContent className="p-4 space-y-3">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm font-medium">
+                                    Lección {lesson.order_number}
+                                  </span>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => removeLesson(moduleIndex, lessonIndex)}
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                  <div className="space-y-1">
+                                    <Label htmlFor={`lesson-title-${moduleIndex}-${lessonIndex}`} className="text-xs">
+                                      Título de la Lección *
+                                    </Label>
+                                    <Input
+                                      id={`lesson-title-${moduleIndex}-${lessonIndex}`}
+                                      value={lesson.title}
+                                      onChange={(e) => updateLesson(moduleIndex, lessonIndex, 'title', e.target.value)}
+                                      placeholder="Ej: Conceptos básicos"
+                                      size="sm"
+                                      required
+                                    />
+                                  </div>
+                                  <div className="space-y-1">
+                                    <Label htmlFor={`lesson-duration-${moduleIndex}-${lessonIndex}`} className="text-xs">
+                                      Duración (minutos)
+                                    </Label>
+                                    <Input
+                                      id={`lesson-duration-${moduleIndex}-${lessonIndex}`}
+                                      type="number"
+                                      value={lesson.duration_minutes}
+                                      onChange={(e) => updateLesson(moduleIndex, lessonIndex, 'duration_minutes', parseInt(e.target.value) || 0)}
+                                      placeholder="0"
+                                      size="sm"
+                                    />
+                                  </div>
+                                </div>
+
+                                <div className="space-y-1">
+                                  <Label htmlFor={`lesson-description-${moduleIndex}-${lessonIndex}`} className="text-xs">
+                                    Descripción de la Lección
+                                  </Label>
+                                  <Textarea
+                                    id={`lesson-description-${moduleIndex}-${lessonIndex}`}
+                                    value={lesson.description}
+                                    onChange={(e) => updateLesson(moduleIndex, lessonIndex, 'description', e.target.value)}
+                                    placeholder="Describe el contenido de esta lección"
+                                    rows={2}
+                                  />
+                                </div>
+
+                                <div className="flex items-center space-x-2">
+                                  <Checkbox
+                                    id={`lesson-free-${moduleIndex}-${lessonIndex}`}
+                                    checked={lesson.is_free}
+                                    onCheckedChange={(checked) => updateLesson(moduleIndex, lessonIndex, 'is_free', checked as boolean)}
+                                  />
+                                  <Label htmlFor={`lesson-free-${moduleIndex}-${lessonIndex}`} className="text-sm">
+                                    Lección gratuita (disponible sin inscripción)
+                                  </Label>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))}
+
+                          {module.lessons.length === 0 && (
+                            <div className="text-center py-4 text-muted-foreground text-sm">
+                              No hay lecciones en este módulo. Agrega al menos una lección.
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+
+                {formData.modules.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No hay módulos creados. Agrega módulos para organizar el contenido del curso.
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
