@@ -45,7 +45,10 @@ const corsOptions = {
     process.env.FRONTEND_URL || 'http://localhost:5173',
     process.env.ADMIN_URL || 'http://localhost:3000',
     'http://localhost:5173',
-    'http://localhost:3000'
+    'http://localhost:3000',
+    'http://localhost:8080',
+    'http://localhost:8081',
+    'http://localhost:8000'
   ],
   credentials: true,
   optionsSuccessStatus: 200

@@ -1,6 +1,6 @@
 // API Configuration for connecting frontend to backend
 export const API_CONFIG = {
-  BASE_URL: 'http://localhost:3002/api',
+  BASE_URL: 'http://localhost:3003/api',
   ENDPOINTS: {
     // Auth endpoints
     AUTH: {

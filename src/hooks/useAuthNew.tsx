@@ -51,7 +51,7 @@ export function useAuth() {
       const response = await authAPI.register({
         email,
         password,
-        fullName: fullName  // Changed from full_name to fullName
+        full_name: fullName
       });
       
       localStorage.setItem('auth_token', response.token);
