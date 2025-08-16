@@ -1,5 +1,5 @@
 const express = require('express');
-const { supabase } = require('../config/database');
+const { supabase, supabaseAdmin } = require('../config/database');
 const { authenticateToken, requireInstructor, requireAdmin } = require('../middleware/auth');
 
 const router = express.Router();
@@ -20,7 +20,8 @@ router.get('/', async (req, res, next) => {
       order = 'desc'
     } = req.query;
 
-    let query = supabase
+    // Use admin client to bypass RLS for public course listing
+    let query = supabaseAdmin
       .from('courses')
       .select('*')
       .eq('is_active', true);

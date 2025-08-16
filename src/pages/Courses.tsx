@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, Clock, Star, User } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { coursesService } from "@/lib/dataService";
 
 interface Course {
   id: string;
@@ -40,14 +40,9 @@ export default function Courses() {
 
   const fetchCourses = async () => {
     try {
-      const { data, error } = await supabase
-        .from('courses')
-        .select('*')
-        .eq('is_active', true)
-        .order('featured', { ascending: false })
-        .order('created_at', { ascending: false });
+      const { data, error } = await coursesService.getCourses({});
 
-      if (error) throw error;
+      if (error) throw new Error(error.message);
       setCourses(data || []);
     } catch (error) {
       console.error('Error fetching courses:', error);
