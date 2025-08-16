@@ -49,6 +49,7 @@ export default function CreateCourse() {
   const [loading, setLoading] = useState(false);
   const [newWhatYouLearn, setNewWhatYouLearn] = useState("");
   const [newRequirement, setNewRequirement] = useState("");
+  const [modules, setModules] = useState<Module[]>([]);
 
   const [formData, setFormData] = useState<CourseFormData>({
     title: "",
@@ -210,12 +211,49 @@ export default function CreateCourse() {
     setLoading(true);
 
     try {
+      // First, create the course
       const result = await courseAPI.create(formData);
 
-      if (result.success) {
+      if (result.success && result.course) {
+        const courseId = result.course.id;
+
+        // Create modules and lessons
+        for (const module of modules) {
+          const { data: moduleData, error: moduleError } = await supabase
+            .from('modules')
+            .insert({
+              course_id: courseId,
+              title: module.title,
+              description: module.description,
+              order_number: module.order_number
+            })
+            .select()
+            .single();
+
+          if (moduleError) throw moduleError;
+
+          // Create lessons for this module
+          for (const lesson of module.lessons) {
+            const { error: lessonError } = await supabase
+              .from('lessons')
+              .insert({
+                course_id: courseId,
+                module_id: moduleData.id,
+                title: lesson.title,
+                description: lesson.description,
+                video_url: lesson.video_url,
+                duration_minutes: lesson.duration_minutes,
+                order_number: lesson.order_number,
+                is_free: lesson.is_free
+              });
+
+            if (lessonError) throw lessonError;
+          }
+        }
+
         toast({
           title: "Éxito",
-          description: "Curso creado correctamente"
+          description: `Curso creado correctamente con ${modules.length} módulos y ${modules.reduce((acc, m) => acc + m.lessons.length, 0)} lecciones`
         });
 
         navigate('/admin/cursos');
@@ -571,7 +609,6 @@ export default function CreateCourse() {
                                       value={lesson.title}
                                       onChange={(e) => updateLesson(moduleIndex, lessonIndex, 'title', e.target.value)}
                                       placeholder="Ej: Conceptos básicos"
-                                      size="sm"
                                       required
                                     />
                                   </div>
@@ -585,7 +622,6 @@ export default function CreateCourse() {
                                       value={lesson.duration_minutes}
                                       onChange={(e) => updateLesson(moduleIndex, lessonIndex, 'duration_minutes', parseInt(e.target.value) || 0)}
                                       placeholder="0"
-                                      size="sm"
                                     />
                                   </div>
                                 </div>
