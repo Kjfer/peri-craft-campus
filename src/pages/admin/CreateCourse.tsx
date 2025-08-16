@@ -11,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 import { courseAPI } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Plus, X } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface CourseFormData {
   title: string;
@@ -38,6 +39,8 @@ interface Module {
 interface Lesson {
   title: string;
   description: string;
+  content: string;
+  video_url: string;
   duration_minutes: number;
   order_number: number;
   is_free: boolean;
@@ -79,7 +82,7 @@ export default function CreateCourse() {
 
   const levels = ["Principiante", "Intermedio", "Avanzado"];
 
-  const handleInputChange = (field: keyof CourseFormData, value: any) => {
+  const handleInputChange = (field: keyof CourseFormData, value: string | number | boolean | string[]) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -158,6 +161,8 @@ export default function CreateCourse() {
     const newLesson: Lesson = {
       title: "",
       description: "",
+      content: "",
+      video_url: "",
       duration_minutes: 0,
       order_number: formData.modules[moduleIndex].lessons.length + 1,
       is_free: false
@@ -260,11 +265,11 @@ export default function CreateCourse() {
       } else {
         throw new Error(result.error || 'Error creating course');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Create course error:', error);
       toast({
         title: "Error",
-        description: error.message || "No se pudo crear el curso",
+        description: error instanceof Error ? error.message : "No se pudo crear el curso",
         variant: "destructive"
       });
     } finally {

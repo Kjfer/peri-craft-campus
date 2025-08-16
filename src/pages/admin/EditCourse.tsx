@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -59,13 +59,7 @@ export default function EditCourse() {
     modules: []
   });
 
-  useEffect(() => {
-    if (id) {
-      fetchCourse();
-    }
-  }, [id]);
-
-  const fetchCourse = async () => {
+  const fetchCourse = useCallback(async () => {
     try {
       setLoading(true);
       const data = await courseAPI.getById(id!);
@@ -83,17 +77,23 @@ export default function EditCourse() {
           modules: course.modules || []
         });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching course:', error);
       toast({
         title: "Error",
-        description: error.message || "No se pudo cargar el curso",
+        description: error instanceof Error ? error.message : "No se pudo cargar el curso",
         variant: "destructive"
       });
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, toast]);
+
+  useEffect(() => {
+    if (id) {
+      fetchCourse();
+    }
+  }, [id, fetchCourse]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -139,11 +139,11 @@ export default function EditCourse() {
         });
         navigate("/admin/cursos");
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error updating course:', error);
       toast({
         title: "Error",
-        description: error.message || "No se pudo actualizar el curso",
+        description: error instanceof Error ? error.message : "No se pudo actualizar el curso",
         variant: "destructive"
       });
     } finally {
@@ -151,7 +151,7 @@ export default function EditCourse() {
     }
   };
 
-  const handleInputChange = (field: keyof CourseFormData, value: any) => {
+  const handleInputChange = (field: keyof CourseFormData, value: string | number | boolean | string[] | Module[]) => {
     setFormData(prev => ({
       ...prev,
       [field]: value

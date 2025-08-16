@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -66,13 +66,7 @@ export default function CourseDetail() {
   const [loading, setLoading] = useState(true);
   const [enrolling, setEnrolling] = useState(false);
 
-  useEffect(() => {
-    if (id) {
-      fetchCourseData();
-    }
-  }, [id, user]);
-
-  const fetchCourseData = async () => {
+  const fetchCourseData = useCallback(async () => {
     try {
       // Fetch course using API
       const courseResponse = await courseAPI.getById(id!);
@@ -95,17 +89,23 @@ export default function CourseDetail() {
 
         setIsEnrolled(!!enrollmentData);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching course data:', error);
       toast({
         title: "Error",
-        description: error.message || "No se pudo cargar la información del curso.",
+        description: error instanceof Error ? error.message : "No se pudo cargar la información del curso.",
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, user, toast]);
+
+  useEffect(() => {
+    if (id) {
+      fetchCourseData();
+    }
+  }, [id, fetchCourseData]);
 
   const handleEnroll = async () => {
     if (!user) {
