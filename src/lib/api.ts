@@ -129,13 +129,21 @@ export const apiCall = async (endpoint: string, options: RequestInit = {}): Prom
   };
 
   try {
+    console.log('🔄 Making API call to:', url);
+    console.log('🔑 Authorization header:', config.headers ? (config.headers as any)['Authorization'] ? 'Present' : 'Missing' : 'No headers');
+    
     const response = await fetch(url, config);
+    console.log('📡 Response status:', response.status, response.statusText);
+    
     const data = await response.json();
+    console.log('📦 Response data:', data);
     
     if (!response.ok) {
+      console.error('❌ API call failed:', data.error || `HTTP error! status: ${response.status}`);
       throw new Error(data.error || `HTTP error! status: ${response.status}`);
     }
     
+    console.log('✅ API call successful');
     return data;
   } catch (error) {
     console.error('API call failed:', error);

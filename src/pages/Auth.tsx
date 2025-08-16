@@ -14,7 +14,7 @@ export default function Auth() {
   const [signInData, setSignInData] = useState({ email: "", password: "" });
   const [signUpData, setSignUpData] = useState({ email: "", password: "", fullName: "", confirmPassword: "" });
   
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, refreshAuth } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -38,7 +38,17 @@ export default function Auth() {
           title: "¡Bienvenido!",
           description: "Has iniciado sesión exitosamente.",
         });
+        
+        // Refresh auth state to ensure UI updates
+        await refreshAuth();
+        
+        // Navigate to dashboard
         navigate("/dashboard");
+        
+        // Force a page refresh to ensure the header updates
+        setTimeout(() => {
+          window.location.reload();
+        }, 100);
       }
     } catch (error) {
       toast({
@@ -96,7 +106,17 @@ export default function Auth() {
           title: "¡Registro exitoso!",
           description: "Revisa tu email para confirmar tu cuenta.",
         });
+        
+        // Refresh auth state to ensure UI updates
+        await refreshAuth();
+        
+        // Navigate to dashboard
         navigate("/dashboard");
+        
+        // Force a page refresh to ensure the header updates
+        setTimeout(() => {
+          window.location.reload();
+        }, 100);
       }
     } catch (error) {
       toast({

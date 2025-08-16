@@ -1,5 +1,5 @@
 const express = require('express');
-const { supabase } = require('../config/database');
+const { supabase, supabaseAdmin } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
@@ -25,6 +25,9 @@ router.put('/profile', authenticateToken, async (req, res, next) => {
   try {
     const { full_name, phone, country, avatar_url } = req.body;
     
+    console.log('Updating profile for user:', req.user.id);
+    console.log('Update data:', { full_name, phone, country, avatar_url });
+    
     const updateData = {};
     if (full_name !== undefined) updateData.full_name = full_name;
     if (phone !== undefined) updateData.phone = phone;
@@ -32,27 +35,75 @@ router.put('/profile', authenticateToken, async (req, res, next) => {
     if (avatar_url !== undefined) updateData.avatar_url = avatar_url;
     updateData.updated_at = new Date().toISOString();
 
-    const { data, error } = await supabase
+    // First, check if profile exists
+    const { data: existingProfile, error: checkError } = await supabaseAdmin
       .from('profiles')
-      .update(updateData)
+      .select('*')
       .eq('user_id', req.user.id)
-      .select()
       .single();
 
-    if (error) {
+    let result;
+    if (checkError && checkError.code === 'PGRST116') {
+      // Profile doesn't exist, create it
+      console.log('Profile does not exist, creating new one...');
+      const { data, error } = await supabaseAdmin
+        .from('profiles')
+        .insert([{
+          user_id: req.user.id,
+          email: req.user.email,
+          ...updateData,
+          role: 'student'
+        }])
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Error creating profile:', error);
+        return res.status(400).json({
+          success: false,
+          error: error.message,
+          details: error
+        });
+      }
+      result = data;
+    } else if (checkError) {
+      console.error('Error checking profile:', checkError);
       return res.status(400).json({
         success: false,
-        error: error.message
+        error: checkError.message,
+        details: checkError
       });
+    } else {
+      // Profile exists, update it
+      console.log('Profile exists, updating...');
+      const { data, error } = await supabaseAdmin
+        .from('profiles')
+        .update(updateData)
+        .eq('user_id', req.user.id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error updating profile:', error);
+        return res.status(400).json({
+          success: false,
+          error: error.message,
+          details: error
+        });
+      }
+      result = data;
     }
+
+    console.log('Profile operation successful:', result);
 
     res.json({
       success: true,
       message: 'Profile updated successfully',
-      profile: data
+      profile: result
     });
 
   } catch (error) {
+    console.error('Profile update exception:', error);
     next(error);
   }
 });

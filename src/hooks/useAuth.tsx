@@ -110,6 +110,10 @@ export function useAuth() {
     return { error: null };
   };
 
+  const refreshAuth = async () => {
+    await checkAuthStatus();
+  };
+
   return {
     user,
     session,
@@ -117,6 +121,7 @@ export function useAuth() {
     loading,
     signUp,
     signIn,
-    signOut
+    signOut,
+    refreshAuth
   };
 }

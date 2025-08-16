@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const { supabase } = require('../config/database');
+const { supabase, supabaseAdmin } = require('../config/database');
 
 const authenticateToken = async (req, res, next) => {
   try {
@@ -23,21 +23,54 @@ const authenticateToken = async (req, res, next) => {
       });
     }
 
-    // Get user profile from database (optional)
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('user_id', user.id)
-      .single();
+    // Get user profile from database
+    let profile = null;
+    try {
+      const { data: dbProfile, error: profileError } = await supabaseAdmin
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
 
-    // If profile doesn't exist, create a temporary one
-    if (profileError || !profile) {
-      console.warn(`Profile not found for user ${user.id}, using fallback`);
-      req.profile = {
+      if (profileError && profileError.code === 'PGRST116') {
+        // Profile doesn't exist, create fallback
+        profile = {
+          id: user.id,
+          user_id: user.id,
+          email: user.email,
+          full_name: user.user_metadata?.full_name || user.email.split('@')[0],
+          role: 'student',
+          avatar_url: null,
+          phone: null,
+          country: null,
+          created_at: user.created_at,
+          updated_at: user.updated_at || user.created_at
+        };
+      } else if (!profileError) {
+        profile = dbProfile;
+      } else {
+        console.error('Profile fetch error:', profileError);
+        profile = {
+          id: user.id,
+          user_id: user.id,
+          email: user.email,
+          full_name: user.user_metadata?.full_name || user.email.split('@')[0],
+          role: 'student',
+          avatar_url: null,
+          phone: null,
+          country: null,
+          created_at: user.created_at,
+          updated_at: user.updated_at || user.created_at
+        };
+      }
+    } catch (profileErr) {
+      console.error('Profile fetch exception:', profileErr);
+      // Create fallback profile
+      profile = {
         id: user.id,
         user_id: user.id,
         email: user.email,
-        full_name: user.user_metadata?.full_name || user.email,
+        full_name: user.user_metadata?.full_name || user.email.split('@')[0],
         role: 'student',
         avatar_url: null,
         phone: null,
@@ -45,8 +78,6 @@ const authenticateToken = async (req, res, next) => {
         created_at: user.created_at,
         updated_at: user.updated_at || user.created_at
       };
-    } else {
-      req.profile = profile;
     }
 
     // Attach user and profile to request object
