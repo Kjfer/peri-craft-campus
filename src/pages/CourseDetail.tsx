@@ -101,6 +101,28 @@ export default function CourseDetail() {
     }
   }, [id, user, toast]);
 
+  const handleLessonClick = (lesson: Lesson) => {
+    // Solo permitir clic si el usuario está inscrito o la lección es gratis
+    if (isEnrolled || lesson.is_free) {
+      if (lesson.video_url) {
+        // Abrir el video en una nueva pestaña
+        window.open(lesson.video_url, '_blank');
+      } else {
+        toast({
+          title: "Video no disponible",
+          description: "Esta lección no tiene un video asociado aún.",
+          variant: "destructive",
+        });
+      }
+    } else {
+      toast({
+        title: "Acceso restringido",
+        description: "Necesitas inscribirte en el curso para acceder a esta lección.",
+        variant: "destructive",
+      });
+    }
+  };
+
   useEffect(() => {
     if (id) {
       fetchCourseData();
@@ -345,7 +367,14 @@ export default function CourseDetail() {
                             <div className="ml-4 space-y-2">
                               {module.lessons.map((lesson, lessonIndex) => (
                                 <div key={lesson.id}>
-                                  <div className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors">
+                                  <div 
+                                    className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
+                                      (isEnrolled || lesson.is_free) 
+                                        ? 'hover:bg-muted/50 cursor-pointer' 
+                                        : 'hover:bg-muted/30 cursor-not-allowed opacity-75'
+                                    }`}
+                                    onClick={() => handleLessonClick(lesson)}
+                                  >
                                     <div className="flex items-center space-x-4">
                                       <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
                                         {lesson.order_number}
@@ -367,7 +396,10 @@ export default function CourseDetail() {
                                         <Badge variant="secondary" className="text-xs">Gratis</Badge>
                                       )}
                                       {(isEnrolled || lesson.is_free) ? (
-                                        <Play className="w-3 h-3 text-primary" />
+                                        <div className="flex items-center">
+                                          <Play className="w-4 h-4 text-primary mr-1" />
+                                          <span className="text-xs text-primary">Ver</span>
+                                        </div>
                                       ) : (
                                         <div className="w-3 h-3 rounded-full border-2 border-muted" />
                                       )}
