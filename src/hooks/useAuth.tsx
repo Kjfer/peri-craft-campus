@@ -22,6 +22,7 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log('🔄 useAuth - Checking auth status on mount...');
     checkAuthStatus();
   }, []);
 
@@ -81,7 +82,9 @@ export function useAuth() {
 
   const signIn = async (email: string, password: string) => {
     try {
+      console.log('🔐 useAuth - Starting sign in process...');
       const response = await authAPI.login({ email, password });
+      console.log('🔐 useAuth - Login response:', response);
       
       localStorage.setItem('auth_token', response.token);
       localStorage.setItem('supabase.auth.token', JSON.stringify({ 
@@ -92,6 +95,12 @@ export function useAuth() {
       setUser(userData);
       setProfile(response.profile);
       setSession({ user: userData } as Session);
+      
+      console.log('🔐 useAuth - Auth state updated:', {
+        user: userData,
+        profile: response.profile,
+        session: { user: userData }
+      });
       
       return { error: null };
     } catch (error: unknown) {

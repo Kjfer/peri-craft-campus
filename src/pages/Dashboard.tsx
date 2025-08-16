@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 import { apiCall, API_CONFIG } from "@/lib/api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -75,6 +76,7 @@ interface ProgressStats {
 export default function Dashboard() {
   const { user, profile, loading, refreshAuth } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [certificates, setCertificates] = useState<Certificate[]>([]);
@@ -307,7 +309,7 @@ export default function Dashboard() {
                     <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                     <h3 className="text-lg font-semibold mb-2">No tienes cursos inscritos</h3>
                     <p className="text-muted-foreground mb-4">Explora nuestro catálogo y comienza tu aprendizaje</p>
-                    <Button>Explorar Cursos</Button>
+                    <Button onClick={() => navigate('/cursos')}>Explorar Cursos</Button>
                   </CardContent>
                 </Card>
               )}

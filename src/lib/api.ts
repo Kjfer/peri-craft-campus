@@ -80,6 +80,20 @@ export const API_CONFIG = {
       USERS: '/admin/users',
       COURSES: '/admin/courses',
       ANALYTICS: '/admin/analytics'
+    },
+    // Cart endpoints
+    CART: {
+      LIST: '/cart',
+      ADD: '/cart',
+      REMOVE: '/cart',
+      CLEAR: '/cart'
+    },
+    // Order endpoints
+    ORDERS: {
+      CREATE: '/orders',
+      LIST: '/orders',
+      DETAIL: '/orders',
+      UPDATE_STATUS: '/orders'
     }
   }
 };
@@ -94,29 +108,32 @@ export const apiCall = async (endpoint: string, options: RequestInit = {}): Prom
     },
   };
 
-  // Add authorization header if user is logged in
-  const authToken = localStorage.getItem('auth_token');
-  const supabaseToken = localStorage.getItem('supabase.auth.token');
-  
-  if (authToken) {
-    // Use direct token
-    defaultOptions.headers = {
-      ...defaultOptions.headers,
-      'Authorization': `Bearer ${authToken}`
-    };
-  } else if (supabaseToken) {
-    // Fallback to supabase token format
-    try {
-      const tokenData = JSON.parse(supabaseToken);
-      if (tokenData.access_token) {
+  // Get auth token - prioritize localStorage token, fallback to Supabase session
+  try {
+    // First try to get token from localStorage
+    const localToken = localStorage.getItem('auth_token');
+    
+    if (localToken) {
+      console.log('🔑 Using token from localStorage');
+      defaultOptions.headers = {
+        ...defaultOptions.headers,
+        'Authorization': `Bearer ${localToken}`
+      };
+    } else {
+      // Fallback to Supabase session
+      console.log('🔑 Falling back to Supabase session');
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.access_token) {
         defaultOptions.headers = {
           ...defaultOptions.headers,
-          'Authorization': `Bearer ${tokenData.access_token}`
+          'Authorization': `Bearer ${session.access_token}`
         };
       }
-    } catch (error) {
-      console.error('Error parsing supabase token:', error);
     }
+  } catch (error) {
+    console.warn('Could not get auth session:', error);
   }
 
   const config: RequestInit = {
@@ -251,4 +268,37 @@ export const adminAPI = {
     const queryString = new URLSearchParams(params).toString();
     return apiCall(`${API_CONFIG.ENDPOINTS.ADMIN.USERS}?${queryString}`);
   }
+};
+
+export const cartAPI = {
+  getItems: () => apiCall(API_CONFIG.ENDPOINTS.CART.LIST),
+  
+  addItem: (courseId: string) => apiCall(API_CONFIG.ENDPOINTS.CART.ADD, {
+    method: 'POST',
+    body: JSON.stringify({ course_id: courseId })
+  }),
+  
+  removeItem: (courseId: string) => apiCall(`${API_CONFIG.ENDPOINTS.CART.REMOVE}/${courseId}`, {
+    method: 'DELETE'
+  }),
+  
+  clearCart: () => apiCall(API_CONFIG.ENDPOINTS.CART.CLEAR, {
+    method: 'DELETE'
+  })
+};
+
+export const orderAPI = {
+  create: (orderData: any) => apiCall(API_CONFIG.ENDPOINTS.ORDERS.CREATE, {
+    method: 'POST',
+    body: JSON.stringify(orderData)
+  }),
+  
+  getAll: () => apiCall(API_CONFIG.ENDPOINTS.ORDERS.LIST),
+  
+  getById: (orderId: string) => apiCall(`${API_CONFIG.ENDPOINTS.ORDERS.DETAIL}/${orderId}`),
+  
+  updateStatus: (orderId: string, status: string) => apiCall(`${API_CONFIG.ENDPOINTS.ORDERS.UPDATE_STATUS}/${orderId}/status`, {
+    method: 'PUT',
+    body: JSON.stringify({ payment_status: status })
+  })
 };

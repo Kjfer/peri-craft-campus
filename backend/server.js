@@ -17,6 +17,9 @@ const paymentRoutes = require('./routes/payments');
 const subscriptionRoutes = require('./routes/subscriptions');
 const adminRoutes = require('./routes/admin');
 const uploadRoutes = require('./routes/upload');
+const cartRoutes = require('./routes/cart');
+const orderRoutes = require('./routes/orders');
+const debugRoutes = require('./routes/debug');
 
 // Import middleware
 const errorHandler = require('./middleware/errorHandler');
@@ -95,6 +98,9 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/cart', cartRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/debug', debugRoutes);
 
 // Welcome endpoint
 app.get('/', (req, res) => {

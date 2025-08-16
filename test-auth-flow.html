@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Auth Flow</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        .result { background: #f9f9f9; padding: 10px; margin: 10px 0; }
+        button { padding: 10px 15px; margin: 5px; background: #007bff; color: white; border: none; cursor: pointer; }
+        input { padding: 8px; margin: 5px; width: 200px; }
+    </style>
+</head>
+<body>
+    <h1>Test Auth Flow</h1>
+    
+    <div class="section">
+        <h3>1. Test Backend Connection</h3>
+        <button onclick="testConnection()">Test Backend</button>
+        <div id="connection-result" class="result"></div>
+    </div>
+    
+    <div class="section">
+        <h3>2. Register New User</h3>
+        <input type="email" id="reg-email" placeholder="Email" value="usuario@test.com">
+        <input type="password" id="reg-password" placeholder="Password" value="password123">
+        <input type="text" id="reg-name" placeholder="Full Name" value="Usuario Prueba">
+        <br>
+        <button onclick="registerUser()">Register</button>
+        <div id="register-result" class="result"></div>
+    </div>
+    
+    <div class="section">
+        <h3>3. Login User</h3>
+        <input type="email" id="login-email" placeholder="Email" value="usuario@test.com">
+        <input type="password" id="login-password" placeholder="Password" value="password123">
+        <br>
+        <button onclick="loginUser()">Login</button>
+        <div id="login-result" class="result"></div>
+    </div>
+    
+    <div class="section">
+        <h3>4. Get Profile (requires login)</h3>
+        <button onclick="getProfile()">Get Profile</button>
+        <div id="profile-result" class="result"></div>
+    </div>
+    
+    <script>
+        let authToken = null;
+        
+        async function testConnection() {
+            const resultDiv = document.getElementById('connection-result');
+            try {
+                const response = await fetch('http://localhost:3003/health');
+                const data = await response.json();
+                resultDiv.innerHTML = `<strong>Success:</strong> ${JSON.stringify(data, null, 2)}`;
+            } catch (error) {
+                resultDiv.innerHTML = `<strong>Error:</strong> ${error.message}`;
+            }
+        }
+        
+        async function registerUser() {
+            const resultDiv = document.getElementById('register-result');
+            const email = document.getElementById('reg-email').value;
+            const password = document.getElementById('reg-password').value;
+            const fullName = document.getElementById('reg-name').value;
+            
+            try {
+                const response = await fetch('http://localhost:3003/api/auth/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        password: password,
+                        fullName: fullName
+                    })
+                });
+                
+                const data = await response.json();
+                resultDiv.innerHTML = `<strong>Status:</strong> ${response.status}<br><strong>Response:</strong> ${JSON.stringify(data, null, 2)}`;
+                
+                if (data.token) {
+                    authToken = data.token;
+                    localStorage.setItem('auth_token', authToken);
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<strong>Error:</strong> ${error.message}`;
+            }
+        }
+        
+        async function loginUser() {
+            const resultDiv = document.getElementById('login-result');
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            
+            try {
+                const response = await fetch('http://localhost:3003/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        password: password
+                    })
+                });
+                
+                const data = await response.json();
+                resultDiv.innerHTML = `<strong>Status:</strong> ${response.status}<br><strong>Response:</strong> ${JSON.stringify(data, null, 2)}`;
+                
+                if (data.token) {
+                    authToken = data.token;
+                    localStorage.setItem('auth_token', authToken);
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<strong>Error:</strong> ${error.message}`;
+            }
+        }
+        
+        async function getProfile() {
+            const resultDiv = document.getElementById('profile-result');
+            
+            if (!authToken) {
+                authToken = localStorage.getItem('auth_token');
+            }
+            
+            if (!authToken) {
+                resultDiv.innerHTML = '<strong>Error:</strong> No auth token. Please login first.';
+                return;
+            }
+            
+            try {
+                const response = await fetch('http://localhost:3003/api/auth/me', {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+                
+                const data = await response.json();
+                resultDiv.innerHTML = `<strong>Status:</strong> ${response.status}<br><strong>Response:</strong> ${JSON.stringify(data, null, 2)}`;
+            } catch (error) {
+                resultDiv.innerHTML = `<strong>Error:</strong> ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>

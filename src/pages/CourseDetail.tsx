@@ -16,7 +16,8 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { courseAPI } from "@/lib/api";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
+import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/hooks/use-toast";
 
 interface Course {
@@ -58,13 +59,14 @@ export default function CourseDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { addToCart, isInCart } = useCart();
   const { toast } = useToast();
   
   const [course, setCourse] = useState<Course | null>(null);
   const [modules, setModules] = useState<Module[]>([]);
   const [isEnrolled, setIsEnrolled] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [enrolling, setEnrolling] = useState(false);
+  const [addingToCart, setAddingToCart] = useState(false);
 
   const fetchCourseData = useCallback(async () => {
     try {
@@ -115,7 +117,7 @@ export default function CourseDetail() {
 
     if (course?.price === 0) {
       // Free course - enroll directly
-      setEnrolling(true);
+      setAddingToCart(true);
       try {
         const { error } = await supabase
           .from('enrollments')
@@ -139,11 +141,24 @@ export default function CourseDetail() {
           variant: "destructive",
         });
       } finally {
-        setEnrolling(false);
+        setAddingToCart(false);
       }
     } else {
-      // Paid course - redirect to payment
-      navigate(`/checkout/course/${id}`);
+      // Paid course - add to cart
+      await handleAddToCart();
+    }
+  };
+
+  const handleAddToCart = async () => {
+    if (!user) {
+      navigate('/auth');
+      return;
+    }
+
+    if (id) {
+      setAddingToCart(true);
+      await addToCart(id);
+      setAddingToCart(false);
     }
   };
 
@@ -227,15 +242,29 @@ export default function CourseDetail() {
                     Continuar Curso
                   </Button>
                 ) : (
-                  <Button 
-                    size="lg" 
-                    onClick={handleEnroll}
-                    disabled={enrolling}
-                    className="bg-white text-primary hover:bg-white/90"
-                  >
-                    <ShoppingCart className="w-4 h-4 mr-2" />
-                    {enrolling ? 'Inscribiendo...' : course.price === 0 ? 'Inscribirse Gratis' : 'Comprar Curso'}
-                  </Button>
+                  <>
+                    {course.price === 0 ? (
+                      <Button 
+                        size="lg" 
+                        onClick={handleEnroll}
+                        disabled={addingToCart}
+                        className="bg-white text-primary hover:bg-white/90"
+                      >
+                        <CheckCircle className="w-4 h-4 mr-2" />
+                        {addingToCart ? 'Inscribiendo...' : 'Inscribirse Gratis'}
+                      </Button>
+                    ) : (
+                      <Button 
+                        size="lg" 
+                        onClick={handleAddToCart}
+                        disabled={addingToCart || isInCart(id!)}
+                        className="bg-white text-primary hover:bg-white/90"
+                      >
+                        <ShoppingCart className="w-4 h-4 mr-2" />
+                        {addingToCart ? 'Agregando...' : isInCart(id!) ? 'En el Carrito' : 'Agregar al Carrito'}
+                      </Button>
+                    )}
+                  </>
                 )}
                 {!isEnrolled && freeLessons > 0 && (
                   <Button 

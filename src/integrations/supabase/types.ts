@@ -14,6 +14,35 @@ export type Database = {
   }
   public: {
     Tables: {
+      cart_items: {
+        Row: {
+          added_at: string
+          course_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          added_at?: string
+          course_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          added_at?: string
+          course_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cart_items_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       certificates: {
         Row: {
           certificate_code: string
@@ -276,6 +305,87 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      order_items: {
+        Row: {
+          course_id: string
+          course_price: number
+          course_title: string
+          created_at: string
+          id: string
+          order_id: string
+        }
+        Insert: {
+          course_id: string
+          course_price: number
+          course_title: string
+          created_at?: string
+          id?: string
+          order_id: string
+        }
+        Update: {
+          course_id?: string
+          course_price?: number
+          course_title?: string
+          created_at?: string
+          id?: string
+          order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_items_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          created_at: string
+          currency: string
+          external_payment_id: string | null
+          id: string
+          order_number: string
+          payment_method: string | null
+          payment_status: Database["public"]["Enums"]["payment_status"]
+          total_amount: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          external_payment_id?: string | null
+          id?: string
+          order_number?: string
+          payment_method?: string | null
+          payment_status?: Database["public"]["Enums"]["payment_status"]
+          total_amount: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          external_payment_id?: string | null
+          id?: string
+          order_number?: string
+          payment_method?: string | null
+          payment_status?: Database["public"]["Enums"]["payment_status"]
+          total_amount?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       payments: {
         Row: {
