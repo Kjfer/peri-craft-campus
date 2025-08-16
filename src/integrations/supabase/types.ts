@@ -92,6 +92,7 @@ export type Database = {
           category: string
           created_at: string
           description: string
+          discounted_price: number | null
           duration_hours: number
           featured: boolean
           id: string
@@ -110,6 +111,7 @@ export type Database = {
           category: string
           created_at?: string
           description: string
+          discounted_price?: number | null
           duration_hours?: number
           featured?: boolean
           id?: string
@@ -128,6 +130,7 @@ export type Database = {
           category?: string
           created_at?: string
           description?: string
+          discounted_price?: number | null
           duration_hours?: number
           featured?: boolean
           id?: string

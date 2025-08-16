@@ -1,47 +1,50 @@
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Play, Users, Award, Star, ArrowRight, BookOpen, Clock, TrendingUp } from "lucide-react";
+import { courseAPI } from "@/lib/api";
+
+interface Course {
+  id: string;
+  title: string;
+  description: string;
+  instructor_name: string;
+  thumbnail_url?: string;
+  category: string;
+  level: string;
+  duration_hours: number;
+  price: number;
+  discounted_price?: number;
+  featured: boolean;
+}
 
 export default function Home() {
   const navigate = useNavigate();
+  const [featuredCourses, setFeaturedCourses] = useState<Course[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const featuredCourses = [
-    {
-      id: 1,
-      title: "Diseño de Moda Básico",
-      instructor: "Ana García",
-      image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=225&fit=crop",
-      rating: 4.8,
-      students: 1234,
-      duration: "12 horas",
-      price: 149.99,
-      level: "Principiante"
-    },
-    {
-      id: 2,
-      title: "Confección Avanzada",
-      instructor: "Carlos Rodríguez",
-      image: "https://images.unsplash.com/photo-1558608425-0b8b8e1f2d7e?w=400&h=225&fit=crop",
-      rating: 4.9,
-      students: 856,
-      duration: "18 horas",
-      price: 199.99,
-      level: "Avanzado"
-    },
-    {
-      id: 3,
-      title: "Patronaje Digital",
-      instructor: "María López",
-      image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=225&fit=crop",
-      rating: 4.7,
-      students: 692,
-      duration: "8 horas",
-      price: 129.99,
-      level: "Intermedio"
-    }
-  ];
+  useEffect(() => {
+    const fetchFeaturedCourses = async () => {
+      try {
+        setLoading(true);
+        const response = await courseAPI.getAll();
+        
+        if (response.success && response.courses) {
+          // Filtrar solo los cursos destacados
+          const featured = response.courses.filter(course => course.featured);
+          setFeaturedCourses(featured);
+        }
+      } catch (error) {
+        console.error('Error fetching featured courses:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFeaturedCourses();
+  }, []);
 
   const stats = [
     { icon: Users, label: "Estudiantes", value: "10,000+" },
@@ -113,54 +116,95 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-            {featuredCourses.map((course) => (
-              <Card key={course.id} className="group hover:shadow-elegant transition-all duration-300 cursor-pointer">
-                <div className="relative overflow-hidden rounded-t-lg">
-                  <img 
-                    src={course.image} 
-                    alt={course.title}
-                    className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                  <Badge className="absolute top-4 left-4 bg-primary text-primary-foreground">
-                    {course.level}
-                  </Badge>
-                </div>
-                
-                <CardHeader>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center text-sm text-muted-foreground">
-                      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400 mr-1" />
-                      <span>{course.rating}</span>
-                      <span className="mx-2">•</span>
-                      <Users className="h-4 w-4 mr-1" />
-                      <span>{course.students}</span>
-                    </div>
-                    <div className="flex items-center text-sm text-muted-foreground">
-                      <Clock className="h-4 w-4 mr-1" />
-                      <span>{course.duration}</span>
-                    </div>
+            {loading ? (
+              // Skeleton loading
+              Array.from({ length: 3 }).map((_, index) => (
+                <Card key={index} className="animate-pulse">
+                  <div className="w-full h-48 bg-gray-300 rounded-t-lg"></div>
+                  <CardHeader>
+                    <div className="h-4 bg-gray-300 rounded w-3/4 mb-2"></div>
+                    <div className="h-6 bg-gray-300 rounded w-full mb-2"></div>
+                    <div className="h-4 bg-gray-300 rounded w-1/2"></div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-8 bg-gray-300 rounded w-full"></div>
+                  </CardContent>
+                </Card>
+              ))
+            ) : featuredCourses.length > 0 ? (
+              featuredCourses.slice(0, 3).map((course) => (
+                <Card key={course.id} className="group hover:shadow-elegant transition-all duration-300 cursor-pointer">
+                  <div className="relative overflow-hidden rounded-t-lg">
+                    <img 
+                      src={course.thumbnail_url || "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=225&fit=crop"} 
+                      alt={course.title}
+                      className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <Badge className="absolute top-4 left-4 bg-primary text-primary-foreground">
+                      {course.level}
+                    </Badge>
                   </div>
-                  <CardTitle className="group-hover:text-primary transition-colors">
-                    {course.title}
-                  </CardTitle>
-                  <CardDescription>Por {course.instructor}</CardDescription>
-                </CardHeader>
-                
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    <span className="text-2xl font-bold text-primary">
-                      ${course.price}
-                    </span>
-                    <Button 
-                      className="group-hover:bg-primary group-hover:text-primary-foreground"
-                      onClick={() => navigate(`/curso/${course.id}`)}
-                    >
-                      Ver Curso
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  
+                  <CardHeader>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400 mr-1" />
+                        <span>4.8</span>
+                        <span className="mx-2">•</span>
+                        <Users className="h-4 w-4 mr-1" />
+                        <span>500+</span>
+                      </div>
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <Clock className="h-4 w-4 mr-1" />
+                        <span>{course.duration_hours}h</span>
+                      </div>
+                    </div>
+                    <CardTitle className="group-hover:text-primary transition-colors">
+                      {course.title}
+                    </CardTitle>
+                    <CardDescription>Por {course.instructor_name}</CardDescription>
+                  </CardHeader>
+                  
+                  <CardContent>
+                    <div className="flex items-center justify-between">
+                      <div className="flex flex-col">
+                        {course.discounted_price ? (
+                          <>
+                            <span className="text-lg font-bold text-primary">
+                              ${course.discounted_price}
+                            </span>
+                            <span className="text-sm text-muted-foreground line-through">
+                              ${course.price}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-2xl font-bold text-primary">
+                            ${course.price}
+                          </span>
+                        )}
+                      </div>
+                      <Button 
+                        className="group-hover:bg-primary group-hover:text-primary-foreground"
+                        onClick={() => navigate(`/curso/${course.id}`)}
+                      >
+                        Ver Curso
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <div className="col-span-full text-center py-12">
+                <BookOpen className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No hay cursos destacados</h3>
+                <p className="text-muted-foreground mb-4">
+                  Aún no se han marcado cursos como destacados.
+                </p>
+                <Button variant="outline" onClick={() => navigate("/cursos")}>
+                  Ver Todos los Cursos
+                </Button>
+              </div>
+            )}
           </div>
 
           <div className="text-center">
