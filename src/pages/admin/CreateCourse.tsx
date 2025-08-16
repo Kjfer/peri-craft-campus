@@ -22,6 +22,7 @@ interface CourseFormData {
   instructor_name: string;
   duration_hours: number;
   price: number;
+  discounted_price?: number | null;
   thumbnail_url: string;
   what_you_learn: string[];
   requirements: string[];
@@ -63,6 +64,7 @@ export default function CreateCourse() {
     instructor_name: "",
     duration_hours: 0,
     price: 0,
+    discounted_price: null,
     thumbnail_url: "",
     what_you_learn: [],
     requirements: [],
@@ -128,33 +130,24 @@ export default function CreateCourse() {
     const newModule: Module = {
       title: "",
       description: "",
-      order_number: formData.modules.length + 1,
+      order_number: modules.length + 1,
       lessons: []
     };
     
-    setFormData(prev => ({
-      ...prev,
-      modules: [...prev.modules, newModule]
-    }));
+    setModules(prev => [...prev, newModule]);
   };
 
   const updateModule = (index: number, field: keyof Module, value: string | number) => {
-    setFormData(prev => ({
-      ...prev,
-      modules: prev.modules.map((module, i) => 
-        i === index ? { ...module, [field]: value } : module
-      )
-    }));
+    setModules(prev => prev.map((module, i) => 
+      i === index ? { ...module, [field]: value } : module
+    ));
   };
 
   const removeModule = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      modules: prev.modules.filter((_, i) => i !== index).map((module, i) => ({
-        ...module,
-        order_number: i + 1
-      }))
-    }));
+    setModules(prev => prev.filter((_, i) => i !== index).map((module, i) => ({
+      ...module,
+      order_number: i + 1
+    })));
   };
 
   const addLesson = (moduleIndex: number) => {
@@ -164,51 +157,42 @@ export default function CreateCourse() {
       content: "",
       video_url: "",
       duration_minutes: 0,
-      order_number: formData.modules[moduleIndex].lessons.length + 1,
+      order_number: modules[moduleIndex].lessons.length + 1,
       is_free: false
     };
 
-    setFormData(prev => ({
-      ...prev,
-      modules: prev.modules.map((module, i) => 
-        i === moduleIndex 
-          ? { ...module, lessons: [...module.lessons, newLesson] }
-          : module
-      )
-    }));
+    setModules(prev => prev.map((module, i) => 
+      i === moduleIndex 
+        ? { ...module, lessons: [...module.lessons, newLesson] }
+        : module
+    ));
   };
 
   const updateLesson = (moduleIndex: number, lessonIndex: number, field: keyof Lesson, value: string | number | boolean) => {
-    setFormData(prev => ({
-      ...prev,
-      modules: prev.modules.map((module, i) => 
-        i === moduleIndex 
-          ? {
-              ...module,
-              lessons: module.lessons.map((lesson, j) => 
-                j === lessonIndex ? { ...lesson, [field]: value } : lesson
-              )
-            }
-          : module
-      )
-    }));
+    setModules(prev => prev.map((module, i) => 
+      i === moduleIndex 
+        ? {
+            ...module,
+            lessons: module.lessons.map((lesson, j) => 
+              j === lessonIndex ? { ...lesson, [field]: value } : lesson
+            )
+          }
+        : module
+    ));
   };
 
   const removeLesson = (moduleIndex: number, lessonIndex: number) => {
-    setFormData(prev => ({
-      ...prev,
-      modules: prev.modules.map((module, i) => 
-        i === moduleIndex 
-          ? {
-              ...module,
-              lessons: module.lessons.filter((_, j) => j !== lessonIndex).map((lesson, j) => ({
-                ...lesson,
-                order_number: j + 1
-              }))
-            }
-          : module
-      )
-    }));
+    setModules(prev => prev.map((module, i) => 
+      i === moduleIndex 
+        ? {
+            ...module,
+            lessons: module.lessons.filter((_, j) => j !== lessonIndex).map((lesson, j) => ({
+              ...lesson,
+              order_number: j + 1
+            }))
+          }
+        : module
+    ));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -216,46 +200,27 @@ export default function CreateCourse() {
     setLoading(true);
 
     try {
-      // First, create the course
-      const result = await courseAPI.create(formData);
+      console.log('Creating course with data:', formData);
+      console.log('Modules to create:', modules);
+      
+      // Prepare course data with modules for backend
+      const courseDataWithModules = {
+        ...formData,
+        modules: modules
+      };
+      
+      console.log('🚀 SENDING TO BACKEND - Full object:');
+      console.log('📋 Course data:', formData);
+      console.log('📚 Modules array:', modules);
+      console.log('🔗 Combined payload:', JSON.stringify(courseDataWithModules, null, 2));
+      
+      // Send to backend - it will handle creating course, modules, and lessons
+      console.log('🎯 CALLING courseAPI.create() now...');
+      const result = await courseAPI.create(courseDataWithModules);
+      console.log('🎯 courseAPI.create() FINISHED with result:', result);
+      console.log('Course creation result:', result);
 
       if (result.success && result.course) {
-        const courseId = result.course.id;
-
-        // Create modules and lessons
-        for (const module of modules) {
-          const { data: moduleData, error: moduleError } = await supabase
-            .from('modules')
-            .insert({
-              course_id: courseId,
-              title: module.title,
-              description: module.description,
-              order_number: module.order_number
-            })
-            .select()
-            .single();
-
-          if (moduleError) throw moduleError;
-
-          // Create lessons for this module
-          for (const lesson of module.lessons) {
-            const { error: lessonError } = await supabase
-              .from('lessons')
-              .insert({
-                course_id: courseId,
-                module_id: moduleData.id,
-                title: lesson.title,
-                description: lesson.description,
-                video_url: lesson.video_url,
-                duration_minutes: lesson.duration_minutes,
-                order_number: lesson.order_number,
-                is_free: lesson.is_free
-              });
-
-            if (lessonError) throw lessonError;
-          }
-        }
-
         toast({
           title: "Éxito",
           description: `Curso creado correctamente con ${modules.length} módulos y ${modules.reduce((acc, m) => acc + m.lessons.length, 0)} lecciones`
@@ -399,14 +364,14 @@ export default function CreateCourse() {
                     id="duration"
                     type="number"
                     min="0"
-                    value={formData.duration_hours}
-                    onChange={(e) => handleInputChange('duration_hours', parseInt(e.target.value))}
+                    value={formData.duration_hours || ''}
+                    onChange={(e) => handleInputChange('duration_hours', parseInt(e.target.value) || 0)}
                     required
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="price">Precio (USD) *</Label>
                   <Input
@@ -414,9 +379,21 @@ export default function CreateCourse() {
                     type="number"
                     min="0"
                     step="0.01"
-                    value={formData.price}
-                    onChange={(e) => handleInputChange('price', parseFloat(e.target.value))}
+                    value={formData.price || ''}
+                    onChange={(e) => handleInputChange('price', parseFloat(e.target.value) || 0)}
                     required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="discounted_price">Precio con Descuento (USD)</Label>
+                  <Input
+                    id="discounted_price"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={formData.discounted_price || ''}
+                    onChange={(e) => handleInputChange('discounted_price', parseFloat(e.target.value) || null)}
                   />
                 </div>
 
@@ -529,7 +506,7 @@ export default function CreateCourse() {
               </Button>
 
               <div className="space-y-6">
-                {formData.modules.map((module, moduleIndex) => (
+                {modules.map((module, moduleIndex) => (
                   <Card key={moduleIndex} className="border-l-4 border-l-primary">
                     <CardHeader className="pb-3">
                       <div className="flex items-center justify-between">
@@ -644,6 +621,20 @@ export default function CreateCourse() {
                                   />
                                 </div>
 
+                                <div className="space-y-1">
+                                  <Label htmlFor={`lesson-video-${moduleIndex}-${lessonIndex}`} className="text-xs">
+                                    URL del Video *
+                                  </Label>
+                                  <Input
+                                    id={`lesson-video-${moduleIndex}-${lessonIndex}`}
+                                    type="url"
+                                    value={lesson.video_url}
+                                    onChange={(e) => updateLesson(moduleIndex, lessonIndex, 'video_url', e.target.value)}
+                                    placeholder="https://youtube.com/watch?v=... o https://vimeo.com/..."
+                                    required
+                                  />
+                                </div>
+
                                 <div className="flex items-center space-x-2">
                                   <Checkbox
                                     id={`lesson-free-${moduleIndex}-${lessonIndex}`}
@@ -669,7 +660,7 @@ export default function CreateCourse() {
                   </Card>
                 ))}
 
-                {formData.modules.length === 0 && (
+                {modules.length === 0 && (
                   <div className="text-center py-8 text-muted-foreground">
                     No hay módulos creados. Agrega módulos para organizar el contenido del curso.
                   </div>
