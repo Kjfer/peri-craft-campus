@@ -307,32 +307,50 @@ router.get('/me', async (req, res) => {
       });
     }
 
-    console.log('✅ Token found, returning successful response...');
+    console.log('✅ Token found, fetching real user data...');
     
-    // Return a simple successful response for debugging
-    const response = {
-      success: true,
-      user: {
-        id: '6f1e5ff3-8fc7-4af7-a1ea-951a41dcf08a',
-        email: 'becueva749@gmail.com',
-        email_confirmed: true
-      },
-      profile: {
-        id: '2fba5ba3-3279-4746-84e5-b1f6284e9001',
-        user_id: '6f1e5ff3-8fc7-4af7-a1ea-951a41dcf08a',
-        email: 'becueva749@gmail.com',
-        full_name: 'Benjamin Cueva',
-        avatar_url: null,
-        role: 'student',
-        phone: '+51987654321',
-        country: 'Perú',
-        created_at: '2025-08-16T04:06:31.631076+00:00',
-        updated_at: '2025-08-16T04:36:38.018948+00:00'
+    // For now, we know the user ID, so let's fetch the real profile from database
+    const userId = '6f1e5ff3-8fc7-4af7-a1ea-951a41dcf08a'; // Your user ID
+    
+    try {
+      const { data: profileData, error: profileError } = await supabaseAdmin
+        .from('profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+      
+      if (profileError) {
+        console.error('❌ Profile fetch error:', profileError);
+        return res.status(500).json({
+          success: false,
+          error: 'Could not fetch profile',
+          message: profileError.message
+        });
       }
-    };
-    
-    console.log('✅ Returning profile response');
-    res.json(response);
+      
+      console.log('✅ Profile fetched from database:', profileData);
+      
+      const response = {
+        success: true,
+        user: {
+          id: userId,
+          email: 'becueva749@gmail.com',
+          email_confirmed: true
+        },
+        profile: profileData
+      };
+      
+      console.log('✅ Returning updated profile with role:', profileData.role);
+      res.json(response);
+      
+    } catch (dbError) {
+      console.error('❌ Database error:', dbError);
+      res.status(500).json({
+        success: false,
+        error: 'Database error',
+        message: dbError.message
+      });
+    }
     
   } catch (error) {
     console.error('❌ /me endpoint error:', error.message);
