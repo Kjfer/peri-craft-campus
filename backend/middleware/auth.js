@@ -23,18 +23,30 @@ const authenticateToken = async (req, res, next) => {
       });
     }
 
-    // Get user profile from database
+    // Get user profile from database (optional)
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('*')
       .eq('user_id', user.id)
       .single();
 
+    // If profile doesn't exist, create a temporary one
     if (profileError || !profile) {
-      return res.status(404).json({ 
-        error: 'User profile not found',
-        message: 'User profile does not exist' 
-      });
+      console.warn(`Profile not found for user ${user.id}, using fallback`);
+      req.profile = {
+        id: user.id,
+        user_id: user.id,
+        email: user.email,
+        full_name: user.user_metadata?.full_name || user.email,
+        role: 'student',
+        avatar_url: null,
+        phone: null,
+        country: null,
+        created_at: user.created_at,
+        updated_at: user.updated_at || user.created_at
+      };
+    } else {
+      req.profile = profile;
     }
 
     // Attach user and profile to request object

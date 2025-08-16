@@ -95,10 +95,19 @@ export const apiCall = async (endpoint: string, options: RequestInit = {}): Prom
   };
 
   // Add authorization header if user is logged in
-  const token = localStorage.getItem('supabase.auth.token');
-  if (token) {
+  const authToken = localStorage.getItem('auth_token');
+  const supabaseToken = localStorage.getItem('supabase.auth.token');
+  
+  if (authToken) {
+    // Use direct token
+    defaultOptions.headers = {
+      ...defaultOptions.headers,
+      'Authorization': `Bearer ${authToken}`
+    };
+  } else if (supabaseToken) {
+    // Fallback to supabase token format
     try {
-      const tokenData = JSON.parse(token);
+      const tokenData = JSON.parse(supabaseToken);
       if (tokenData.access_token) {
         defaultOptions.headers = {
           ...defaultOptions.headers,
@@ -106,7 +115,7 @@ export const apiCall = async (endpoint: string, options: RequestInit = {}): Prom
         };
       }
     } catch (error) {
-      console.error('Error parsing token:', error);
+      console.error('Error parsing supabase token:', error);
     }
   }
 
