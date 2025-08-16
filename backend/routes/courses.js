@@ -9,59 +9,22 @@ const router = express.Router();
 // @access  Public
 router.get('/', async (req, res, next) => {
   try {
-    // Temporary mock data while fixing RLS issues
-    const mockCourses = [
-      {
-        id: '1',
-        title: 'Diseño de Moda para Principiantes',
-        description: 'Aprende los fundamentos del diseño de moda desde cero. Este curso te enseñará las técnicas básicas de ilustración, patrones y confección.',
-        short_description: 'Fundamentos del diseño de moda',
-        category: 'Diseño',
-        level: 'beginner',
-        price: 99.99,
-        thumbnail_url: '/placeholder.svg',
-        instructor_name: 'María González',
-        duration_hours: 20,
-        featured: true,
-        is_active: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      },
-      {
-        id: '2',
-        title: 'Confección Avanzada de Vestidos',
-        description: 'Domina las técnicas avanzadas de confección para crear vestidos elegantes y profesionales.',
-        short_description: 'Técnicas avanzadas de confección',
-        category: 'Confección',
-        level: 'advanced',
-        price: 199.99,
-        thumbnail_url: '/placeholder.svg',
-        instructor_name: 'Carmen Silva',
-        duration_hours: 35,
-        featured: true,
-        is_active: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      },
-      {
-        id: '3',
-        title: 'Patronaje Industrial',
-        description: 'Aprende las técnicas de patronaje utilizadas en la industria textil moderna.',
-        short_description: 'Patronaje para la industria',
-        category: 'Patronaje',
-        level: 'intermediate',
-        price: 149.99,
-        thumbnail_url: '/placeholder.svg',
-        instructor_name: 'Roberto Mendez',
-        duration_hours: 28,
-        featured: false,
-        is_active: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }
-    ];
+    // Get real data from database using supabaseAdmin to bypass RLS
+    const { data: coursesData, error: coursesError } = await supabaseAdmin
+      .from('courses')
+      .select('*')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false });
 
-    let filteredCourses = [...mockCourses];
+    if (coursesError) {
+      console.error('Error fetching courses:', coursesError);
+      return res.status(400).json({
+        success: false,
+        error: coursesError.message
+      });
+    }
+
+    let filteredCourses = coursesData || [];
     
     // Apply filters
     const { category, level, search, featured } = req.query;
@@ -109,40 +72,84 @@ router.get('/', async (req, res, next) => {
 router.get('/:id', async (req, res, next) => {
   try {
     const { id } = req.params;
+    console.log(`🔍 Fetching course with ID: ${id}`);
 
-    // Mock course detail for now
-    const mockCourse = {
-      id: id,
-      title: 'Diseño de Moda para Principiantes',
-      description: 'Aprende los fundamentos del diseño de moda desde cero. Este curso te enseñará las técnicas básicas de ilustración, patrones y confección.',
-      short_description: 'Fundamentos del diseño de moda',
-      category: 'Diseño',
-      level: 'beginner',
-      price: 99.99,
-      thumbnail_url: '/placeholder.svg',
-      instructor_name: 'María González',
-      duration_hours: 20,
-      featured: true,
-      is_active: true,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      lessons: [
-        {
-          id: '1',
-          title: 'Introducción al diseño de moda',
-          description: 'Conceptos básicos y historia',
-          duration_minutes: 45,
-          order: 1
-        }
-      ]
+    // Get course from database
+    const { data: course, error: courseError } = await supabase
+      .from('courses')
+      .select(`
+        id,
+        title,
+        description,
+        short_description,
+        category,
+        level,
+        price,
+        thumbnail_url,
+        instructor_name,
+        duration_hours,
+        featured,
+        is_active,
+        requirements,
+        what_you_learn,
+        created_at,
+        updated_at
+      `)
+      .eq('id', id)
+      .eq('is_active', true)
+      .single();
+
+    console.log(`📊 Course query result:`, { course, error: courseError });
+
+    if (courseError) {
+      console.log(`❌ Course error: ${courseError.code} - ${courseError.message}`);
+      if (courseError.code === 'PGRST116') {
+        return res.status(404).json({
+          success: false,
+          error: 'Course not found'
+        });
+      }
+      return res.status(400).json({
+        success: false,
+        error: courseError.message
+      });
+    }
+
+    console.log(`✅ Course found: ${course.title}`);
+
+    // Get lessons for this course
+    const { data: lessons, error: lessonsError } = await supabase
+      .from('lessons')
+      .select(`
+        id,
+        title,
+        description,
+        duration_minutes,
+        order_number,
+        is_free
+      `)
+      .eq('course_id', id)
+      .order('order_number', { ascending: true });
+
+    if (lessonsError) {
+      console.warn('Error fetching lessons:', lessonsError.message);
+    }
+
+    console.log(`📚 Found ${lessons?.length || 0} lessons for course`);
+
+    // Include lessons in the response
+    const courseWithLessons = {
+      ...course,
+      lessons: lessons || []
     };
 
     res.json({
       success: true,
-      course: mockCourse
+      course: courseWithLessons
     });
 
   } catch (error) {
+    console.error('❌ Unexpected error in course endpoint:', error);
     next(error);
   }
 });
@@ -174,7 +181,7 @@ router.post('/', authenticateToken, requireInstructor, async (req, res, next) =>
       });
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('courses')
       .insert([{
         title,
@@ -225,7 +232,7 @@ router.put('/:id', authenticateToken, requireInstructor, async (req, res, next) 
     delete updateData.id;
     delete updateData.created_at;
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('courses')
       .update(updateData)
       .eq('id', id)
@@ -264,7 +271,7 @@ router.delete('/:id', authenticateToken, requireAdmin, async (req, res, next) =>
   try {
     const { id } = req.params;
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('courses')
       .update({ 
         is_active: false,

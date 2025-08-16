@@ -307,16 +307,27 @@ router.get('/me', async (req, res) => {
       });
     }
 
-    console.log('✅ Token found, fetching real user data...');
+    console.log('✅ Token found, validating with Supabase...');
     
-    // For now, we know the user ID, so let's fetch the real profile from database
-    const userId = '6f1e5ff3-8fc7-4af7-a1ea-951a41dcf08a'; // Your user ID
+    // Verify the token with Supabase and get the real user
+    const { data: { user }, error: tokenError } = await supabase.auth.getUser(token);
+    
+    if (tokenError || !user) {
+      console.error('❌ Token validation failed:', tokenError);
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid or expired token',
+        message: 'Please login again'
+      });
+    }
+    
+    console.log('✅ Token validated, user ID:', user.id);
     
     try {
       const { data: profileData, error: profileError } = await supabaseAdmin
         .from('profiles')
         .select('*')
-        .eq('user_id', userId)
+        .eq('user_id', user.id)
         .single();
       
       if (profileError) {
@@ -333,8 +344,8 @@ router.get('/me', async (req, res) => {
       const response = {
         success: true,
         user: {
-          id: userId,
-          email: 'becueva749@gmail.com',
+          id: user.id,
+          email: user.email,
           email_confirmed: true
         },
         profile: profileData

@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/table";
 import { Plus, Search, Edit, Trash2, Eye } from "lucide-react";
 import { Link } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { adminAPI } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 
 interface Course {
@@ -41,17 +41,13 @@ export default function CourseManagement() {
 
   const fetchCourses = async () => {
     try {
-      const { data, error } = await supabase
-        .from('courses')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setCourses(data || []);
-    } catch (error) {
+      const data = await adminAPI.getCourses();
+      setCourses(data.courses || []);
+    } catch (error: any) {
+      console.error('Error fetching courses:', error);
       toast({
         title: "Error",
-        description: "No se pudieron cargar los cursos",
+        description: error.message || "No se pudieron cargar los cursos",
         variant: "destructive"
       });
     } finally {
@@ -59,15 +55,46 @@ export default function CourseManagement() {
     }
   };
 
+  const deleteCourse = async (courseId: string, courseTitle: string) => {
+    if (!confirm(`¿Estás seguro de que quieres eliminar el curso "${courseTitle}"? Esta acción no se puede deshacer.`)) {
+      return;
+    }
+
+    try {
+      await adminAPI.deleteCourse(courseId);
+      
+      // Actualizar la lista local eliminando el curso
+      setCourses(courses.filter(course => course.id !== courseId));
+      
+      toast({
+        title: "Éxito",
+        description: `Curso "${courseTitle}" eliminado correctamente`
+      });
+    } catch (error: any) {
+      console.error('Error deleting course:', error);
+      toast({
+        title: "Error",
+        description: error.message || "No se pudo eliminar el curso",
+        variant: "destructive"
+      });
+    }
+  };
+
   const toggleCourseStatus = async (courseId: string, currentStatus: boolean) => {
     try {
-      const { error } = await supabase
-        .from('courses')
-        .update({ is_active: !currentStatus })
-        .eq('id', courseId);
+      // Encontrar el curso actual para obtener sus datos
+      const currentCourse = courses.find(course => course.id === courseId);
+      if (!currentCourse) return;
 
-      if (error) throw error;
+      // Actualizar usando el endpoint de actualización general
+      await adminAPI.updateCourse(courseId, {
+        title: currentCourse.title,
+        description: currentCourse.title, // Por ahora usar title como description
+        price: currentCourse.price,
+        status: !currentStatus ? 'active' : 'inactive'
+      });
 
+      // Actualizar estado local
       setCourses(courses.map(course => 
         course.id === courseId 
           ? { ...course, is_active: !currentStatus }
@@ -78,10 +105,11 @@ export default function CourseManagement() {
         title: "Éxito",
         description: `Curso ${!currentStatus ? 'activado' : 'desactivado'} correctamente`
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Error toggling course status:', error);
       toast({
         title: "Error",
-        description: "No se pudo actualizar el estado del curso",
+        description: error.message || "No se pudo actualizar el estado del curso",
         variant: "destructive"
       });
     }
@@ -203,11 +231,7 @@ export default function CourseManagement() {
                         <Button 
                           variant="ghost" 
                           size="sm"
-                          onClick={() => {
-                            if (confirm('¿Estás seguro de que quieres eliminar este curso?')) {
-                              // TODO: Implement delete functionality
-                            }
-                          }}
+                          onClick={() => deleteCourse(course.id, course.title)}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>

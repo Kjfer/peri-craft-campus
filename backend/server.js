@@ -62,6 +62,14 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Logging
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
+  
+  // Debug middleware para rastrear todas las peticiones
+  app.use((req, res, next) => {
+    console.log(`🌐 ${new Date().toISOString()} - ${req.method} ${req.path}`);
+    console.log(`📍 Origin: ${req.get('Origin') || 'No origin'}`);
+    console.log(`🔑 User-Agent: ${req.get('User-Agent')?.substring(0, 50) || 'No user-agent'}...`);
+    next();
+  });
 } else {
   app.use(morgan('combined'));
 }

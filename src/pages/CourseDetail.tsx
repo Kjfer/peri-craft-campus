@@ -15,6 +15,7 @@ import {
   BookOpen
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { courseAPI } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 
@@ -62,26 +63,15 @@ export default function CourseDetail() {
 
   const fetchCourseData = async () => {
     try {
-      // Fetch course
-      const { data: courseData, error: courseError } = await supabase
-        .from('courses')
-        .select('*')
-        .eq('id', id)
-        .eq('is_active', true)
-        .single();
-
-      if (courseError) throw courseError;
-      setCourse(courseData);
-
-      // Fetch lessons
-      const { data: lessonsData, error: lessonsError } = await supabase
-        .from('lessons')
-        .select('id, title, description, duration_minutes, order_number, is_free')
-        .eq('course_id', id)
-        .order('order_number', { ascending: true });
-
-      if (lessonsError) throw lessonsError;
-      setLessons(lessonsData || []);
+      // Fetch course using API
+      const courseResponse = await courseAPI.getById(id!);
+      
+      if (courseResponse.success && courseResponse.course) {
+        setCourse(courseResponse.course);
+        setLessons(courseResponse.course.lessons || []);
+      } else {
+        throw new Error('Course not found');
+      }
 
       // Check enrollment if user is logged in
       if (user) {
@@ -94,11 +84,11 @@ export default function CourseDetail() {
 
         setIsEnrolled(!!enrollmentData);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching course data:', error);
       toast({
         title: "Error",
-        description: "No se pudo cargar la información del curso.",
+        description: error.message || "No se pudo cargar la información del curso.",
         variant: "destructive",
       });
     } finally {

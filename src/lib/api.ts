@@ -224,3 +224,31 @@ export const paymentAPI = {
     body: JSON.stringify({ payment_intent_id: paymentIntentId, payment_id: paymentId })
   })
 };
+
+export const adminAPI = {
+  getCourses: (params: Record<string, any> = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return apiCall(`${API_CONFIG.ENDPOINTS.ADMIN.COURSES}?${queryString}`);
+  },
+  
+  updateCourse: (courseId: string, courseData: any) => apiCall(`${API_CONFIG.ENDPOINTS.ADMIN.COURSES}/${courseId}`, {
+    method: 'PUT',
+    body: JSON.stringify(courseData)
+  }),
+  
+  deleteCourse: (courseId: string) => apiCall(`${API_CONFIG.ENDPOINTS.ADMIN.COURSES}/${courseId}`, {
+    method: 'DELETE'
+  }),
+  
+  toggleCourseFeatured: (courseId: string, featured: boolean) => apiCall(`${API_CONFIG.ENDPOINTS.ADMIN.COURSES}/${courseId}/featured`, {
+    method: 'PUT',
+    body: JSON.stringify({ featured })
+  }),
+  
+  getDashboard: () => apiCall(API_CONFIG.ENDPOINTS.ADMIN.DASHBOARD),
+  
+  getUsers: (params: Record<string, any> = {}) => {
+    const queryString = new URLSearchParams(params).toString();
+    return apiCall(`${API_CONFIG.ENDPOINTS.ADMIN.USERS}?${queryString}`);
+  }
+};

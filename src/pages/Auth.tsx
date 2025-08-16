@@ -44,11 +44,6 @@ export default function Auth() {
         
         // Navigate to dashboard
         navigate("/dashboard");
-        
-        // Force a page refresh to ensure the header updates
-        setTimeout(() => {
-          window.location.reload();
-        }, 100);
       }
     } catch (error) {
       toast({
@@ -112,11 +107,6 @@ export default function Auth() {
         
         // Navigate to dashboard
         navigate("/dashboard");
-        
-        // Force a page refresh to ensure the header updates
-        setTimeout(() => {
-          window.location.reload();
-        }, 100);
       }
     } catch (error) {
       toast({

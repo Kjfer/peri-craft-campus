@@ -245,9 +245,9 @@ router.get('/courses', authenticateToken, requireAdmin, async (req, res, next) =
       order = 'desc'
     } = req.query;
 
-    let query = supabase
+    let query = supabaseAdmin
       .from('courses')
-      .select('*');
+      .select('*', { count: 'exact' });
 
     // Apply filters
     if (category && category !== 'all') {
@@ -275,6 +275,7 @@ router.get('/courses', authenticateToken, requireAdmin, async (req, res, next) =
     const { data, error, count } = await query;
 
     if (error) {
+      console.error('Admin courses fetch error:', error);
       return res.status(400).json({
         success: false,
         error: error.message
@@ -297,6 +298,142 @@ router.get('/courses', authenticateToken, requireAdmin, async (req, res, next) =
   }
 });
 
+// @desc    Update course
+// @route   PUT /api/admin/courses/:id
+// @access  Private (Admin)
+router.put('/courses/:id', authenticateToken, requireAdmin, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const {
+      title,
+      description,
+      price,
+      discounted_price,
+      thumbnail_url,
+      featured,
+      status
+    } = req.body;
+
+    // Validar campos requeridos
+    if (!title || !description || price === undefined) {
+      return res.status(400).json({
+        success: false,
+        error: 'Title, description, and price are required'
+      });
+    }
+
+    // Verificar que el precio sea válido
+    if (price < 0 || (discounted_price !== undefined && discounted_price < 0)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Prices must be non-negative'
+      });
+    }
+
+    const updateData = {
+      title: title.trim(),
+      description: description.trim(),
+      price: parseFloat(price),
+      updated_at: new Date().toISOString()
+    };
+
+    // Solo agregar campos opcionales si están presentes
+    if (discounted_price !== undefined) {
+      updateData.discounted_price = parseFloat(discounted_price) || null;
+    }
+    if (thumbnail_url !== undefined) {
+      updateData.thumbnail_url = thumbnail_url?.trim() || null;
+    }
+    if (featured !== undefined) {
+      updateData.featured = Boolean(featured);
+    }
+    if (status !== undefined) {
+      updateData.status = status;
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('courses')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        error: error.message
+      });
+    }
+
+    if (!data) {
+      return res.status(404).json({
+        success: false,
+        error: 'Course not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Course updated successfully',
+      course: data
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
+// @desc    Delete course
+// @route   DELETE /api/admin/courses/:id
+// @access  Private (Admin)
+router.delete('/courses/:id', authenticateToken, requireAdmin, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    // Verificar si el curso existe antes de eliminar
+    const { data: existingCourse, error: checkError } = await supabaseAdmin
+      .from('courses')
+      .select('id, title')
+      .eq('id', id)
+      .single();
+
+    if (checkError && checkError.code === 'PGRST116') {
+      return res.status(404).json({
+        success: false,
+        error: 'Course not found'
+      });
+    }
+
+    if (checkError) {
+      return res.status(400).json({
+        success: false,
+        error: checkError.message
+      });
+    }
+
+    // Eliminar el curso
+    const { error: deleteError } = await supabaseAdmin
+      .from('courses')
+      .delete()
+      .eq('id', id);
+
+    if (deleteError) {
+      return res.status(400).json({
+        success: false,
+        error: deleteError.message
+      });
+    }
+
+    res.json({
+      success: true,
+      message: `Course "${existingCourse.title}" deleted successfully`
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
 // @desc    Toggle course featured status
 // @route   PUT /api/admin/courses/:id/featured
 // @access  Private (Admin)
@@ -305,7 +442,7 @@ router.put('/courses/:id/featured', authenticateToken, requireAdmin, async (req,
     const { id } = req.params;
     const { featured } = req.body;
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('courses')
       .update({ 
         featured: Boolean(featured),

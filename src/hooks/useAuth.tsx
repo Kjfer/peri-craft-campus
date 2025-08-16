@@ -28,17 +28,24 @@ export function useAuth() {
   const checkAuthStatus = async () => {
     try {
       const token = localStorage.getItem('auth_token');
+      console.log('🔍 checkAuthStatus - token:', token ? 'Present' : 'Missing');
+      
       if (!token) {
+        console.log('🔍 No token found, setting loading to false');
         setLoading(false);
         return;
       }
 
+      console.log('🔍 Making request to getProfile...');
       const response = await authAPI.getProfile();
+      console.log('🔍 Profile response:', response);
+      
       setUser({ id: response.user.id, email: response.user.email } as User);
       setProfile(response.profile);
       setSession({ user: { id: response.user.id, email: response.user.email } } as Session);
+      console.log('🔍 Auth state updated successfully');
     } catch (error) {
-      console.error('Auth check failed:', error);
+      console.error('🔍 Auth check failed:', error);
       localStorage.removeItem('auth_token');
       localStorage.removeItem('supabase.auth.token');
     } finally {

@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { courseAPI } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Plus, X } from "lucide-react";
 
@@ -107,22 +107,23 @@ export default function CreateCourse() {
     setLoading(true);
 
     try {
-      const { error } = await supabase
-        .from('courses')
-        .insert([formData]);
+      const result = await courseAPI.create(formData);
 
-      if (error) throw error;
+      if (result.success) {
+        toast({
+          title: "Éxito",
+          description: "Curso creado correctamente"
+        });
 
-      toast({
-        title: "Éxito",
-        description: "Curso creado correctamente"
-      });
-
-      navigate('/admin/cursos');
-    } catch (error) {
+        navigate('/admin/cursos');
+      } else {
+        throw new Error(result.error || 'Error creating course');
+      }
+    } catch (error: any) {
+      console.error('Create course error:', error);
       toast({
         title: "Error",
-        description: "No se pudo crear el curso",
+        description: error.message || "No se pudo crear el curso",
         variant: "destructive"
       });
     } finally {
