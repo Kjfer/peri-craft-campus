@@ -1,0 +1,515 @@
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { 
+  ArrowLeft, 
+  Play, 
+  Pause, 
+  SkipForward, 
+  SkipBack,
+  CheckCircle,
+  Lock,
+  BookOpen,
+  Clock,
+  User,
+  Download,
+  MessageCircle
+} from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import useCourseAccess from "@/hooks/useCourseAccess";
+import { supabase } from "@/integrations/supabase/client";
+
+interface Lesson {
+  id: string;
+  title: string;
+  description?: string;
+  content?: string;
+  video_url?: string;
+  duration_minutes: number;
+  order_number: number;
+  is_free: boolean;
+  module_id: string;
+}
+
+interface Module {
+  id: string;
+  title: string;
+  description?: string;
+  order_number: number;
+  lessons: Lesson[];
+}
+
+interface Course {
+  id: string;
+  title: string;
+  instructor_name: string;
+  modules: Module[];
+}
+
+interface LessonProgress {
+  id?: string;
+  lesson_id: string;
+  watch_time_seconds: number;
+  completed: boolean;
+  completed_at?: string;
+}
+
+export default function LessonPlayer() {
+  const { courseId, lessonId } = useParams<{ courseId: string; lessonId: string }>();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  
+  const [course, setCourse] = useState<Course | null>(null);
+  const [currentLesson, setCurrentLesson] = useState<Lesson | null>(null);
+  const [allLessons, setAllLessons] = useState<Lesson[]>([]);
+  const [lessonProgress, setLessonProgress] = useState<LessonProgress | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [videoProgress, setVideoProgress] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  // Use course access hook
+  const { access, loading: accessLoading } = useCourseAccess(courseId || '');
+
+  useEffect(() => {
+    if (courseId && lessonId) {
+      fetchCourseAndLesson();
+      fetchLessonProgress();
+    }
+  }, [courseId, lessonId]);
+
+  const fetchCourseAndLesson = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch course with modules and lessons
+      const { data: courseData, error: courseError } = await supabase
+        .from('courses')
+        .select(`
+          id, title, instructor_name,
+          modules:modules!course_id (
+            id, title, description, order_number,
+            lessons:lessons!module_id (
+              id, title, description, content, video_url, 
+              duration_minutes, order_number, is_free
+            )
+          )
+        `)
+        .eq('id', courseId)
+        .single();
+
+      if (courseError || !courseData) {
+        throw new Error('Course not found');
+      }
+
+      // Sort modules and lessons by order
+      const sortedModules = courseData.modules
+        .sort((a: any, b: any) => a.order_number - b.order_number)
+        .map((module: any) => ({
+          ...module,
+          lessons: module.lessons.sort((a: any, b: any) => a.order_number - b.order_number)
+        }));
+
+      // Create flat array of all lessons
+      const flatLessons: Lesson[] = [];
+      sortedModules.forEach((module: Module) => {
+        module.lessons.forEach((lesson: Lesson) => {
+          flatLessons.push({ ...lesson, module_id: module.id });
+        });
+      });
+
+      const lesson = flatLessons.find(l => l.id === lessonId);
+      if (!lesson) {
+        throw new Error('Lesson not found');
+      }
+
+      setCourse({ ...courseData, modules: sortedModules });
+      setCurrentLesson(lesson);
+      setAllLessons(flatLessons);
+      
+    } catch (error) {
+      console.error('Error fetching course and lesson:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo cargar la lección",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchLessonProgress = async () => {
+    if (!user || !lessonId) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('course_progress')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('lesson_id', lessonId)
+        .single();
+
+      if (!error && data) {
+        setLessonProgress(data);
+        setVideoProgress((data.watch_time_seconds / (currentLesson?.duration_minutes * 60 || 1)) * 100);
+      }
+    } catch (error) {
+      console.error('Error fetching lesson progress:', error);
+    }
+  };
+
+  const updateProgress = async (watchTimeSeconds: number, completed: boolean = false) => {
+    if (!user || !lessonId) return;
+
+    try {
+      const progressData = {
+        user_id: user.id,
+        lesson_id: lessonId,
+        watch_time_seconds: watchTimeSeconds,
+        completed,
+        completed_at: completed ? new Date().toISOString() : null
+      };
+
+      const { error } = await supabase
+        .from('course_progress')
+        .upsert(progressData, { 
+          onConflict: 'user_id,lesson_id',
+          ignoreDuplicates: false 
+        });
+
+      if (error) throw error;
+
+      setLessonProgress(progressData);
+      
+      if (completed) {
+        toast({
+          title: "¡Lección completada!",
+          description: `Has completado "${currentLesson?.title}"`,
+        });
+      }
+    } catch (error) {
+      console.error('Error updating progress:', error);
+    }
+  };
+
+  const handleMarkComplete = () => {
+    if (!currentLesson) return;
+    
+    const totalSeconds = currentLesson.duration_minutes * 60;
+    updateProgress(totalSeconds, true);
+    setVideoProgress(100);
+  };
+
+  const navigateToLesson = (lesson: Lesson) => {
+    if (access?.hasAccess || lesson.is_free) {
+      navigate(`/courses/${courseId}/lessons/${lesson.id}`);
+    } else {
+      toast({
+        title: "Acceso restringido",
+        description: "Necesitas comprar el curso para acceder a esta lección",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getCurrentLessonIndex = () => {
+    return allLessons.findIndex(l => l.id === lessonId);
+  };
+
+  const navigateToNext = () => {
+    const currentIndex = getCurrentLessonIndex();
+    if (currentIndex < allLessons.length - 1) {
+      const nextLesson = allLessons[currentIndex + 1];
+      navigateToLesson(nextLesson);
+    }
+  };
+
+  const navigateToPrevious = () => {
+    const currentIndex = getCurrentLessonIndex();
+    if (currentIndex > 0) {
+      const prevLesson = allLessons[currentIndex - 1];
+      navigateToLesson(prevLesson);
+    }
+  };
+
+  const canAccessLesson = (lesson: Lesson) => {
+    return access?.hasAccess || lesson.is_free;
+  };
+
+  if (loading || accessLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-pulse bg-gradient-to-r from-blue-600 to-purple-600 w-16 h-16 rounded-full mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Cargando lección...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentLesson || !course) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Alert variant="destructive">
+          <AlertDescription>
+            No se pudo encontrar la lección solicitada
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
+  // Check access
+  if (!canAccessLesson(currentLesson)) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Alert variant="destructive">
+          <Lock className="w-4 h-4" />
+          <AlertDescription>
+            Esta lección requiere que compres el curso para acceder a ella.
+            <Button 
+              variant="link" 
+              className="p-0 h-auto ml-2"
+              onClick={() => navigate(`/curso/${courseId}`)}
+            >
+              Ver curso
+            </Button>
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
+  const currentIndex = getCurrentLessonIndex();
+  const progress = lessonProgress ? 
+    (lessonProgress.watch_time_seconds / (currentLesson.duration_minutes * 60)) * 100 : 0;
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white border-b sticky top-0 z-10">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => navigate(`/curso/${courseId}`)}
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Volver al curso
+              </Button>
+              <div>
+                <h1 className="font-semibold">{course.title}</h1>
+                <p className="text-sm text-muted-foreground">
+                  por {course.instructor_name}
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-muted-foreground">
+                {currentIndex + 1} de {allLessons.length} lecciones
+              </span>
+              <Progress value={(currentIndex / allLessons.length) * 100} className="w-32" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="container mx-auto px-4 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Video Player and Content */}
+          <div className="lg:col-span-3 space-y-6">
+            {/* Video Player */}
+            <Card>
+              <CardContent className="p-0">
+                <div className="aspect-video bg-black rounded-lg overflow-hidden relative">
+                  {currentLesson.video_url ? (
+                    <iframe
+                      src={currentLesson.video_url}
+                      className="w-full h-full"
+                      allowFullScreen
+                      title={currentLesson.title}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-white">
+                      <div className="text-center">
+                        <Play className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                        <p>Video no disponible</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Lesson Info */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <CardTitle className="text-xl">{currentLesson.title}</CardTitle>
+                    {lessonProgress?.completed && (
+                      <Badge variant="secondary" className="bg-green-100 text-green-800">
+                        <CheckCircle className="w-3 h-3 mr-1" />
+                        Completada
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Clock className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
+                      {currentLesson.duration_minutes} minutos
+                    </span>
+                  </div>
+                </div>
+                
+                {/* Progress */}
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Progreso</span>
+                    <span>{Math.round(progress)}%</span>
+                  </div>
+                  <Progress value={progress} />
+                </div>
+              </CardHeader>
+              
+              <CardContent>
+                <Tabs defaultValue="description" className="w-full">
+                  <TabsList>
+                    <TabsTrigger value="description">Descripción</TabsTrigger>
+                    <TabsTrigger value="content">Contenido</TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="description" className="mt-4">
+                    {currentLesson.description ? (
+                      <p className="text-muted-foreground">{currentLesson.description}</p>
+                    ) : (
+                      <p className="text-muted-foreground italic">
+                        No hay descripción disponible para esta lección.
+                      </p>
+                    )}
+                  </TabsContent>
+                  
+                  <TabsContent value="content" className="mt-4">
+                    {currentLesson.content ? (
+                      <div className="prose max-w-none">
+                        <pre className="whitespace-pre-wrap text-sm">{currentLesson.content}</pre>
+                      </div>
+                    ) : (
+                      <p className="text-muted-foreground italic">
+                        No hay contenido adicional para esta lección.
+                      </p>
+                    )}
+                  </TabsContent>
+                </Tabs>
+
+                <Separator className="my-6" />
+
+                {/* Actions */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={navigateToPrevious}
+                      disabled={currentIndex === 0}
+                    >
+                      <SkipBack className="w-4 h-4 mr-2" />
+                      Anterior
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={navigateToNext}
+                      disabled={currentIndex === allLessons.length - 1}
+                    >
+                      Siguiente
+                      <SkipForward className="w-4 h-4 ml-2" />
+                    </Button>
+                  </div>
+                  
+                  {!lessonProgress?.completed && (
+                    <Button onClick={handleMarkComplete}>
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Marcar como completada
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Course Navigation */}
+          <div className="lg:col-span-1">
+            <Card className="sticky top-24">
+              <CardHeader>
+                <CardTitle className="text-lg">Contenido del curso</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0 max-h-[70vh] overflow-y-auto">
+                {course.modules.map((module) => (
+                  <div key={module.id} className="border-b last:border-b-0">
+                    <div className="p-4 bg-gray-50">
+                      <h4 className="font-medium text-sm">{module.title}</h4>
+                      <p className="text-xs text-muted-foreground">
+                        {module.lessons.length} lecciones
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      {module.lessons.map((lesson) => (
+                        <button
+                          key={lesson.id}
+                          onClick={() => navigateToLesson(lesson)}
+                          className={`w-full text-left p-3 hover:bg-gray-50 transition-colors border-l-4 ${
+                            lesson.id === lessonId 
+                              ? 'border-l-primary bg-blue-50' 
+                              : 'border-l-transparent'
+                          }`}
+                          disabled={!canAccessLesson(lesson)}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-2 flex-1 min-w-0">
+                              {canAccessLesson(lesson) ? (
+                                <Play className="w-3 h-3 text-blue-500 flex-shrink-0" />
+                              ) : (
+                                <Lock className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                              )}
+                              <span className={`text-xs font-medium truncate ${
+                                canAccessLesson(lesson) ? 'text-gray-900' : 'text-gray-500'
+                              }`}>
+                                {lesson.title}
+                              </span>
+                            </div>
+                            <div className="flex items-center space-x-1 flex-shrink-0">
+                              {lesson.is_free && (
+                                <Badge variant="secondary" className="text-xs px-1">
+                                  Gratis
+                                </Badge>
+                              )}
+                              <span className="text-xs text-muted-foreground">
+                                {lesson.duration_minutes}m
+                              </span>
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

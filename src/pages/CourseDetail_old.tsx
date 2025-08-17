@@ -64,7 +64,7 @@ export default function CourseDetail() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
-  const { addToCart, isInCart, cartItems } = useCart();
+  const { addToCart, isInCart, state } = useCart();
   const { toast } = useToast();
   
   const [course, setCourse] = useState<Course | null>(null);
@@ -108,14 +108,6 @@ export default function CourseDetail() {
       setLoading(false);
     }
   }, [id, toast]);
-        title: "Error",
-        description: error instanceof Error ? error.message : "No se pudo cargar la información del curso.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [id, user, toast]);
 
   const handleLessonClick = (lesson: Lesson) => {
     // Solo permitir clic si el usuario está inscrito o la lección es gratis
