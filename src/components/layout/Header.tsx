@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Cart } from "@/components/ui/cart";
+import Cart from "@/components/cart/Cart";
 import { Menu, User, LogOut, BookOpen, Award, Settings, ShoppingCart } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/contexts/CartContext";
@@ -69,13 +69,7 @@ export function Header() {
 
           {/* User Actions */}
           <div className="flex items-center space-x-4">
-            {user && (
-              <Cart>
-                <Button variant="ghost" size="icon" className="relative">
-                  <ShoppingCart className="h-5 w-5" />
-                </Button>
-              </Cart>
-            )}
+            {user && <Cart />}
             
             {user ? (
               <>

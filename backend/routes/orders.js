@@ -4,6 +4,51 @@ const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
 
+// @desc    Get order by ID
+// @route   GET /api/orders/:id
+// @access  Private
+router.get('/:id', authenticateToken, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    const { data: order, error } = await supabase
+      .from('orders')
+      .select(`
+        *,
+        order_items (
+          id,
+          course_id,
+          course_title,
+          course_price
+        )
+      `)
+      .eq('id', id)
+      .eq('user_id', userId)
+      .single();
+
+    if (error || !order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      order
+    });
+
+  } catch (error) {
+    console.error('Get order error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching order',
+      error: error.message
+    });
+  }
+});
+
 // @desc    Create new order from cart
 // @route   POST /api/orders
 // @access  Private

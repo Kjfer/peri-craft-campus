@@ -16,6 +16,7 @@ import Plans from "./pages/Plans";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
 import VerifyCertificate from "./pages/VerifyCertificate";
+import PaymentResult from "./pages/PaymentResult";
 import Checkout from "./pages/Checkout";
 import CheckoutSuccess from "./pages/CheckoutSuccess";
 import NotFound from "./pages/NotFound";
@@ -49,6 +50,9 @@ const App = () => (
                   <Route path="/verificar-certificado" element={<VerifyCertificate />} />
                   <Route path="/checkout" element={<Checkout />} />
                   <Route path="/checkout/success/:orderId" element={<CheckoutSuccess />} />
+                  <Route path="/payment/success" element={<PaymentResult />} />
+                  <Route path="/payment/failure" element={<PaymentResult />} />
+                  <Route path="/payment/pending" element={<PaymentResult />} />
                   
                   {/* Admin Routes */}
                   <Route path="/admin" element={<AdminDashboard />} />

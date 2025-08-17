@@ -4,6 +4,16 @@ const { authenticateToken, requireAdmin } = require('../middleware/auth');
 
 const router = express.Router();
 
+// Import payment gateway routes
+const mercadoPagoRoutes = require('./mercadopago');
+const paypalRoutes = require('./paypal');
+const googlePayRoutes = require('./googlepay');
+
+// Mount payment gateway routes
+router.use('/mercadopago', mercadoPagoRoutes);
+router.use('/paypal', paypalRoutes);
+router.use('/googlepay', googlePayRoutes);
+
 // Mock Stripe - In production, replace with actual Stripe integration
 const mockStripe = {
   createPaymentIntent: (amount, currency) => {
