@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Play, Users, Award, Star, ArrowRight, BookOpen, Clock, TrendingUp } from "lucide-react";
-import { courseAPI } from "@/lib/api";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Course {
   id: string;
@@ -29,12 +29,17 @@ export default function Home() {
     const fetchFeaturedCourses = async () => {
       try {
         setLoading(true);
-        const response = await courseAPI.getAll();
+        const { data: courses, error } = await supabase
+          .from('courses')
+          .select('*')
+          .eq('is_active', true)
+          .eq('featured', true)
+          .order('created_at', { ascending: false });
         
-        if (response.success && response.courses) {
-          // Filtrar solo los cursos destacados
-          const featured = response.courses.filter(course => course.featured);
-          setFeaturedCourses(featured);
+        if (error) {
+          console.error('Error fetching featured courses:', error);
+        } else {
+          setFeaturedCourses(courses || []);
         }
       } catch (error) {
         console.error('Error fetching featured courses:', error);

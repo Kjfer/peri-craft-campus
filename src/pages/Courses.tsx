@@ -6,7 +6,9 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, Clock, Star, User } from "lucide-react";
-import { coursesService } from "@/lib/dataService";
+import { supabase } from "@/integrations/supabase/client";
+import AddToCartButton from "@/components/ui/AddToCartButton";
+import { useNavigate } from "react-router-dom";
 
 interface Course {
   id: string;
@@ -23,6 +25,7 @@ interface Course {
 }
 
 export default function Courses() {
+  const navigate = useNavigate();
   const [courses, setCourses] = useState<Course[]>([]);
   const [filteredCourses, setFilteredCourses] = useState<Course[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -39,16 +42,17 @@ export default function Courses() {
   }, [courses, searchTerm, selectedCategory, selectedLevel]);
 
   const fetchCourses = async () => {
-    console.log('🎯 Fetching courses...');
     try {
-      const { data, error } = await coursesService.getCourses({});
-      console.log('📚 Courses service response:', { data, error });
+      const { data, error } = await supabase
+        .from('courses')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
 
-      if (error) throw new Error(error.message);
-      console.log('✅ Setting courses:', data);
+      if (error) throw error;
       setCourses(data || []);
     } catch (error) {
-      console.error('❌ Error fetching courses:', error);
+      console.error('Error fetching courses:', error);
     } finally {
       setLoading(false);
     }
@@ -208,9 +212,24 @@ export default function Courses() {
                           ${course.price.toFixed(2)}
                         </span>
                       </div>
-                      <Link to={`/curso/${course.id}`} className="w-full">
-                        <Button className="w-full">Ver Curso</Button>
-                      </Link>
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => navigate(`/curso/${course.id}`)}
+                          className="flex-1"
+                        >
+                          Ver Curso
+                        </Button>
+                        {course.price > 0 && (
+                          <AddToCartButton
+                            courseId={course.id}
+                            price={course.price}
+                            size="sm"
+                            className="flex-1"
+                          />
+                        )}
+                      </div>
                     </div>
                   </CardFooter>
                 </Card>

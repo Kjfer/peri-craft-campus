@@ -153,7 +153,7 @@ export default function CheckoutModal({
         });
         clearCart();
         onClose();
-        window.location.href = `/checkout/success/${data.orderId}`;
+        navigate(`/payment/success?order=${data.orderId}`);
       } else {
         throw new Error(data.error || 'Error processing payment');
       }
