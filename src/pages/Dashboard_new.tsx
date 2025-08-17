@@ -124,7 +124,7 @@ export default function Dashboard() {
           });
         }
 
-        // Fetch only PAID enrollments (courses the user has purchased)
+        // Fetch user enrollments and check payment status separately
         const { data: enrollmentsData, error: enrollmentsError } = await supabase
           .from('enrollments')
           .select(`
@@ -138,25 +138,38 @@ export default function Dashboard() {
               duration_hours,
               category,
               level,
-              price,
-              is_free
-            ),
-            orders!inner (
-              payment_status
+              price
             )
           `)
-          .eq('user_id', user.id)
-          .or('orders.payment_status.eq.completed,courses.is_free.eq.true,courses.price.eq.0');
+          .eq('user_id', user.id);
 
         if (enrollmentsError) {
           console.error('Error fetching enrollments:', enrollmentsError);
         } else {
-          // Filter to ensure only paid/free courses are shown
-          const validEnrollments = (enrollmentsData || []).filter((enrollment: any) => {
-            return enrollment.orders?.payment_status === 'completed' || 
-                   enrollment.courses?.is_free === true || 
-                   enrollment.courses?.price === 0;
-          });
+          // Check payment status for each enrollment
+          const validEnrollments = [];
+          
+          for (const enrollment of enrollmentsData || []) {
+            // Check if course is free (price = 0)
+            if (enrollment.courses?.price === 0) {
+              validEnrollments.push(enrollment);
+              continue;
+            }
+            
+            // Check for completed payment
+            const { data: payment } = await supabase
+              .from('payments')
+              .select('*')
+              .eq('user_id', user.id)
+              .eq('course_id', enrollment.course_id)
+              .eq('payment_status', 'completed')
+              .single();
+              
+            if (payment) {
+              validEnrollments.push(enrollment);
+            }
+          }
+          
           setEnrollments(validEnrollments);
 
           // Calculate progress stats

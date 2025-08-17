@@ -48,11 +48,11 @@ export function useCourseAccess(courseId: string): {
       // Check if course is free
       const { data: course } = await supabase
         .from('courses')
-        .select('price, is_free')
+        .select('price')
         .eq('id', courseId)
         .single();
 
-      if (course?.is_free || course?.price === 0) {
+      if (course?.price === 0) {
         // Free course - create enrollment if not exists
         const { data: enrollment } = await supabase
           .from('enrollments')
@@ -67,8 +67,7 @@ export function useCourseAccess(courseId: string): {
             .insert({
               user_id: user.id,
               course_id: courseId,
-              enrolled_at: new Date().toISOString(),
-              payment_status: 'free'
+              enrolled_at: new Date().toISOString()
             });
         }
 
@@ -77,20 +76,12 @@ export function useCourseAccess(courseId: string): {
         return;
       }
 
-      // Check for paid enrollment
+      // Check for enrollment first
       const { data: enrollment, error: enrollmentError } = await supabase
         .from('enrollments')
-        .select(`
-          *,
-          orders!inner (
-            id,
-            payment_status,
-            created_at
-          )
-        `)
+        .select('*')
         .eq('user_id', user.id)
         .eq('course_id', courseId)
-        .eq('orders.payment_status', 'completed')
         .single();
 
       if (enrollmentError && enrollmentError.code !== 'PGRST116') {
@@ -101,27 +92,44 @@ export function useCourseAccess(courseId: string): {
       }
 
       if (enrollment) {
-        setAccess({
-          hasAccess: true,
-          isPaid: true,
-          enrollmentDate: enrollment.enrolled_at,
-          paymentStatus: enrollment.orders.payment_status,
-          orderId: enrollment.orders.id
-        });
-      } else {
-        // Check for pending payments
-        const { data: pendingOrder } = await supabase
-          .from('orders')
+        // Check if there's a completed payment for this course
+        const { data: completedPayment } = await supabase
+          .from('payments')
           .select('*')
           .eq('user_id', user.id)
+          .eq('course_id', courseId)
+          .eq('payment_status', 'completed')
+          .single();
+
+        if (completedPayment) {
+          setAccess({
+            hasAccess: true,
+            isPaid: true,
+            enrollmentDate: enrollment.enrolled_at,
+            paymentStatus: completedPayment.payment_status,
+            orderId: completedPayment.id
+          });
+        } else {
+          setAccess({
+            hasAccess: false,
+            isPaid: false,
+            paymentStatus: 'none'
+          });
+        }
+      } else {
+        // Check for pending payments
+        const { data: pendingPayment } = await supabase
+          .from('payments')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('course_id', courseId)
           .eq('payment_status', 'pending')
-          .contains('order_items', [{ course_id: courseId }])
           .single();
 
         setAccess({
           hasAccess: false,
           isPaid: false,
-          paymentStatus: pendingOrder ? 'pending' : 'none'
+          paymentStatus: pendingPayment ? 'pending' : 'none'
         });
       }
 

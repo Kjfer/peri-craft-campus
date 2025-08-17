@@ -42,7 +42,6 @@ interface Course {
   level: string;
   duration_hours: number;
   price: number;
-  is_free: boolean;
   requirements?: string[];
   what_you_learn?: string[];
   modules?: Module[];
@@ -235,7 +234,7 @@ export default function CourseDetail() {
 
   const isPaid = access?.hasAccess;
   const isInCartNow = isInCart(course.id);
-  const isFree = course.is_free || course.price === 0;
+  const isFree = course.price === 0;
 
   return (
     <div className="min-h-screen bg-gray-50">
