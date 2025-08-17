@@ -132,36 +132,36 @@ export default function CheckoutModal({
   const handlePayPalSuccess = async (details: any) => {
     setIsProcessing(true);
     try {
-      const response = await fetch('/api/payments/paypal/capture', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
-        },
-        body: JSON.stringify({
-          orderID: details.id,
+      const { data, error } = await supabase.functions.invoke('create-payment', {
+        body: {
           cartItems,
-          totalAmount
-        })
+          totalAmount,
+          paymentMethod: 'paypal',
+          paymentData: {
+            orderID: details.id,
+            payerID: details.payer?.payer_id
+          }
+        }
       });
 
-      const result = await response.json();
+      if (error) throw error;
       
-      if (result.success) {
+      if (data.success) {
         toast({
           title: "¡Pago exitoso!",
           description: "Tu pago con PayPal se procesó correctamente.",
         });
         clearCart();
         onClose();
+        window.location.href = `/checkout/success/${data.orderId}`;
       } else {
-        throw new Error(result.message || 'Error processing payment');
+        throw new Error(data.error || 'Error processing payment');
       }
     } catch (error) {
       console.error('PayPal payment error:', error);
       toast({
         title: "Error en el pago",
-        description: "No se pudo procesar el pago con PayPal. Intenta nuevamente.",
+        description: error.message || "No se pudo procesar el pago con PayPal. Intenta nuevamente.",
         variant: "destructive",
       });
     } finally {
@@ -172,36 +172,33 @@ export default function CheckoutModal({
   const handleGooglePaySuccess = async (paymentData: any) => {
     setIsProcessing(true);
     try {
-      const response = await fetch('/api/payments/googlepay/process', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
-        },
-        body: JSON.stringify({
-          paymentData,
+      const { data, error } = await supabase.functions.invoke('create-payment', {
+        body: {
           cartItems,
-          totalAmount
-        })
+          totalAmount,
+          paymentMethod: 'googlepay',
+          paymentData: paymentData
+        }
       });
 
-      const result = await response.json();
+      if (error) throw error;
       
-      if (result.success) {
+      if (data.success) {
         toast({
           title: "¡Pago exitoso!",
           description: "Tu pago con Google Pay se procesó correctamente.",
         });
         clearCart();
         onClose();
+        window.location.href = `/checkout/success/${data.orderId}`;
       } else {
-        throw new Error(result.message || 'Error processing payment');
+        throw new Error(data.error || 'Error processing payment');
       }
     } catch (error) {
       console.error('Google Pay payment error:', error);
       toast({
         title: "Error en el pago",
-        description: "No se pudo procesar el pago con Google Pay. Intenta nuevamente.",
+        description: error.message || "No se pudo procesar el pago con Google Pay. Intenta nuevamente.",
         variant: "destructive",
       });
     } finally {
@@ -255,40 +252,39 @@ export default function CheckoutModal({
   const handleMercadoPagoYape = async () => {
     setIsProcessing(true);
     try {
-      const response = await fetch('/api/payments/mercadopago/yape', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
-        },
-        body: JSON.stringify({
+      const { data, error } = await supabase.functions.invoke('create-payment', {
+        body: {
           cartItems,
           totalAmount,
           paymentMethod: 'yape',
-          user: {
-            email: user?.email,
-            name: user?.user_metadata?.full_name || user?.email
+          paymentData: {
+            user: {
+              email: user?.email,
+              name: user?.user_metadata?.full_name || user?.email
+            }
           }
-        })
+        }
       });
 
-      const result = await response.json();
+      if (error) throw error;
       
-      if (result.success) {
-        window.open(result.checkoutUrl, '_blank');
+      if (data.success) {
+        if (data.paymentUrl) {
+          window.open(data.paymentUrl, '_blank');
+        }
         toast({
           title: "Redirigiendo a Yape",
           description: "Se abrirá una nueva ventana para completar el pago con Yape.",
         });
         onClose();
       } else {
-        throw new Error(result.message || 'Error creating Yape payment');
+        throw new Error(data.error || 'Error creating Yape payment');
       }
     } catch (error) {
       console.error('Yape payment error:', error);
       toast({
         title: "Error en el pago",
-        description: "No se pudo crear el pago con Yape. Intenta nuevamente.",
+        description: error.message || "No se pudo crear el pago con Yape. Intenta nuevamente.",
         variant: "destructive",
       });
     } finally {
@@ -299,40 +295,39 @@ export default function CheckoutModal({
   const handleMercadoPagoPlin = async () => {
     setIsProcessing(true);
     try {
-      const response = await fetch('/api/payments/mercadopago/plin', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
-        },
-        body: JSON.stringify({
+      const { data, error } = await supabase.functions.invoke('create-payment', {
+        body: {
           cartItems,
           totalAmount,
           paymentMethod: 'plin',
-          user: {
-            email: user?.email,
-            name: user?.user_metadata?.full_name || user?.email
+          paymentData: {
+            user: {
+              email: user?.email,
+              name: user?.user_metadata?.full_name || user?.email
+            }
           }
-        })
+        }
       });
 
-      const result = await response.json();
+      if (error) throw error;
       
-      if (result.success) {
-        window.open(result.checkoutUrl, '_blank');
+      if (data.success) {
+        if (data.paymentUrl) {
+          window.open(data.paymentUrl, '_blank');
+        }
         toast({
           title: "Redirigiendo a Plin",
           description: "Se abrirá una nueva ventana para completar el pago con Plin.",
         });
         onClose();
       } else {
-        throw new Error(result.message || 'Error creating Plin payment');
+        throw new Error(data.error || 'Error creating Plin payment');
       }
     } catch (error) {
       console.error('Plin payment error:', error);
       toast({
         title: "Error en el pago",
-        description: "No se pudo crear el pago con Plin. Intenta nuevamente.",
+        description: error.message || "No se pudo crear el pago con Plin. Intenta nuevamente.",
         variant: "destructive",
       });
     } finally {
@@ -343,39 +338,39 @@ export default function CheckoutModal({
   const handleMercadoPagoPayment = async () => {
     setIsProcessing(true);
     try {
-      const response = await fetch('/api/payments/mercadopago/create-preference', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
-        },
-        body: JSON.stringify({
+      const { data, error } = await supabase.functions.invoke('create-payment', {
+        body: {
           cartItems,
           totalAmount,
-          user: {
-            email: user?.email,
-            name: user?.user_metadata?.full_name || user?.email
+          paymentMethod: 'mercadopago',
+          paymentData: {
+            user: {
+              email: user?.email,
+              name: user?.user_metadata?.full_name || user?.email
+            }
           }
-        })
+        }
       });
 
-      const result = await response.json();
+      if (error) throw error;
       
-      if (result.success) {
-        window.open(result.checkoutUrl, '_blank');
+      if (data.success) {
+        if (data.paymentUrl) {
+          window.open(data.paymentUrl, '_blank');
+        }
         toast({
           title: "Redirigiendo a MercadoPago",
           description: "Se abrirá una nueva ventana para completar el pago.",
         });
         onClose();
       } else {
-        throw new Error(result.message || 'Error creating payment preference');
+        throw new Error(data.error || 'Error creating payment preference');
       }
     } catch (error) {
       console.error('MercadoPago payment error:', error);
       toast({
         title: "Error en el pago",
-        description: "No se pudo crear la preferencia de pago. Intenta nuevamente.",
+        description: error.message || "No se pudo crear la preferencia de pago. Intenta nuevamente.",
         variant: "destructive",
       });
     } finally {
@@ -451,6 +446,34 @@ export default function CheckoutModal({
                   </TabsTrigger>
                 ))}
               </TabsList>
+              
+              {/* Google Pay Button - Always visible */}
+              <div className="mt-4 p-4 border rounded-lg bg-muted/20">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-medium">Pago Rápido</h3>
+                  <Badge variant="secondary">Google Pay</Badge>
+                </div>
+                <GooglePayButton
+                  environment={googlePayConfig.environment}
+                  paymentRequest={{
+                    apiVersion: googlePayConfig.apiVersion,
+                    apiVersionMinor: googlePayConfig.apiVersionMinor,
+                    allowedPaymentMethods: googlePayConfig.allowedPaymentMethods,
+                    merchantInfo: googlePayConfig.merchantInfo,
+                    transactionInfo: {
+                      totalPriceStatus: "FINAL",
+                      totalPrice: totalAmount.toFixed(2),
+                      currencyCode: "USD",
+                      countryCode: "US"
+                    }
+                  }}
+                  onLoadPaymentData={handleGooglePaySuccess}
+                  existingPaymentMethodRequired={false}
+                  buttonColor="default"
+                  buttonType="pay"
+                  buttonSizeMode="fill"
+                />
+              </div>
 
               {/* Credit/Debit Card Tab */}
               <TabsContent value="card" className="space-y-4">

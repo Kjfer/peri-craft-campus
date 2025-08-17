@@ -101,8 +101,17 @@ serve(async (req) => {
       case 'mercadopago':
         paymentResult = await processMercadoPagoPayment(cartItems, totalAmount, order.id);
         break;
+      case 'yape':
+        paymentResult = await processYapePayment(cartItems, totalAmount, order.id);
+        break;
+      case 'plin':
+        paymentResult = await processPlinPayment(cartItems, totalAmount, order.id);
+        break;
       case 'paypal':
-        paymentResult = await processPayPalPayment(cartItems, totalAmount, order.id);
+        paymentResult = await processPayPalPayment(cartItems, totalAmount, order.id, paymentData);
+        break;
+      case 'googlepay':
+        paymentResult = await processGooglePayPayment(paymentData, order.id, totalAmount);
         break;
       default:
         throw new Error(`Unsupported payment method: ${paymentMethod}`);
@@ -202,14 +211,50 @@ async function processMercadoPagoPayment(cartItems: any[], amount: number, order
   };
 }
 
-async function processPayPalPayment(cartItems: any[], amount: number, orderId: string) {
+async function processYapePayment(cartItems: any[], amount: number, orderId: string) {
+  // Mock Yape integration via MercadoPago
+  await new Promise(resolve => setTimeout(resolve, 500));
+  
+  return {
+    success: true,
+    message: "Redirecting to Yape",
+    paymentId: `yape_${Date.now()}`,
+    paymentUrl: `https://mercadopago.com/yape/checkout/${orderId}`
+  };
+}
+
+async function processPlinPayment(cartItems: any[], amount: number, orderId: string) {
+  // Mock Plin integration via MercadoPago
+  await new Promise(resolve => setTimeout(resolve, 500));
+  
+  return {
+    success: true,
+    message: "Redirecting to Plin",
+    paymentId: `plin_${Date.now()}`,
+    paymentUrl: `https://mercadopago.com/plin/checkout/${orderId}`
+  };
+}
+
+async function processPayPalPayment(cartItems: any[], amount: number, orderId: string, paymentData?: any) {
   // Mock PayPal integration
   await new Promise(resolve => setTimeout(resolve, 500));
   
   return {
     success: true,
-    message: "Redirecting to PayPal",
-    paymentId: `pp_${Date.now()}`,
-    paymentUrl: `https://paypal.com/checkout/${orderId}`
+    message: "PayPal payment processed",
+    paymentId: paymentData?.orderID || `pp_${Date.now()}`,
+    paymentUrl: null
+  };
+}
+
+async function processGooglePayPayment(paymentData: any, orderId: string, amount: number) {
+  // Mock Google Pay integration
+  await new Promise(resolve => setTimeout(resolve, 500));
+  
+  return {
+    success: true,
+    message: "Google Pay payment processed",
+    paymentId: `gp_${Date.now()}`,
+    paymentUrl: null
   };
 }

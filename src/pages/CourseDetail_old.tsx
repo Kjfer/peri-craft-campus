@@ -23,6 +23,7 @@ import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/hooks/use-toast";
 import useCourseAccess from "@/hooks/useCourseAccess";
 import CheckoutModal from "@/components/checkout/CheckoutModal";
+import AddToCartButton from "@/components/ui/AddToCartButton";
 
 interface Course {
   id: string;
@@ -282,15 +283,12 @@ export default function CourseDetail() {
                         {addingToCart ? 'Inscribiendo...' : 'Inscribirse Gratis'}
                       </Button>
                     ) : (
-                      <Button 
-                        size="lg" 
-                        onClick={handleAddToCart}
-                        disabled={addingToCart || isInCart(id!)}
+                      <AddToCartButton
+                        courseId={id!}
+                        price={course.price}
+                        size="lg"
                         className="bg-white text-primary hover:bg-white/90"
-                      >
-                        <ShoppingCart className="w-4 h-4 mr-2" />
-                        {addingToCart ? 'Agregando...' : isInCart(id!) ? 'En el Carrito' : 'Agregar al Carrito'}
-                      </Button>
+                      />
                     )}
                   </>
                 )}
