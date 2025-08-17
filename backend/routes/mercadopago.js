@@ -236,4 +236,222 @@ router.get('/payment-status/:orderId', authenticateToken, async (req, res) => {
   }
 });
 
+// Create payment preference specifically for Yape
+router.post('/yape', authenticateToken, async (req, res) => {
+  try {
+    const { cartItems, totalAmount, user } = req.body;
+    const userId = req.user.id;
+
+    if (!cartItems || cartItems.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cart is empty'
+      });
+    }
+
+    // Create order in database
+    const orderNumber = `YAPE-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    const { data: orderData, error: orderError } = await supabase
+      .from('orders')
+      .insert({
+        user_id: userId,
+        order_number: orderNumber,
+        total_amount: totalAmount,
+        currency: 'PEN',
+        payment_method: 'yape',
+        payment_status: 'pending'
+      })
+      .select()
+      .single();
+
+    if (orderError) {
+      throw orderError;
+    }
+
+    // Create order items
+    const orderItems = cartItems.map(item => ({
+      order_id: orderData.id,
+      course_id: item.id,
+      course_title: item.title,
+      course_price: item.price
+    }));
+
+    const { error: itemsError } = await supabase
+      .from('order_items')
+      .insert(orderItems);
+
+    if (itemsError) {
+      throw itemsError;
+    }
+
+    // Convert USD to PEN (approximate rate: 1 USD = 3.75 PEN)
+    const amountInPEN = Math.round(totalAmount * 3.75 * 100) / 100;
+
+    // Create MercadoPago preference with Yape specific settings
+    const items = cartItems.map(item => ({
+      id: item.id,
+      title: item.title,
+      description: `Curso: ${item.title}`,
+      quantity: 1,
+      currency_id: 'PEN',
+      unit_price: parseFloat((item.price * 3.75).toFixed(2))
+    }));
+
+    const preferenceData = {
+      items: items,
+      payer: {
+        name: user.name || 'Estudiante',
+        email: user.email,
+      },
+      payment_methods: {
+        excluded_payment_methods: [],
+        excluded_payment_types: [
+          { id: 'credit_card' },
+          { id: 'debit_card' },
+          { id: 'bank_transfer' }
+        ],
+        installments: 1,
+        default_installments: 1
+      },
+      back_urls: {
+        success: `${process.env.FRONTEND_URL}/payment-result?status=success&order=${orderData.id}&method=yape`,
+        failure: `${process.env.FRONTEND_URL}/payment-result?status=failure&order=${orderData.id}&method=yape`,
+        pending: `${process.env.FRONTEND_URL}/payment-result?status=pending&order=${orderData.id}&method=yape`
+      },
+      auto_return: 'approved',
+      external_reference: orderData.id,
+      notification_url: `${process.env.BACKEND_URL}/api/payments/mercadopago/webhook`,
+      statement_descriptor: 'PERI INSTITUTE - YAPE'
+    };
+
+    const result = await preference.create({ body: preferenceData });
+
+    res.json({
+      success: true,
+      checkoutUrl: result.init_point,
+      preferenceId: result.id,
+      orderId: orderData.id,
+      amountPEN: amountInPEN
+    });
+
+  } catch (error) {
+    console.error('Yape payment creation error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error creating Yape payment',
+      error: error.message
+    });
+  }
+});
+
+// Create payment preference specifically for Plin
+router.post('/plin', authenticateToken, async (req, res) => {
+  try {
+    const { cartItems, totalAmount, user } = req.body;
+    const userId = req.user.id;
+
+    if (!cartItems || cartItems.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cart is empty'
+      });
+    }
+
+    // Create order in database
+    const orderNumber = `PLIN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    const { data: orderData, error: orderError } = await supabase
+      .from('orders')
+      .insert({
+        user_id: userId,
+        order_number: orderNumber,
+        total_amount: totalAmount,
+        currency: 'PEN',
+        payment_method: 'plin',
+        payment_status: 'pending'
+      })
+      .select()
+      .single();
+
+    if (orderError) {
+      throw orderError;
+    }
+
+    // Create order items
+    const orderItems = cartItems.map(item => ({
+      order_id: orderData.id,
+      course_id: item.id,
+      course_title: item.title,
+      course_price: item.price
+    }));
+
+    const { error: itemsError } = await supabase
+      .from('order_items')
+      .insert(orderItems);
+
+    if (itemsError) {
+      throw itemsError;
+    }
+
+    // Convert USD to PEN
+    const amountInPEN = Math.round(totalAmount * 3.75 * 100) / 100;
+
+    // Create MercadoPago preference with Plin specific settings
+    const items = cartItems.map(item => ({
+      id: item.id,
+      title: item.title,
+      description: `Curso: ${item.title}`,
+      quantity: 1,
+      currency_id: 'PEN',
+      unit_price: parseFloat((item.price * 3.75).toFixed(2))
+    }));
+
+    const preferenceData = {
+      items: items,
+      payer: {
+        name: user.name || 'Estudiante',
+        email: user.email,
+      },
+      payment_methods: {
+        excluded_payment_methods: [],
+        excluded_payment_types: [
+          { id: 'credit_card' },
+          { id: 'debit_card' },
+          { id: 'bank_transfer' }
+        ],
+        installments: 1,
+        default_installments: 1
+      },
+      back_urls: {
+        success: `${process.env.FRONTEND_URL}/payment-result?status=success&order=${orderData.id}&method=plin`,
+        failure: `${process.env.FRONTEND_URL}/payment-result?status=failure&order=${orderData.id}&method=plin`,
+        pending: `${process.env.FRONTEND_URL}/payment-result?status=pending&order=${orderData.id}&method=plin`
+      },
+      auto_return: 'approved',
+      external_reference: orderData.id,
+      notification_url: `${process.env.BACKEND_URL}/api/payments/mercadopago/webhook`,
+      statement_descriptor: 'PERI INSTITUTE - PLIN'
+    };
+
+    const result = await preference.create({ body: preferenceData });
+
+    res.json({
+      success: true,
+      checkoutUrl: result.init_point,
+      preferenceId: result.id,
+      orderId: orderData.id,
+      amountPEN: amountInPEN
+    });
+
+  } catch (error) {
+    console.error('Plin payment creation error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error creating Plin payment',
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;

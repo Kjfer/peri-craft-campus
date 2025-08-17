@@ -90,56 +90,56 @@ export default function Dashboard() {
   });
 
   useEffect(() => {
-    if (profile) {
-      // Use the profile data from useAuth hook
-      setUserProfile({
-        id: profile.id,
-        full_name: profile.full_name || '',
-        email: profile.email || '',
-        avatar_url: profile.avatar_url || undefined,
-        phone: profile.phone || undefined,
-        country: profile.country || undefined,
-        role: profile.role || 'student',
-        created_at: profile.created_at || new Date().toISOString()
-      });
-      
-      setEditedProfile({
-        full_name: profile.full_name || '',
-        phone: profile.phone || '',
-        country: profile.country || ''
-      });
-      
-      // Fetch additional user data (enrollments, certificates, etc.)
-      const fetchAdditionalUserData = async () => {
-        try {
-          setIsLoading(true);
-          
-          // Only fetch data that's not available in the profile
-          // For now, we'll set empty arrays since the backend endpoints might not be fully implemented
-          setEnrollments([]);
-          setCertificates([]);
-          setProgressStats({
-            total_enrollments: 0,
-            completed_courses: 0,
-            average_progress: 0,
-            completion_rate: 0
+    const fetchDashboardData = async () => {
+      if (!user) return;
+
+      try {
+        setIsLoading(true);
+
+        // Fetch user profile
+        if (profile) {
+          setUserProfile({
+            id: profile.id,
+            full_name: profile.full_name || '',
+            email: profile.email || '',
+            avatar_url: profile.avatar_url || undefined,
+            phone: profile.phone || undefined,
+            country: profile.country || undefined,
+            role: profile.role || 'student',
+            created_at: profile.created_at || ''
           });
-          
-        } catch (error) {
-          console.error('Error fetching additional user data:', error);
-          toast({
-            title: "Error",
-            description: "No se pudieron cargar algunos datos del perfil.",
-            variant: "destructive",
+
+          setEditedProfile({
+            full_name: profile.full_name || '',
+            phone: profile.phone || '',
+            country: profile.country || ''
           });
-        } finally {
-          setIsLoading(false);
         }
-      };
-      
-      fetchAdditionalUserData();
-    }
-  }, [profile, toast]);
+
+        // For now, set empty arrays since we need to implement proper API endpoints
+        setEnrollments([]);
+        setCertificates([]);
+        setProgressStats({
+          total_enrollments: 0,
+          completed_courses: 0,
+          average_progress: 0,
+          completion_rate: 0
+        });
+
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar los datos del dashboard",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, [user, profile, toast]);
 
   const handleUpdateProfile = async () => {
     try {

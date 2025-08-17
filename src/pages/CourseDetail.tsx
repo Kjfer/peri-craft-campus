@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
   Clock, 
   User, 
@@ -12,13 +13,23 @@ import {
   Play, 
   Star,
   ShoppingCart,
-  BookOpen
+  BookOpen,
+  Lock,
+  CreditCard,
+  Shield,
+  Download,
+  Users,
+  Calendar,
+  Award,
+  ArrowLeft
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { courseAPI } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/hooks/use-toast";
+import useCourseAccess from "@/hooks/useCourseAccess";
+import CheckoutModal from "@/components/checkout/CheckoutModal";
 
 interface Course {
   id: string;
@@ -31,6 +42,7 @@ interface Course {
   level: string;
   duration_hours: number;
   price: number;
+  is_free: boolean;
   requirements?: string[];
   what_you_learn?: string[];
   modules?: Module[];
@@ -58,18 +70,31 @@ interface Lesson {
 export default function CourseDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
-  const { addToCart, isInCart } = useCart();
+  const { addToCart, isInCart, cartItems } = useCart();
   const { toast } = useToast();
   
   const [course, setCourse] = useState<Course | null>(null);
   const [modules, setModules] = useState<Module[]>([]);
-  const [isEnrolled, setIsEnrolled] = useState(false);
   const [loading, setLoading] = useState(true);
   const [addingToCart, setAddingToCart] = useState(false);
+  const [showCheckout, setShowCheckout] = useState(false);
+
+  // Use course access hook to check if user has paid access
+  const { access, loading: accessLoading, refreshAccess } = useCourseAccess(id || '');
+
+  // Check if checkout should be shown from URL params
+  useEffect(() => {
+    if (searchParams.get('checkout') === 'true' && course && !access?.hasAccess) {
+      setShowCheckout(true);
+    }
+  }, [searchParams, course, access]);
 
   const fetchCourseData = useCallback(async () => {
     try {
+      setLoading(true);
+      
       // Fetch course using API
       const courseResponse = await courseAPI.getById(id!);
       
@@ -79,51 +104,17 @@ export default function CourseDetail() {
       } else {
         throw new Error('Course not found');
       }
-
-      // Check enrollment if user is logged in
-      if (user) {
-        const { data: enrollmentData } = await supabase
-          .from('enrollments')
-          .select('id')
-          .eq('user_id', user.id)
-          .eq('course_id', id)
-          .single();
-
-        setIsEnrolled(!!enrollmentData);
-      }
     } catch (error: unknown) {
       console.error('Error fetching course data:', error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "No se pudo cargar la información del curso.",
+        description: "No se pudo cargar el curso",
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
-  }, [id, user, toast]);
-
-  const handleLessonClick = (lesson: Lesson) => {
-    // Solo permitir clic si el usuario está inscrito o la lección es gratis
-    if (isEnrolled || lesson.is_free) {
-      if (lesson.video_url) {
-        // Abrir el video en una nueva pestaña
-        window.open(lesson.video_url, '_blank');
-      } else {
-        toast({
-          title: "Video no disponible",
-          description: "Esta lección no tiene un video asociado aún.",
-          variant: "destructive",
-        });
-      }
-    } else {
-      toast({
-        title: "Acceso restringido",
-        description: "Necesitas inscribirte en el curso para acceder a esta lección.",
-        variant: "destructive",
-      });
-    }
-  };
+  }, [id, toast]);
 
   useEffect(() => {
     if (id) {
@@ -131,71 +122,94 @@ export default function CourseDetail() {
     }
   }, [id, fetchCourseData]);
 
-  const handleEnroll = async () => {
-    if (!user) {
-      navigate('/auth');
-      return;
-    }
-
-    if (course?.price === 0) {
-      // Free course - enroll directly
-      setAddingToCart(true);
-      try {
-        const { error } = await supabase
-          .from('enrollments')
-          .insert({
-            user_id: user.id,
-            course_id: id!
-          });
-
-        if (error) throw error;
-
-        setIsEnrolled(true);
-        toast({
-          title: "¡Inscripción exitosa!",
-          description: "Te has inscrito al curso correctamente.",
-        });
-      } catch (error) {
-        console.error('Error enrolling:', error);
-        toast({
-          title: "Error",
-          description: "No se pudo completar la inscripción.",
-          variant: "destructive",
-        });
-      } finally {
-        setAddingToCart(false);
-      }
-    } else {
-      // Paid course - add to cart
-      await handleAddToCart();
-    }
-  };
-
   const handleAddToCart = async () => {
     if (!user) {
+      toast({
+        title: "Inicia sesión",
+        description: "Debes iniciar sesión para agregar cursos al carrito",
+        variant: "destructive",
+      });
       navigate('/auth');
       return;
     }
 
-    if (id) {
+    if (!course) return;
+
+    try {
       setAddingToCart(true);
-      await addToCart(id);
+      addToCart(course);
+      toast({
+        title: "¡Agregado al carrito!",
+        description: `${course.title} se agregó a tu carrito`,
+      });
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo agregar el curso al carrito",
+        variant: "destructive",
+      });
+    } finally {
       setAddingToCart(false);
     }
   };
 
-  const handleStartCourse = () => {
-    if (isEnrolled || allLessons.some(lesson => lesson.is_free)) {
-      navigate(`/curso/${id}/lecciones`);
+  const handleBuyNow = () => {
+    if (!user) {
+      toast({
+        title: "Inicia sesión",
+        description: "Debes iniciar sesión para comprar cursos",
+        variant: "destructive",
+      });
+      navigate('/auth');
+      return;
+    }
+
+    if (!course) return;
+
+    // Add to cart if not already there
+    if (!isInCart(course.id)) {
+      addToCart(course);
+    }
+    
+    // Show checkout modal
+    setShowCheckout(true);
+  };
+
+  const handleLessonClick = (lesson: Lesson) => {
+    // Solo permitir acceso si el usuario tiene acceso al curso o la lección es gratis
+    if (access?.hasAccess || lesson.is_free) {
+      if (lesson.video_url) {
+        window.open(lesson.video_url, '_blank');
+      } else {
+        navigate(`/courses/${id}/lessons/${lesson.id}`);
+      }
+    } else {
+      toast({
+        title: "Acceso restringido",
+        description: "Necesitas comprar el curso para acceder a esta lección",
+        variant: "destructive",
+      });
     }
   };
 
-  if (loading) {
+  const handleStartCourse = () => {
+    if (access?.hasAccess) {
+      // Navigate to first lesson
+      if (modules.length > 0 && modules[0].lessons.length > 0) {
+        navigate(`/courses/${id}/lessons/${modules[0].lessons[0].id}`);
+      }
+    } else {
+      handleBuyNow();
+    }
+  };
+
+  if (loading || accessLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Cargando curso...</p>
+          <div className="animate-pulse bg-gradient-to-r from-blue-600 to-purple-600 w-16 h-16 rounded-full mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Cargando curso...</p>
         </div>
       </div>
     );
@@ -204,283 +218,319 @@ export default function CourseDetail() {
   if (!course) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-destructive mb-4">Curso no encontrado</h1>
-          <Button onClick={() => navigate('/cursos')}>Volver al catálogo</Button>
-        </div>
+        <Alert variant="destructive">
+          <AlertDescription>
+            No se pudo encontrar el curso solicitado
+          </AlertDescription>
+        </Alert>
       </div>
     );
   }
 
-  // Calculate lessons from modules
-  const allLessons = modules.flatMap(module => module.lessons);
-  const totalLessons = allLessons.length;
-  const freeLessons = allLessons.filter(lesson => lesson.is_free).length;
+  const totalDuration = modules.reduce((total, module) => 
+    total + module.lessons.reduce((moduleTotal, lesson) => 
+      moduleTotal + lesson.duration_minutes, 0), 0);
+
+  const totalLessons = modules.reduce((total, module) => total + module.lessons.length, 0);
+
+  const isPaid = access?.hasAccess;
+  const isInCartNow = isInCart(course.id);
+  const isFree = course.is_free || course.price === 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted/30">
-      {/* Hero Section */}
-      <section className="py-12 bg-gradient-primary text-primary-foreground">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <Badge className="bg-white/20 text-white">{course.category}</Badge>
-                <h1 className="text-4xl font-bold">{course.title}</h1>
-                <p className="text-xl opacity-90">{course.short_description}</p>
-              </div>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white border-b">
+        <div className="container mx-auto px-4 py-4">
+          <Button 
+            variant="ghost" 
+            onClick={() => navigate('/courses')}
+            className="mb-4"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Volver a cursos
+          </Button>
+        </div>
+      </div>
 
-              <div className="flex items-center space-x-6 text-sm">
+      <div className="container mx-auto px-4 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Main Content */}
+          <div className="lg:col-span-2 space-y-8">
+            {/* Course Header */}
+            <div className="bg-white rounded-lg p-6 shadow-sm">
+              <div className="flex flex-wrap gap-2 mb-4">
+                <Badge variant="secondary">{course.category}</Badge>
+                <Badge variant="outline">{course.level}</Badge>
+                {isPaid && (
+                  <Badge className="bg-green-500">
+                    <CheckCircle className="w-3 h-3 mr-1" />
+                    Comprado
+                  </Badge>
+                )}
+              </div>
+              
+              <h1 className="text-3xl font-bold mb-4">{course.title}</h1>
+              <p className="text-lg text-muted-foreground mb-6">{course.short_description}</p>
+              
+              <div className="flex flex-wrap items-center gap-6 text-sm text-muted-foreground">
                 <div className="flex items-center">
                   <User className="w-4 h-4 mr-2" />
                   {course.instructor_name}
                 </div>
                 <div className="flex items-center">
                   <Clock className="w-4 h-4 mr-2" />
-                  {course.duration_hours} horas
+                  {Math.floor(totalDuration / 60)}h {totalDuration % 60}m
                 </div>
                 <div className="flex items-center">
                   <BookOpen className="w-4 h-4 mr-2" />
                   {totalLessons} lecciones
                 </div>
-                <Badge variant="secondary">{course.level}</Badge>
-              </div>
-
-              <div className="flex items-center space-x-4">
-                <span className="text-3xl font-bold">
-                  {course.price === 0 ? 'Gratis' : `$${course.price.toFixed(2)}`}
-                </span>
-                {freeLessons > 0 && (
-                  <span className="text-sm opacity-75">
-                    {freeLessons} lección{freeLessons !== 1 ? 'es' : ''} gratis
-                  </span>
-                )}
-              </div>
-
-              <div className="flex space-x-4">
-                {isEnrolled ? (
-                  <Button size="lg" onClick={handleStartCourse} className="bg-white text-primary hover:bg-white/90">
-                    <Play className="w-4 h-4 mr-2" />
-                    Continuar Curso
-                  </Button>
-                ) : (
-                  <>
-                    {course.price === 0 ? (
-                      <Button 
-                        size="lg" 
-                        onClick={handleEnroll}
-                        disabled={addingToCart}
-                        className="bg-white text-primary hover:bg-white/90"
-                      >
-                        <CheckCircle className="w-4 h-4 mr-2" />
-                        {addingToCart ? 'Inscribiendo...' : 'Inscribirse Gratis'}
-                      </Button>
-                    ) : (
-                      <Button 
-                        size="lg" 
-                        onClick={handleAddToCart}
-                        disabled={addingToCart || isInCart(id!)}
-                        className="bg-white text-primary hover:bg-white/90"
-                      >
-                        <ShoppingCart className="w-4 h-4 mr-2" />
-                        {addingToCart ? 'Agregando...' : isInCart(id!) ? 'En el Carrito' : 'Agregar al Carrito'}
-                      </Button>
-                    )}
-                  </>
-                )}
-                {!isEnrolled && freeLessons > 0 && (
-                  <Button 
-                    size="lg" 
-                    variant="outline"
-                    onClick={handleStartCourse}
-                    className="bg-white/10 border-white/20 text-white hover:bg-white/20"
-                  >
-                    <Play className="w-4 h-4 mr-2" />
-                    Vista Previa
-                  </Button>
-                )}
+                <div className="flex items-center">
+                  <Users className="w-4 h-4 mr-2" />
+                  {course.level}
+                </div>
               </div>
             </div>
 
-            <div className="lg:justify-self-end">
-              <div className="aspect-video relative overflow-hidden rounded-lg shadow-2xl">
-                {course.thumbnail_url ? (
-                  <img
-                    src={course.thumbnail_url}
-                    alt={course.title}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-white/20 flex items-center justify-center">
-                    <span className="text-6xl font-bold opacity-50">
-                      {course.title.charAt(0)}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+            {/* Course Content Tabs */}
+            <Tabs defaultValue="overview" className="bg-white rounded-lg shadow-sm">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="overview">Descripción</TabsTrigger>
+                <TabsTrigger value="curriculum">Contenido</TabsTrigger>
+                <TabsTrigger value="requirements">Requisitos</TabsTrigger>
+              </TabsList>
 
-      {/* Content Section */}
-      <section className="py-12">
-        <div className="container mx-auto px-4">
-          <Tabs defaultValue="overview" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="overview">Descripción</TabsTrigger>
-              <TabsTrigger value="curriculum">Temario</TabsTrigger>
-              <TabsTrigger value="requirements">Requisitos</TabsTrigger>
-            </TabsList>
+              <TabsContent value="overview" className="p-6 space-y-6">
+                <div>
+                  <h3 className="text-xl font-semibold mb-4">Descripción del curso</h3>
+                  <p className="text-muted-foreground leading-relaxed">{course.description}</p>
+                </div>
 
-            <TabsContent value="overview" className="mt-8">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Sobre este curso</CardTitle>
-                </CardHeader>
-                <CardContent className="prose max-w-none">
-                  <p className="text-muted-foreground leading-relaxed">
-                    {course.description}
-                  </p>
-                  
-                  {course.what_you_learn && course.what_you_learn.length > 0 && (
-                    <div className="mt-8">
-                      <h3 className="text-lg font-semibold mb-4">¿Qué aprenderás?</h3>
-                      <ul className="space-y-2">
-                        {course.what_you_learn.map((item, index) => (
-                          <li key={index} className="flex items-start">
-                            <CheckCircle className="w-5 h-5 text-primary mr-3 mt-0.5 flex-shrink-0" />
-                            <span>{item}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="curriculum" className="mt-8">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Contenido del curso</CardTitle>
-                  <CardDescription>
-                    {modules.length} módulo{modules.length !== 1 ? 's' : ''} • {totalLessons} lecciones • {course.duration_hours} horas total
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-6">
-                    {modules.length > 0 ? (
-                      modules.map((module, moduleIndex) => (
-                        <div key={module.id} className="space-y-4">
-                          {/* Module Header */}
-                          <div className="flex items-center space-x-3 p-4 bg-primary/5 rounded-lg border">
-                            <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold">
-                              {module.order_number}
-                            </div>
-                            <div className="flex-1">
-                              <h3 className="font-semibold text-lg">{module.title}</h3>
-                              {module.description && (
-                                <p className="text-sm text-muted-foreground mt-1">
-                                  {module.description}
-                                </p>
-                              )}
-                              <p className="text-xs text-muted-foreground mt-1">
-                                {module.lessons.length} lección{module.lessons.length !== 1 ? 'es' : ''}
-                              </p>
-                            </div>
-                          </div>
-
-                          {/* Module Lessons */}
-                          {module.lessons.length > 0 && (
-                            <div className="ml-4 space-y-2">
-                              {module.lessons.map((lesson, lessonIndex) => (
-                                <div key={lesson.id}>
-                                  <div 
-                                    className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
-                                      (isEnrolled || lesson.is_free) 
-                                        ? 'hover:bg-muted/50 cursor-pointer' 
-                                        : 'hover:bg-muted/30 cursor-not-allowed opacity-75'
-                                    }`}
-                                    onClick={() => handleLessonClick(lesson)}
-                                  >
-                                    <div className="flex items-center space-x-4">
-                                      <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
-                                        {lesson.order_number}
-                                      </div>
-                                      <div>
-                                        <h4 className="font-medium text-sm">{lesson.title}</h4>
-                                        {lesson.description && (
-                                          <p className="text-xs text-muted-foreground mt-1">
-                                            {lesson.description}
-                                          </p>
-                                        )}
-                                      </div>
-                                    </div>
-                                    <div className="flex items-center space-x-3">
-                                      <span className="text-xs text-muted-foreground">
-                                        {lesson.duration_minutes} min
-                                      </span>
-                                      {lesson.is_free && (
-                                        <Badge variant="secondary" className="text-xs">Gratis</Badge>
-                                      )}
-                                      {(isEnrolled || lesson.is_free) ? (
-                                        <div className="flex items-center">
-                                          <Play className="w-4 h-4 text-primary mr-1" />
-                                          <span className="text-xs text-primary">Ver</span>
-                                        </div>
-                                      ) : (
-                                        <div className="w-3 h-3 rounded-full border-2 border-muted" />
-                                      )}
-                                    </div>
-                                  </div>
-                                  {lessonIndex < module.lessons.length - 1 && <Separator className="ml-10" />}
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                          {moduleIndex < modules.length - 1 && <Separator className="my-6" />}
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-center py-8">
-                        <BookOpen className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                        <p className="text-muted-foreground">
-                          El contenido del curso se está preparando. Pronto estará disponible.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="requirements" className="mt-8">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Requisitos</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {course.requirements && course.requirements.length > 0 ? (
+                {course.what_you_learn && course.what_you_learn.length > 0 && (
+                  <div>
+                    <h3 className="text-xl font-semibold mb-4">¿Qué aprenderás?</h3>
                     <ul className="space-y-2">
-                      {course.requirements.map((requirement, index) => (
+                      {course.what_you_learn.map((item, index) => (
                         <li key={index} className="flex items-start">
-                          <CheckCircle className="w-5 h-5 text-muted-foreground mr-3 mt-0.5 flex-shrink-0" />
-                          <span>{requirement}</span>
+                          <CheckCircle className="w-5 h-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
+                          <span className="text-muted-foreground">{item}</span>
                         </li>
                       ))}
                     </ul>
-                  ) : (
-                    <p className="text-muted-foreground">
-                      No se requieren conocimientos previos para este curso.
-                    </p>
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="curriculum" className="p-6">
+                <h3 className="text-xl font-semibold mb-6">Contenido del curso</h3>
+                <div className="space-y-4">
+                  {modules.map((module) => (
+                    <Card key={module.id}>
+                      <CardHeader>
+                        <CardTitle className="flex items-center justify-between">
+                          <span>{module.title}</span>
+                          <Badge variant="outline">
+                            {module.lessons.length} lecciones
+                          </Badge>
+                        </CardTitle>
+                        {module.description && (
+                          <CardDescription>{module.description}</CardDescription>
+                        )}
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          {module.lessons.map((lesson) => (
+                            <div
+                              key={lesson.id}
+                              className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
+                                isPaid || lesson.is_free
+                                  ? 'hover:bg-gray-50 cursor-pointer'
+                                  : 'bg-gray-50 cursor-not-allowed'
+                              }`}
+                              onClick={() => handleLessonClick(lesson)}
+                            >
+                              <div className="flex items-center space-x-3">
+                                {isPaid || lesson.is_free ? (
+                                  <Play className="w-4 h-4 text-blue-500" />
+                                ) : (
+                                  <Lock className="w-4 h-4 text-gray-400" />
+                                )}
+                                <div>
+                                  <h4 className={`font-medium ${
+                                    isPaid || lesson.is_free ? 'text-gray-900' : 'text-gray-500'
+                                  }`}>
+                                    {lesson.title}
+                                  </h4>
+                                  {lesson.description && (
+                                    <p className="text-sm text-muted-foreground">
+                                      {lesson.description}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                {lesson.is_free && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    Gratis
+                                  </Badge>
+                                )}
+                                <span className="text-sm text-muted-foreground">
+                                  {lesson.duration_minutes} min
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="requirements" className="p-6">
+                <h3 className="text-xl font-semibold mb-6">Requisitos</h3>
+                {course.requirements && course.requirements.length > 0 ? (
+                  <ul className="space-y-2">
+                    {course.requirements.map((requirement, index) => (
+                      <li key={index} className="flex items-start">
+                        <CheckCircle className="w-5 h-5 text-blue-500 mr-3 mt-0.5 flex-shrink-0" />
+                        <span className="text-muted-foreground">{requirement}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-muted-foreground">
+                    No se requieren conocimientos previos para este curso.
+                  </p>
+                )}
+              </TabsContent>
+            </Tabs>
+          </div>
+
+          {/* Sidebar */}
+          <div className="lg:col-span-1">
+            <div className="sticky top-6 space-y-6">
+              {/* Course Preview */}
+              <Card>
+                <div className="relative">
+                  <img
+                    src={course.thumbnail_url || '/placeholder.svg'}
+                    alt={course.title}
+                    className="w-full h-48 object-cover rounded-t-lg"
+                  />
+                  {!isPaid && (
+                    <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center rounded-t-lg">
+                      <div className="text-center text-white">
+                        <Lock className="w-8 h-8 mx-auto mb-2" />
+                        <p className="text-sm">Vista previa</p>
+                      </div>
+                    </div>
                   )}
+                </div>
+                
+                <CardContent className="p-6 space-y-4">
+                  <div className="text-center">
+                    {isFree ? (
+                      <div className="text-3xl font-bold text-green-600">Gratis</div>
+                    ) : (
+                      <div className="text-3xl font-bold">${course.price}</div>
+                    )}
+                  </div>
+
+                  <div className="space-y-3">
+                    {isPaid ? (
+                      <Button 
+                        className="w-full" 
+                        size="lg"
+                        onClick={handleStartCourse}
+                      >
+                        <Play className="w-4 h-4 mr-2" />
+                        Continuar curso
+                      </Button>
+                    ) : isFree ? (
+                      <Button 
+                        className="w-full" 
+                        size="lg"
+                        onClick={handleStartCourse}
+                      >
+                        <Play className="w-4 h-4 mr-2" />
+                        Comenzar gratis
+                      </Button>
+                    ) : (
+                      <>
+                        <Button 
+                          className="w-full" 
+                          size="lg"
+                          onClick={handleBuyNow}
+                        >
+                          <CreditCard className="w-4 h-4 mr-2" />
+                          Comprar ahora
+                        </Button>
+                        
+                        <Button 
+                          variant="outline" 
+                          className="w-full" 
+                          onClick={handleAddToCart}
+                          disabled={addingToCart || isInCartNow}
+                        >
+                          <ShoppingCart className="w-4 h-4 mr-2" />
+                          {isInCartNow ? 'En el carrito' : 'Agregar al carrito'}
+                        </Button>
+                      </>
+                    )}
+                  </div>
+
+                  <Separator />
+
+                  <div className="space-y-3">
+                    <h4 className="font-semibold">Este curso incluye:</h4>
+                    <ul className="space-y-2 text-sm">
+                      <li className="flex items-center">
+                        <Clock className="w-4 h-4 mr-2 text-muted-foreground" />
+                        {Math.floor(totalDuration / 60)}h {totalDuration % 60}m de contenido
+                      </li>
+                      <li className="flex items-center">
+                        <BookOpen className="w-4 h-4 mr-2 text-muted-foreground" />
+                        {totalLessons} lecciones
+                      </li>
+                      <li className="flex items-center">
+                        <Download className="w-4 h-4 mr-2 text-muted-foreground" />
+                        Recursos descargables
+                      </li>
+                      <li className="flex items-center">
+                        <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
+                        Acceso de por vida
+                      </li>
+                      <li className="flex items-center">
+                        <Award className="w-4 h-4 mr-2 text-muted-foreground" />
+                        Certificado de finalización
+                      </li>
+                    </ul>
+                  </div>
+
+                  <Separator />
+
+                  <div className="flex items-center justify-center text-sm text-muted-foreground">
+                    <Shield className="w-4 h-4 mr-1" />
+                    Garantía de devolución de 30 días
+                  </div>
                 </CardContent>
               </Card>
-            </TabsContent>
-          </Tabs>
+            </div>
+          </div>
         </div>
-      </section>
+      </div>
+
+      {/* Checkout Modal */}
+      {showCheckout && course && (
+        <CheckoutModal
+          isOpen={showCheckout}
+          onClose={() => setShowCheckout(false)}
+          cartItems={isInCartNow ? cartItems : [course]}
+          totalAmount={isInCartNow ? cartItems.reduce((sum, item) => sum + item.price, 0) : course.price}
+        />
+      )}
     </div>
   );
 }

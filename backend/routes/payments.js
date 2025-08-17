@@ -8,11 +8,13 @@ const router = express.Router();
 const mercadoPagoRoutes = require('./mercadopago');
 const paypalRoutes = require('./paypal');
 const googlePayRoutes = require('./googlepay');
+const cardRoutes = require('./card');
 
 // Mount payment gateway routes
 router.use('/mercadopago', mercadoPagoRoutes);
 router.use('/paypal', paypalRoutes);
 router.use('/googlepay', googlePayRoutes);
+router.use('/card', cardRoutes);
 
 // Mock Stripe - In production, replace with actual Stripe integration
 const mockStripe = {

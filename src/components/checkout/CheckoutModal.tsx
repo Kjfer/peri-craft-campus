@@ -13,6 +13,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/contexts/CartContext";
@@ -23,7 +26,10 @@ import {
   Shield,
   CheckCircle,
   Loader2,
-  X
+  X,
+  Lock,
+  Calendar,
+  User
 } from "lucide-react";
 
 interface CheckoutModalProps {
@@ -54,6 +60,15 @@ export default function CheckoutModal({
   const [selectedMethod, setSelectedMethod] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [showMercadoPago, setShowMercadoPago] = useState(false);
+  
+  // Card form state
+  const [cardData, setCardData] = useState({
+    number: "",
+    name: "",
+    expiry: "",
+    cvc: "",
+    email: user?.email || ""
+  });
 
   // PayPal configuration
   const paypalOptions = {
@@ -91,10 +106,10 @@ export default function CheckoutModal({
 
   const paymentMethods: PaymentMethod[] = [
     {
-      id: "paypal",
-      name: "PayPal",
+      id: "card",
+      name: "Tarjeta",
       icon: <CreditCard className="w-6 h-6" />,
-      description: "Paga de forma segura con tu cuenta PayPal",
+      description: "Tarjeta de débito o crédito",
       available: true
     },
     {
@@ -105,10 +120,10 @@ export default function CheckoutModal({
       available: true
     },
     {
-      id: "googlepay",
-      name: "Google Pay",
+      id: "paypal",
+      name: "PayPal",
       icon: <Smartphone className="w-6 h-6" />,
-      description: "Pago rápido y seguro con Google Pay",
+      description: "Paga de forma segura con tu cuenta PayPal",
       available: true
     }
   ];
@@ -193,6 +208,145 @@ export default function CheckoutModal({
     }
   };
 
+  const handleCardPayment = async () => {
+    setIsProcessing(true);
+    try {
+      // Validate card data
+      if (!cardData.number || !cardData.name || !cardData.expiry || !cardData.cvc) {
+        throw new Error('Por favor completa todos los campos de la tarjeta');
+      }
+
+      const response = await fetch('/api/payments/card/process', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
+        },
+        body: JSON.stringify({
+          cardData,
+          cartItems,
+          totalAmount,
+          user: {
+            email: user?.email,
+            name: user?.user_metadata?.full_name || user?.email
+          }
+        })
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        toast({
+          title: "¡Pago exitoso!",
+          description: "Tu pago con tarjeta se procesó correctamente.",
+        });
+        clearCart();
+        onClose();
+        // Redirect to success page
+        window.location.href = `/payment-result?status=success&orderId=${result.orderId}`;
+      } else {
+        throw new Error(result.message || 'Error processing card payment');
+      }
+    } catch (error) {
+      console.error('Card payment error:', error);
+      toast({
+        title: "Error en el pago",
+        description: error.message || "No se pudo procesar el pago con tarjeta. Intenta nuevamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleMercadoPagoYape = async () => {
+    setIsProcessing(true);
+    try {
+      const response = await fetch('/api/payments/mercadopago/yape', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
+        },
+        body: JSON.stringify({
+          cartItems,
+          totalAmount,
+          paymentMethod: 'yape',
+          user: {
+            email: user?.email,
+            name: user?.user_metadata?.full_name || user?.email
+          }
+        })
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        window.open(result.checkoutUrl, '_blank');
+        toast({
+          title: "Redirigiendo a Yape",
+          description: "Se abrirá una nueva ventana para completar el pago con Yape.",
+        });
+        onClose();
+      } else {
+        throw new Error(result.message || 'Error creating Yape payment');
+      }
+    } catch (error) {
+      console.error('Yape payment error:', error);
+      toast({
+        title: "Error en el pago",
+        description: "No se pudo crear el pago con Yape. Intenta nuevamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleMercadoPagoPlin = async () => {
+    setIsProcessing(true);
+    try {
+      const response = await fetch('/api/payments/mercadopago/plin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
+        },
+        body: JSON.stringify({
+          cartItems,
+          totalAmount,
+          paymentMethod: 'plin',
+          user: {
+            email: user?.email,
+            name: user?.user_metadata?.full_name || user?.email
+          }
+        })
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        window.open(result.checkoutUrl, '_blank');
+        toast({
+          title: "Redirigiendo a Plin",
+          description: "Se abrirá una nueva ventana para completar el pago con Plin.",
+        });
+        onClose();
+      } else {
+        throw new Error(result.message || 'Error creating Plin payment');
+      }
+    } catch (error) {
+      console.error('Plin payment error:', error);
+      toast({
+        title: "Error en el pago",
+        description: "No se pudo crear el pago con Plin. Intenta nuevamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const handleMercadoPagoPayment = async () => {
     setIsProcessing(true);
     try {
@@ -215,7 +369,6 @@ export default function CheckoutModal({
       const result = await response.json();
       
       if (result.success) {
-        // Redirect to MercadoPago checkout
         window.open(result.checkoutUrl, '_blank');
         toast({
           title: "Redirigiendo a MercadoPago",
@@ -306,16 +459,250 @@ export default function CheckoutModal({
                 ))}
               </TabsList>
 
+              {/* Credit/Debit Card Tab */}
+              <TabsContent value="card" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <CreditCard className="w-5 h-5 mr-2" />
+                      Tarjeta de Débito/Crédito
+                    </CardTitle>
+                    <CardDescription>
+                      Paga de forma segura con tu tarjeta Visa, Mastercard o American Express
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="card-number">Número de tarjeta</Label>
+                        <Input
+                          id="card-number"
+                          placeholder="1234 5678 9012 3456"
+                          value={cardData.number}
+                          onChange={(e) => {
+                            let value = e.target.value.replace(/\s/g, '').replace(/\D/g, '');
+                            value = value.replace(/(.{4})/g, '$1 ').trim();
+                            if (value.length <= 19) {
+                              setCardData(prev => ({ ...prev, number: value }));
+                            }
+                          }}
+                          maxLength={19}
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="card-name">Nombre del titular</Label>
+                        <Input
+                          id="card-name"
+                          placeholder="Juan Pérez"
+                          value={cardData.name}
+                          onChange={(e) => setCardData(prev => ({ ...prev, name: e.target.value }))}
+                        />
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="card-expiry">Fecha de vencimiento</Label>
+                          <Input
+                            id="card-expiry"
+                            placeholder="MM/YY"
+                            value={cardData.expiry}
+                            onChange={(e) => {
+                              let value = e.target.value.replace(/\D/g, '');
+                              if (value.length >= 2) {
+                                value = value.substring(0, 2) + '/' + value.substring(2, 4);
+                              }
+                              if (value.length <= 5) {
+                                setCardData(prev => ({ ...prev, expiry: value }));
+                              }
+                            }}
+                            maxLength={5}
+                          />
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label htmlFor="card-cvc">CVC</Label>
+                          <Input
+                            id="card-cvc"
+                            placeholder="123"
+                            value={cardData.cvc}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/\D/g, '');
+                              if (value.length <= 4) {
+                                setCardData(prev => ({ ...prev, cvc: value }));
+                              }
+                            }}
+                            maxLength={4}
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Email para confirmación</Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          placeholder="tu@email.com"
+                          value={cardData.email}
+                          onChange={(e) => setCardData(prev => ({ ...prev, email: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                      <Lock className="w-4 h-4" />
+                      <span>Tus datos están protegidos con encriptación SSL de 256 bits</span>
+                    </div>
+                    
+                    <Button
+                      onClick={handleCardPayment}
+                      disabled={isProcessing || !cardData.number || !cardData.name || !cardData.expiry || !cardData.cvc}
+                      className="w-full"
+                      size="lg"
+                    >
+                      {isProcessing ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Procesando pago...
+                        </>
+                      ) : (
+                        <>
+                          <CreditCard className="w-4 h-4 mr-2" />
+                          Pagar ${totalAmount.toFixed(2)}
+                        </>
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* MercadoPago Tab */}
+              <TabsContent value="mercadopago" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <Wallet className="w-5 h-5 mr-2" />
+                      MercadoPago - Métodos Peruanos
+                    </CardTitle>
+                    <CardDescription>
+                      Métodos de pago populares en Perú y Sudamérica
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Yape Button */}
+                    <Card className="border-2 border-purple-200 hover:border-purple-300 transition-colors">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                              <Smartphone className="w-6 h-6 text-purple-600" />
+                            </div>
+                            <div>
+                              <h3 className="font-semibold text-purple-900">Yape</h3>
+                              <p className="text-sm text-muted-foreground">Pago instantáneo con Yape</p>
+                            </div>
+                          </div>
+                          <Button
+                            onClick={handleMercadoPagoYape}
+                            disabled={isProcessing}
+                            className="bg-purple-600 hover:bg-purple-700"
+                          >
+                            {isProcessing ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              "Pagar"
+                            )}
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Plin Button */}
+                    <Card className="border-2 border-blue-200 hover:border-blue-300 transition-colors">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                              <Smartphone className="w-6 h-6 text-blue-600" />
+                            </div>
+                            <div>
+                              <h3 className="font-semibold text-blue-900">Plin</h3>
+                              <p className="text-sm text-muted-foreground">Pago rápido con Plin</p>
+                            </div>
+                          </div>
+                          <Button
+                            onClick={handleMercadoPagoPlin}
+                            disabled={isProcessing}
+                            className="bg-blue-600 hover:bg-blue-700"
+                          >
+                            {isProcessing ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              "Pagar"
+                            )}
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Other MercadoPago Methods */}
+                    <Card>
+                      <CardContent className="p-4">
+                        <h3 className="font-semibold mb-3">Otros métodos disponibles:</h3>
+                        <div className="grid grid-cols-2 gap-2 mb-4">
+                          <Badge variant="outline" className="justify-center py-2">
+                            <CreditCard className="w-4 h-4 mr-1" />
+                            Tarjetas
+                          </Badge>
+                          <Badge variant="outline" className="justify-center py-2">
+                            <Wallet className="w-4 h-4 mr-1" />
+                            Efectivo
+                          </Badge>
+                          <Badge variant="outline" className="justify-center py-2">
+                            <User className="w-4 h-4 mr-1" />
+                            Tunki
+                          </Badge>
+                          <Badge variant="outline" className="justify-center py-2">
+                            <Calendar className="w-4 h-4 mr-1" />
+                            Cuotas
+                          </Badge>
+                        </div>
+                        
+                        <Button
+                          onClick={handleMercadoPagoPayment}
+                          disabled={isProcessing}
+                          variant="outline"
+                          className="w-full"
+                          size="lg"
+                        >
+                          {isProcessing ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Procesando...
+                            </>
+                          ) : (
+                            <>
+                              <Wallet className="w-4 h-4 mr-2" />
+                              Ver todos los métodos
+                            </>
+                          )}
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
               {/* PayPal Tab */}
               <TabsContent value="paypal" className="space-y-4">
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center">
-                      <CreditCard className="w-5 h-5 mr-2" />
+                      <Smartphone className="w-5 h-5 mr-2" />
                       PayPal
                     </CardTitle>
                     <CardDescription>
-                      Paga de forma segura con tu cuenta PayPal o tarjeta de crédito
+                      Paga de forma segura con tu cuenta PayPal
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -358,88 +745,6 @@ export default function CheckoutModal({
                         disabled={isProcessing}
                       />
                     </PayPalScriptProvider>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              {/* MercadoPago Tab */}
-              <TabsContent value="mercadopago" className="space-y-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <Wallet className="w-5 h-5 mr-2" />
-                      MercadoPago
-                    </CardTitle>
-                    <CardDescription>
-                      Métodos de pago populares en Perú y Sudamérica
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-2">
-                      <Badge variant="outline" className="justify-center py-2">
-                        <img src="/api/placeholder/24/24" alt="Yape" className="w-4 h-4 mr-1" />
-                        Yape
-                      </Badge>
-                      <Badge variant="outline" className="justify-center py-2">
-                        <img src="/api/placeholder/24/24" alt="Plin" className="w-4 h-4 mr-1" />
-                        Plin
-                      </Badge>
-                      <Badge variant="outline" className="justify-center py-2">
-                        <CreditCard className="w-4 h-4 mr-1" />
-                        Tarjetas
-                      </Badge>
-                      <Badge variant="outline" className="justify-center py-2">
-                        <Wallet className="w-4 h-4 mr-1" />
-                        Efectivo
-                      </Badge>
-                    </div>
-                    
-                    <Button
-                      onClick={handleMercadoPagoPayment}
-                      disabled={isProcessing}
-                      className="w-full"
-                      size="lg"
-                    >
-                      {isProcessing ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Procesando...
-                        </>
-                      ) : (
-                        <>
-                          <Wallet className="w-4 h-4 mr-2" />
-                          Pagar con MercadoPago
-                        </>
-                      )}
-                    </Button>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              {/* Google Pay Tab */}
-              <TabsContent value="googlepay" className="space-y-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <Smartphone className="w-5 h-5 mr-2" />
-                      Google Pay
-                    </CardTitle>
-                    <CardDescription>
-                      Pago rápido y seguro con Google Pay
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-center p-8">
-                      <Smartphone className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                      <h3 className="text-lg font-semibold mb-2">Google Pay</h3>
-                      <p className="text-muted-foreground mb-4">
-                        Google Pay estará disponible próximamente
-                      </p>
-                      <Button disabled className="w-full">
-                        <Smartphone className="w-4 h-4 mr-2" />
-                        Próximamente
-                      </Button>
-                    </div>
                   </CardContent>
                 </Card>
               </TabsContent>
