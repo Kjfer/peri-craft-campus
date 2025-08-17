@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 import GooglePayButton from "@google-pay/button-react";
 import {
@@ -58,6 +59,7 @@ export default function CheckoutModal({
   const { user } = useAuth();
   const { clearCart } = useCart();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [selectedMethod, setSelectedMethod] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [showMercadoPago, setShowMercadoPago] = useState(false);
