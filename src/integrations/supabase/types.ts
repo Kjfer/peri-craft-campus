@@ -283,6 +283,84 @@ export type Database = {
           },
         ]
       }
+      order_items: {
+        Row: {
+          course_id: string | null
+          created_at: string
+          id: string
+          order_id: string | null
+          price: number
+        }
+        Insert: {
+          course_id?: string | null
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          price: number
+        }
+        Update: {
+          course_id?: string | null
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_items_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          created_at: string
+          currency: string
+          id: string
+          order_number: string
+          payment_id: string | null
+          payment_method: string | null
+          payment_status: string
+          total_amount: number
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          id?: string
+          order_number?: string
+          payment_id?: string | null
+          payment_method?: string | null
+          payment_status?: string
+          total_amount: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          id?: string
+          order_number?: string
+          payment_id?: string | null
+          payment_method?: string | null
+          payment_status?: string
+          total_amount?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       payments: {
         Row: {
           amount: number
@@ -427,6 +505,14 @@ export type Database = {
       get_current_user_role: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      verify_certificate_code: {
+        Args: { certificate_code_input: string }
+        Returns: {
+          course_title: string
+          is_valid: boolean
+          issued_date: string
+        }[]
       }
     }
     Enums: {

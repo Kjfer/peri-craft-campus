@@ -15,6 +15,7 @@ import CourseDetail from "./pages/CourseDetail";
 import Plans from "./pages/Plans";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
+import LessonPlayer from "./pages/LessonPlayer";
 import VerifyCertificate from "./pages/VerifyCertificate";
 import PaymentResult from "./pages/PaymentResult";
 import Checkout from "./pages/Checkout";
@@ -43,6 +44,7 @@ const App = () => (
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/cursos" element={<Courses />} />
+                  <Route path="/courses/:courseId/lessons/:lessonId" element={<LessonPlayer />} />
                   <Route path="/curso/:id" element={<CourseDetail />} />
                   <Route path="/planes" element={<Plans />} />
                   <Route path="/nosotros" element={<About />} />

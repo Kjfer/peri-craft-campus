@@ -19,8 +19,7 @@ interface Order {
 interface OrderItem {
   id: string;
   course_id: string;
-  course_title: string;
-  course_price: number;
+  price: number;
   courses: {
     id: string;
     title: string;
@@ -60,8 +59,7 @@ export default function CheckoutSuccess() {
           order_items (
             id,
             course_id,
-            course_title,
-            course_price,
+            price,
             courses:course_id (
               id,
               title,

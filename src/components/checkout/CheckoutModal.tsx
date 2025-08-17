@@ -19,6 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/contexts/CartContext";
+import { supabase } from "@/integrations/supabase/client";
 import {
   CreditCard,
   Smartphone,
@@ -216,26 +217,18 @@ export default function CheckoutModal({
         throw new Error('Por favor completa todos los campos de la tarjeta');
       }
 
-      const response = await fetch('/api/payments/card/process', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('supabase_token')}`
-        },
-        body: JSON.stringify({
-          cardData,
+      const { data, error } = await supabase.functions.invoke('create-payment', {
+        body: {
           cartItems,
           totalAmount,
-          user: {
-            email: user?.email,
-            name: user?.user_metadata?.full_name || user?.email
-          }
-        })
+          paymentMethod: 'card',
+          paymentData: cardData
+        }
       });
 
-      const result = await response.json();
-      
-      if (result.success) {
+      if (error) throw error;
+
+      if (data.success) {
         toast({
           title: "¡Pago exitoso!",
           description: "Tu pago con tarjeta se procesó correctamente.",
@@ -243,9 +236,9 @@ export default function CheckoutModal({
         clearCart();
         onClose();
         // Redirect to success page
-        window.location.href = `/payment-result?status=success&orderId=${result.orderId}`;
+        window.location.href = `/checkout/success/${data.orderId}`;
       } else {
-        throw new Error(result.message || 'Error processing card payment');
+        throw new Error(data.error || 'Error processing card payment');
       }
     } catch (error) {
       console.error('Card payment error:', error);
