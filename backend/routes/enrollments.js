@@ -121,6 +121,36 @@ router.post('/', authenticateToken, async (req, res, next) => {
   }
 });
 
+// @desc    Get user's enrolled course IDs only
+// @route   GET /api/enrollments/my-courses
+// @access  Private
+router.get('/my-courses', authenticateToken, async (req, res, next) => {
+  try {
+    const { data: enrollments, error } = await supabase
+      .from('enrollments')
+      .select('course_id')
+      .eq('user_id', req.user.id);
+
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        error: error.message
+      });
+    }
+
+    const courseIds = enrollments.map(enrollment => enrollment.course_id);
+
+    res.json({
+      success: true,
+      courseIds: courseIds,
+      count: courseIds.length
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
 // @desc    Get user's enrollments
 // @route   GET /api/enrollments
 // @access  Private

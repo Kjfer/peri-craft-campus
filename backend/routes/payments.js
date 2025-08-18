@@ -1,20 +1,430 @@
 const express = require('express');
-const { supabase } = require('../config/database');
+const { supabase, supabaseAdmin } = require('../config/database');
 const { authenticateToken, requireAdmin } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Import payment gateway routes
-const mercadoPagoRoutes = require('./mercadopago');
-const paypalRoutes = require('./paypal');
-const googlePayRoutes = require('./googlepay');
-const cardRoutes = require('./card');
+console.log('🔥 Loading payments.js route file...');
 
-// Mount payment gateway routes
-router.use('/mercadopago', mercadoPagoRoutes);
-router.use('/paypal', paypalRoutes);
-router.use('/googlepay', googlePayRoutes);
-router.use('/card', cardRoutes);
+// Create order endpoint (separate from payment processing)
+router.post('/create-order', authenticateToken, async (req, res) => {
+  try {
+    console.log('🌐 Creating order endpoint hit');
+    const { cartItems, totalAmount } = req.body;
+    const user = req.user;
+    const userId = user.id;
+
+    // Validate input
+    if (!cartItems || cartItems.length === 0) {
+      return res.status(400).json({ success: false, error: 'Cart is empty' });
+    }
+
+    if (!totalAmount || totalAmount <= 0) {
+      return res.status(400).json({ success: false, error: 'Invalid total amount' });
+    }
+
+    console.log('💰 Creating order for user:', userId);
+
+    // Create order
+    const { data: order, error: orderError } = await supabaseAdmin
+      .from('orders')
+      .insert({
+        user_id: userId,
+        total_amount: totalAmount,
+        created_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (orderError) {
+      console.error('❌ Order creation failed:', orderError);
+      throw new Error('Failed to create order: ' + orderError.message);
+    }
+
+    console.log('✅ Order created with ID:', order.id);
+
+    // Create order items
+    const orderItems = cartItems.map(item => ({
+      order_id: order.id,
+      course_id: item.course?.id || item.course_id || item.id,
+      price: item.course?.price || item.price || (totalAmount / cartItems.length)
+    }));
+
+    const { error: orderItemsError } = await supabaseAdmin
+      .from('order_items')
+      .insert(orderItems);
+
+    if (orderItemsError) {
+      console.error('❌ Order items creation failed:', orderItemsError);
+      throw new Error('Failed to create order items: ' + orderItemsError.message);
+    }
+
+    console.log('✅ Order items created:', orderItems.length);
+
+    res.json({
+      success: true,
+      orderId: order.id,
+      orderNumber: order.id,
+      totalAmount: totalAmount,
+      itemCount: cartItems.length
+    });
+
+  } catch (error) {
+    console.error('❌ Order creation error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Create payment endpoint
+router.post('/create-payment', authenticateToken, async (req, res, next) => {
+  console.log('🔥 Payment endpoint hit:', req.method, req.url);
+  console.log('🔥 Request body:', req.body);
+  console.log('🔥 User from auth:', req.user);
+  
+  try {
+    const { cartItems, totalAmount, paymentMethod, paymentData } = req.body;
+    const userId = req.user.id;
+
+    // Conversión de USD a PEN para métodos peruanos
+    const USD_TO_PEN_RATE = 3.75; // Tasa de cambio aproximada
+    const isPeruvianMethod = ['yape', 'plin'].includes(paymentMethod);
+    const convertedAmount = isPeruvianMethod ? Math.round(totalAmount * USD_TO_PEN_RATE) : totalAmount;
+    const currency = isPeruvianMethod ? 'PEN' : 'USD';
+
+    console.log('💳 Processing payment:', {
+      userId,
+      originalAmount: totalAmount,
+      convertedAmount: convertedAmount,
+      currency: currency,
+      paymentMethod,
+      itemCount: cartItems?.length || 0
+    });
+
+    if (!cartItems || !totalAmount || !paymentMethod) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required payment data'
+      });
+    }
+
+    // Create order using the existing orders table (minimal fields)
+    console.log('💰 Creating order for user:', userId);
+    
+    const { data: order, error: orderError } = await supabaseAdmin
+      .from('orders')
+      .insert({
+        user_id: userId,
+        total_amount: convertedAmount,
+        currency: currency,
+        payment_method: paymentMethod
+      })
+      .select()
+      .single();
+
+    if (orderError) {
+      console.error('Order creation error:', orderError);
+      return res.status(400).json({
+        success: false,
+        error: 'Failed to create order: ' + orderError.message
+      });
+    }
+
+    console.log('✅ Order created with ID:', order.id);
+
+    // Create order items using the existing order_items table
+    console.log('📝 Creating order items...');
+    
+    const orderItems = cartItems.map(item => ({
+      order_id: order.id,
+      course_id: item.course?.id || item.course_id || item.id,
+      price: isPeruvianMethod ? 
+        Math.round((item.course?.price || item.price || (totalAmount / cartItems.length)) * USD_TO_PEN_RATE) :
+        (item.course?.price || item.price || (totalAmount / cartItems.length))
+    }));
+
+    console.log('📝 Order items to create:', orderItems);
+
+    const { error: orderItemsError } = await supabaseAdmin
+      .from('order_items')
+      .insert(orderItems);
+
+    if (orderItemsError) {
+      console.error('Order items creation error:', orderItemsError);
+      return res.status(400).json({
+        success: false,
+        error: 'Failed to create order items: ' + orderItemsError.message
+      });
+    }
+
+    console.log('✅ Order items created:', orderItems.length);
+    // Create individual payment records for tracking
+    console.log('💳 Creating payment records...');
+    
+    let mainPaymentId = null;
+    const paymentPromises = cartItems.map(async (item, index) => {
+      const { data: payment, error } = await supabaseAdmin
+        .from('payments')
+        .insert({
+          user_id: userId,
+          course_id: item.course?.id || item.course_id || item.id,
+          amount: item.course?.price || item.price || totalAmount / cartItems.length,
+          currency: 'PEN',
+          payment_method: paymentMethod,
+          payment_status: 'pending',
+          external_payment_id: `PAY-${order.id}-${Date.now()}-${index}`
+        })
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Individual payment creation error:', error);
+      } else if (index === 0) {
+        // Store the first payment ID as the main payment
+        mainPaymentId = payment.id;
+      }
+      
+      return { payment, error };
+    });
+
+    const paymentResults = await Promise.all(paymentPromises);
+    const hasPaymentErrors = paymentResults.some(result => result.error !== null);
+
+    if (hasPaymentErrors) {
+      console.error('⚠️ Some payment records failed to create');
+      // Continue anyway since main order was created
+    } else {
+      console.log('✅ Payment records created successfully');
+    }
+
+    // Process payment based on method
+    console.log(`🎯 Processing payment with method: ${paymentMethod}`);
+    let paymentResult;
+    
+    try {
+      switch (paymentMethod) {
+        case 'card':
+          paymentResult = await processCardPayment(paymentData, order.id, totalAmount);
+          break;
+        case 'mercadopago':
+          paymentResult = await processMercadoPagoPayment(cartItems, totalAmount, order.id);
+          break;
+        case 'yape':
+          paymentResult = await processYapePayment(cartItems, convertedAmount, order.id);
+          break;
+        case 'plin':
+          paymentResult = await processPlinPayment(cartItems, convertedAmount, order.id);
+          break;
+        case 'paypal':
+          paymentResult = await processPayPalPayment(cartItems, totalAmount, order.id, paymentData);
+          break;
+        case 'googlepay':
+          paymentResult = await processGooglePayPayment(paymentData, order.id, totalAmount);
+          break;
+        default:
+          paymentResult = {
+            success: false,
+            message: `Unsupported payment method: ${paymentMethod}`
+          };
+      }
+      
+      console.log(`✅ Payment processing result:`, {
+        method: paymentMethod,
+        success: paymentResult.success,
+        message: paymentResult.message,
+        paymentId: paymentResult.paymentId
+      });
+      
+    } catch (paymentError) {
+      console.error(`❌ Payment processing failed for ${paymentMethod}:`, paymentError);
+      paymentResult = {
+        success: false,
+        message: `Payment processing failed: ${paymentError.message}`,
+        error: paymentError.message
+      };
+    }
+
+    // Update order and payment status with result
+    console.log('🔄 Updating payment status...');
+    
+    // Note: Not updating order status since 'order_status' column doesn't exist
+    // The order creation itself indicates it's been processed
+    
+    // Update payment status for all payments related to this order
+    const { error: paymentsUpdateError } = await supabaseAdmin
+      .from('payments')
+      .update({
+        payment_status: paymentResult.success ? 'completed' : 'failed',
+        external_payment_id: paymentResult.paymentId || `PAY-${order.id}-${Date.now()}`
+      })
+      .eq('user_id', userId)
+      .like('external_payment_id', `PAY-${order.id}%`);
+
+    if (paymentsUpdateError) {
+      console.error('Failed to update payment status:', paymentsUpdateError);
+    } else {
+      console.log('✅ Payment status updated successfully');
+    }
+
+    // If payment successful, create enrollments
+    if (paymentResult.success) {
+      const enrollments = cartItems.map(item => ({
+        user_id: userId,
+        course_id: item.course?.id || item.course_id || item.id,
+        enrolled_at: new Date().toISOString()
+      }));
+
+      const { error: enrollmentError } = await supabaseAdmin
+        .from('enrollments')
+        .insert(enrollments);
+
+      if (enrollmentError) {
+        console.error('Failed to create enrollments:', enrollmentError);
+      }
+    }
+
+    // Send response
+    const response = {
+      success: paymentResult.success,
+      orderId: order.id,
+      orderNumber: order.id,
+      paymentUrl: paymentResult.paymentUrl,
+      message: paymentResult.message,
+      paymentMethod: paymentMethod,
+      totalAmount: totalAmount,
+      itemCount: cartItems.length
+    };
+
+    console.log('📤 Sending payment response:', response);
+
+    res.json(response);
+
+  } catch (error) {
+    console.error('Payment processing error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Payment method processors
+async function processCardPayment(paymentData, orderId, amount) {
+  console.log('💳 Processing card payment:', { orderId, amount });
+  
+  // Simulate processing delay
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  
+  // Mock validation
+  if (!paymentData.number || !paymentData.cvc || !paymentData.expiry) {
+    return {
+      success: false,
+      message: "Invalid card data",
+      paymentId: null
+    };
+  }
+
+  // Mock success for demo (in production, integrate with Stripe)
+  return {
+    success: true,
+    message: "Payment processed successfully",
+    paymentId: `card_${Date.now()}`,
+    paymentUrl: null
+  };
+}
+
+async function processMercadoPagoPayment(cartItems, amount, orderId) {
+  console.log('💳 Processing MercadoPago payment:', { orderId, amount });
+  
+  await new Promise(resolve => setTimeout(resolve, 500));
+  
+  return {
+    success: true,
+    message: "Redirecting to MercadoPago",
+    paymentId: `mp_${Date.now()}`,
+    paymentUrl: `http://localhost:8080/payment/success/${orderId}?method=mercadopago&amount=${amount}`
+  };
+}
+
+async function processYapePayment(cartItems, amount, orderId) {
+  console.log('💳 Processing Yape payment:', { orderId, amount, itemCount: cartItems.length });
+  
+  try {
+    // Simulate Yape processing delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    console.log('✅ Yape payment processed successfully');
+    
+    return {
+      success: true,
+      message: "Redirecting to Yape instructions",
+      paymentId: `yape_${orderId}_${Date.now()}`,
+      paymentUrl: `http://localhost:8080/payment/instructions/${orderId}?method=yape&amount=${amount}`,
+      orderId: orderId
+    };
+  } catch (error) {
+    console.error('❌ Yape payment processing error:', error);
+    return {
+      success: false,
+      message: "Yape payment failed: " + error.message,
+      error: error.message
+    };
+  }
+}
+
+async function processPlinPayment(cartItems, amount, orderId) {
+  console.log('💳 Processing Plin payment:', { orderId, amount, itemCount: cartItems.length });
+  
+  try {
+    // Simulate Plin processing delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    console.log('✅ Plin payment processed successfully');
+    
+    return {
+      success: true,
+      message: "Redirecting to Plin instructions",
+      paymentId: `plin_${orderId}_${Date.now()}`,
+      paymentUrl: `http://localhost:8080/payment/instructions/${orderId}?method=plin&amount=${amount}`,
+      orderId: orderId
+    };
+  } catch (error) {
+    console.error('❌ Plin payment processing error:', error);
+    return {
+      success: false,
+      message: "Plin payment failed: " + error.message,
+      error: error.message
+    };
+  }
+}
+
+async function processPayPalPayment(cartItems, amount, orderId, paymentData) {
+  console.log('💳 Processing PayPal payment:', { orderId, amount });
+  
+  await new Promise(resolve => setTimeout(resolve, 500));
+  
+  return {
+    success: true,
+    message: "PayPal payment processed",
+    paymentId: paymentData?.orderID || `pp_${Date.now()}`,
+    paymentUrl: null
+  };
+}
+
+async function processGooglePayPayment(paymentData, orderId, amount) {
+  console.log('💳 Processing Google Pay payment:', { orderId, amount });
+  
+  await new Promise(resolve => setTimeout(resolve, 500));
+  
+  return {
+    success: true,
+    message: "Google Pay payment processed",
+    paymentId: `gp_${Date.now()}`,
+    paymentUrl: null
+  };
+}
 
 // Mock Stripe - In production, replace with actual Stripe integration
 const mockStripe = {
@@ -564,6 +974,89 @@ router.post('/webhook', async (req, res, next) => {
 
   } catch (error) {
     next(error);
+  }
+});
+
+// Payment confirmation endpoint for external payment methods
+router.post('/confirm-payment', authenticateToken, async (req, res) => {
+  try {
+    const { orderId, paymentMethod, transactionId } = req.body;
+    const userId = req.user.id;
+
+    console.log('💳 Confirming payment:', { orderId, paymentMethod, transactionId, userId });
+
+    // Verify order belongs to user
+    const { data: order, error: orderError } = await supabaseAdmin
+      .from('orders')
+      .select('*')
+      .eq('id', orderId)
+      .eq('user_id', userId)
+      .single();
+
+    if (orderError || !order) {
+      return res.status(404).json({
+        success: false,
+        error: 'Order not found'
+      });
+    }
+
+    // Update payment status
+    const { error: paymentUpdateError } = await supabaseAdmin
+      .from('payments')
+      .update({
+        payment_status: 'completed',
+        external_payment_id: transactionId || `CONFIRMED-${orderId}-${Date.now()}`
+      })
+      .eq('user_id', userId)
+      .like('external_payment_id', `PAY-${orderId}%`);
+
+    if (paymentUpdateError) {
+      console.error('Payment update error:', paymentUpdateError);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to update payment status'
+      });
+    }
+
+    // Get order items to create enrollments
+    const { data: orderItems, error: orderItemsError } = await supabaseAdmin
+      .from('order_items')
+      .select('course_id')
+      .eq('order_id', orderId);
+
+    if (orderItemsError) {
+      console.error('Order items fetch error:', orderItemsError);
+    } else {
+      // Create enrollments
+      const enrollments = orderItems.map(item => ({
+        user_id: userId,
+        course_id: item.course_id,
+        enrolled_at: new Date().toISOString()
+      }));
+
+      const { error: enrollmentError } = await supabaseAdmin
+        .from('enrollments')
+        .insert(enrollments);
+
+      if (enrollmentError) {
+        console.error('Enrollment creation error:', enrollmentError);
+      } else {
+        console.log('✅ Enrollments created for order:', orderId);
+      }
+    }
+
+    res.json({
+      success: true,
+      message: 'Payment confirmed successfully',
+      orderId: orderId
+    });
+
+  } catch (error) {
+    console.error('Payment confirmation error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
   }
 });
 

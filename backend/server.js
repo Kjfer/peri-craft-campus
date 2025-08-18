@@ -19,7 +19,6 @@ const adminRoutes = require('./routes/admin');
 const uploadRoutes = require('./routes/upload');
 const cartRoutes = require('./routes/cart');
 const orderRoutes = require('./routes/orders');
-const debugRoutes = require('./routes/debug');
 
 // Import middleware
 const errorHandler = require('./middleware/errorHandler');
@@ -102,7 +101,6 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
-app.use('/api/debug', debugRoutes);
 
 // Welcome endpoint
 app.get('/', (req, res) => {
@@ -111,6 +109,15 @@ app.get('/', (req, res) => {
     version: '1.0.0',
     documentation: '/api/docs',
     health: '/health'
+  });
+});
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
   });
 });
 

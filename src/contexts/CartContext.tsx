@@ -90,21 +90,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       dispatch({ type: 'SET_LOADING', payload: true });
       console.log('🛒 Refreshing cart for user:', user.id);
 
-      // Try to load from API first
-      try {
-        const response = await cartAPI.getItems();
-        console.log('🛒 Cart API response:', response);
-
-        if (response.success) {
-          const cartItems: CartItem[] = response.items || [];
-          dispatch({ type: 'SET_ITEMS', payload: cartItems });
-          return;
-        }
-      } catch (apiError) {
-        console.log('🛒 API not available, using localStorage fallback');
-      }
-
-      // Fallback to localStorage
+      // Use localStorage as primary storage since API cart is not available
       const cartKey = `cart_items_${user.id}`;
       const savedCart = localStorage.getItem(cartKey);
       
@@ -116,10 +102,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         } catch (e) {
           console.error('Error parsing cart from localStorage:', e);
           localStorage.removeItem(cartKey);
+          dispatch({ type: 'SET_ITEMS', payload: [] });
         }
+      } else {
+        dispatch({ type: 'SET_ITEMS', payload: [] });
       }
     } catch (error) {
       console.error('Error refreshing cart:', error);
+      dispatch({ type: 'SET_ITEMS', payload: [] });
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
@@ -155,24 +145,47 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // Try API first
-      try {
-        const response = await cartAPI.addItem(courseId);
-        console.log('🛒 Add to cart API response:', response);
+      // Validate with backend first
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch('http://localhost:3003/api/cart', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ course_id: courseId })
+      });
 
-        if (response.success) {
-          await refreshCart();
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Error validating course for cart');
+      }
+
+      if (!data.success) {
+        // Handle specific error cases
+        if (data.enrolled) {
           toast({
-            title: "¡Agregado al carrito!",
-            description: "El curso se agregó a tu carrito.",
+            title: "Ya estás inscrito",
+            description: "Ya estás inscrito en este curso. Puedes acceder desde tu dashboard.",
+            variant: "destructive",
           });
           return;
         }
-      } catch (apiError) {
-        console.log('🛒 API not available, using localStorage fallback');
+        
+        if (data.pending) {
+          toast({
+            title: "Orden pendiente",
+            description: "Ya tienes una orden pendiente para este curso. Completa el pago para continuar.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        throw new Error(data.error);
       }
 
-      // Fallback: Get course details and add to localStorage
+      // Get course details
       const courseResponse = await courseAPI.getById(courseId);
       console.log('🛒 Course details:', courseResponse);
 
@@ -198,7 +211,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         added_at: new Date().toISOString(),
       };
 
-      // Add to state
+      // Add to state first for immediate UI update
       dispatch({ type: 'ADD_ITEM', payload: newCartItem });
       
       // Save to localStorage
@@ -214,10 +227,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       
       let errorMessage = "No se pudo agregar el curso al carrito.";
       
-      if (error.message?.includes('already enrolled')) {
+      if (error.message?.includes('Ya estás inscrito')) {
         errorMessage = "Ya estás inscrito en este curso.";
-      } else if (error.message?.includes('already in cart')) {
-        errorMessage = "Este curso ya está en tu carrito.";
+      } else if (error.message?.includes('orden pendiente')) {
+        errorMessage = "Ya tienes una orden pendiente para este curso.";
       } else if (error.message?.includes('Course not found')) {
         errorMessage = "No se pudo encontrar el curso.";
       }

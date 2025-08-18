@@ -19,6 +19,8 @@ import LessonPlayer from "./pages/LessonPlayer";
 import LearningPlatform from "./pages/LearningPlatform";
 import VerifyCertificate from "./pages/VerifyCertificate";
 import PaymentResult from "./pages/PaymentResult";
+import PaymentSuccess from "./pages/PaymentSuccess";
+import PaymentInstructions from "./pages/PaymentInstructions";
 import Checkout from "./pages/Checkout";
 import CheckoutSuccess from "./pages/CheckoutSuccess";
 import NotFound from "./pages/NotFound";
@@ -55,6 +57,8 @@ const App = () => (
                   <Route path="/verificar-certificado" element={<VerifyCertificate />} />
                   <Route path="/checkout" element={<Checkout />} />
                   <Route path="/checkout/success/:orderId" element={<CheckoutSuccess />} />
+                  <Route path="/payment/instructions/:orderId" element={<PaymentInstructions />} />
+                  <Route path="/payment/success/:orderId" element={<PaymentSuccess />} />
                   <Route path="/payment/success" element={<PaymentResult />} />
                   <Route path="/payment/failure" element={<PaymentResult />} />
                   <Route path="/payment/pending" element={<PaymentResult />} />

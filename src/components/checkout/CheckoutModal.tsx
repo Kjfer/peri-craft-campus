@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 import GooglePayButton from "@google-pay/button-react";
+import PaymentInstructionsModal from "./PaymentInstructionsModal";
 import {
   Dialog,
   DialogContent,
@@ -63,6 +64,12 @@ export default function CheckoutModal({
   const [selectedMethod, setSelectedMethod] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [showMercadoPago, setShowMercadoPago] = useState(false);
+  const [showPaymentInstructions, setShowPaymentInstructions] = useState(false);
+  const [paymentData, setPaymentData] = useState<{
+    orderId: string;
+    method: 'yape' | 'plin';
+    amount: number;
+  } | null>(null);
   
   // Card form state
   const [cardData, setCardData] = useState({
@@ -134,8 +141,14 @@ export default function CheckoutModal({
   const handlePayPalSuccess = async (details: any) => {
     setIsProcessing(true);
     try {
-      const { data, error } = await supabase.functions.invoke('create-payment', {
-        body: {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch('/api/payments/create-payment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
           cartItems,
           totalAmount,
           paymentMethod: 'paypal',
@@ -143,11 +156,11 @@ export default function CheckoutModal({
             orderID: details.id,
             payerID: details.payer?.payer_id
           }
-        }
+        })
       });
 
-      if (error) throw error;
-      
+      const data = await response.json();
+
       if (data.success) {
         toast({
           title: "¡Pago exitoso!",
@@ -174,17 +187,23 @@ export default function CheckoutModal({
   const handleGooglePaySuccess = async (paymentData: any) => {
     setIsProcessing(true);
     try {
-      const { data, error } = await supabase.functions.invoke('create-payment', {
-        body: {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch('/api/payments/create-payment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
           cartItems,
           totalAmount,
           paymentMethod: 'googlepay',
           paymentData: paymentData
-        }
+        })
       });
 
-      if (error) throw error;
-      
+      const data = await response.json();
+
       if (data.success) {
         toast({
           title: "¡Pago exitoso!",
@@ -216,16 +235,22 @@ export default function CheckoutModal({
         throw new Error('Por favor completa todos los campos de la tarjeta');
       }
 
-      const { data, error } = await supabase.functions.invoke('create-payment', {
-        body: {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch('/api/payments/create-payment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
           cartItems,
           totalAmount,
           paymentMethod: 'card',
           paymentData: cardData
-        }
+        })
       });
 
-      if (error) throw error;
+      const data = await response.json();
 
       if (data.success) {
         toast({
@@ -254,34 +279,81 @@ export default function CheckoutModal({
   const handleMercadoPagoYape = async () => {
     setIsProcessing(true);
     try {
-      const { data, error } = await supabase.functions.invoke('create-payment', {
-        body: {
-          cartItems,
-          totalAmount,
-          paymentMethod: 'yape',
-          paymentData: {
-            user: {
-              email: user?.email,
-              name: user?.user_metadata?.full_name || user?.email
-            }
-          }
-        }
-      });
-
-      if (error) throw error;
+      const token = localStorage.getItem('auth_token');
+      console.log('🔥 Making Yape payment request...');
       
-      if (data.success) {
-        if (data.paymentUrl) {
-          window.open(data.paymentUrl, '_blank');
+      // Check if we already have an order for this cart
+      const cartKey = `cart_${JSON.stringify(cartItems.map(item => item.id).sort())}`;
+      let existingOrderId = localStorage.getItem(cartKey);
+      
+      if (!existingOrderId) {
+        // Create new order first
+        console.log('🔥 Creating new order...');
+        const orderResponse = await fetch('http://localhost:3003/api/payments/create-payment', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            cartItems,
+            totalAmount,
+            paymentMethod: 'yape',
+            paymentData: {
+              user: {
+                email: user?.email,
+                name: user?.user_metadata?.full_name || user?.email
+              }
+            }
+          })
+        });
+
+        if (!orderResponse.ok) {
+          const errorText = await orderResponse.text();
+          console.error('🔥 Order creation error:', errorText);
+          throw new Error(`HTTP ${orderResponse.status}: ${errorText}`);
         }
+
+        const orderData = await orderResponse.json();
+        console.log('🔥 Order created:', orderData);
+        
+        if (orderData.success) {
+          existingOrderId = orderData.orderId;
+          localStorage.setItem(cartKey, existingOrderId);
+          
+          // Show modal instead of opening new window
+          setPaymentData({
+            orderId: existingOrderId,
+            method: 'yape',
+            amount: Math.round(totalAmount * 3.75) // Convert to PEN
+          });
+          setShowPaymentInstructions(true);
+          
+          toast({
+            title: "Procesando pago con Yape",
+            description: "Sigue las instrucciones para completar el pago.",
+          });
+          onClose();
+        } else {
+          throw new Error(orderData.error || 'Error creating order');
+        }
+      } else {
+        // Use existing order, show modal
+        console.log('🔥 Using existing order:', existingOrderId);
+        setPaymentData({
+          orderId: existingOrderId,
+          method: 'yape',
+          amount: Math.round(totalAmount * 3.75) // Convert to PEN
+        });
+        setShowPaymentInstructions(true);
+        
         toast({
-          title: "Redirigiendo a Yape",
-          description: "Se abrirá una nueva ventana para completar el pago con Yape.",
+          title: "Procesando pago con Yape",
+          description: "Sigue las instrucciones para completar el pago.",
         });
         onClose();
-      } else {
-        throw new Error(data.error || 'Error creating Yape payment');
       }
+      
     } catch (error) {
       console.error('Yape payment error:', error);
       toast({
@@ -297,34 +369,81 @@ export default function CheckoutModal({
   const handleMercadoPagoPlin = async () => {
     setIsProcessing(true);
     try {
-      const { data, error } = await supabase.functions.invoke('create-payment', {
-        body: {
-          cartItems,
-          totalAmount,
-          paymentMethod: 'plin',
-          paymentData: {
-            user: {
-              email: user?.email,
-              name: user?.user_metadata?.full_name || user?.email
-            }
-          }
-        }
-      });
-
-      if (error) throw error;
+      const token = localStorage.getItem('auth_token');
+      console.log('🔥 Making Plin payment request...');
       
-      if (data.success) {
-        if (data.paymentUrl) {
-          window.open(data.paymentUrl, '_blank');
+      // Check if we already have an order for this cart
+      const cartKey = `cart_${JSON.stringify(cartItems.map(item => item.id).sort())}`;
+      let existingOrderId = localStorage.getItem(cartKey);
+      
+      if (!existingOrderId) {
+        // Create new order first
+        console.log('🔥 Creating new order...');
+        const orderResponse = await fetch('http://localhost:3003/api/payments/create-payment', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            cartItems,
+            totalAmount,
+            paymentMethod: 'plin',
+            paymentData: {
+              user: {
+                email: user?.email,
+                name: user?.user_metadata?.full_name || user?.email
+              }
+            }
+          })
+        });
+
+        if (!orderResponse.ok) {
+          const errorText = await orderResponse.text();
+          console.error('🔥 Order creation error:', errorText);
+          throw new Error(`HTTP ${orderResponse.status}: ${errorText}`);
         }
+
+        const orderData = await orderResponse.json();
+        console.log('🔥 Order created:', orderData);
+        
+        if (orderData.success) {
+          existingOrderId = orderData.orderId;
+          localStorage.setItem(cartKey, existingOrderId);
+          
+          // Show modal instead of opening new window
+          setPaymentData({
+            orderId: existingOrderId,
+            method: 'plin',
+            amount: Math.round(totalAmount * 3.75) // Convert to PEN
+          });
+          setShowPaymentInstructions(true);
+          
+          toast({
+            title: "Procesando pago con Plin",
+            description: "Sigue las instrucciones para completar el pago.",
+          });
+          onClose();
+        } else {
+          throw new Error(orderData.error || 'Error creating order');
+        }
+      } else {
+        // Use existing order, show modal
+        console.log('🔥 Using existing order:', existingOrderId);
+        setPaymentData({
+          orderId: existingOrderId,
+          method: 'plin',
+          amount: Math.round(totalAmount * 3.75) // Convert to PEN
+        });
+        setShowPaymentInstructions(true);
+        
         toast({
-          title: "Redirigiendo a Plin",
-          description: "Se abrirá una nueva ventana para completar el pago con Plin.",
+          title: "Procesando pago con Plin",
+          description: "Sigue las instrucciones para completar el pago.",
         });
         onClose();
-      } else {
-        throw new Error(data.error || 'Error creating Plin payment');
       }
+      
     } catch (error) {
       console.error('Plin payment error:', error);
       toast({
@@ -340,8 +459,16 @@ export default function CheckoutModal({
   const handleMercadoPagoPayment = async () => {
     setIsProcessing(true);
     try {
-      const { data, error } = await supabase.functions.invoke('create-payment', {
-        body: {
+      const token = localStorage.getItem('auth_token');
+      console.log('🔥 Making MercadoPago payment request...');
+      
+      const response = await fetch('http://localhost:3003/api/payments/create-payment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
           cartItems,
           totalAmount,
           paymentMethod: 'mercadopago',
@@ -351,10 +478,19 @@ export default function CheckoutModal({
               name: user?.user_metadata?.full_name || user?.email
             }
           }
-        }
+        })
       });
 
-      if (error) throw error;
+      console.log('🔥 Response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('🔥 Response error text:', errorText);
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      const data = await response.json();
+      console.log('🔥 Response data:', data);
       
       if (data.success) {
         if (data.paymentUrl) {
@@ -778,6 +914,25 @@ export default function CheckoutModal({
           </span>
         </div>
       </DialogContent>
+
+      {/* Payment Instructions Modal */}
+      {paymentData && (
+        <PaymentInstructionsModal
+          isOpen={showPaymentInstructions}
+          onClose={() => {
+            setShowPaymentInstructions(false);
+            setPaymentData(null);
+          }}
+          orderId={paymentData.orderId}
+          paymentMethod={paymentData.method}
+          amount={paymentData.amount}
+          onPaymentConfirmed={() => {
+            clearCart();
+            const cartKey = `cart_${JSON.stringify(cartItems.map(item => item.id).sort())}`;
+            localStorage.removeItem(cartKey);
+          }}
+        />
+      )}
     </Dialog>
   );
 }

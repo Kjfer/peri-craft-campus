@@ -5,10 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Clock, Star, User } from "lucide-react";
+import { Search, Clock, Star, User, CheckCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import AddToCartButton from "@/components/ui/AddToCartButton";
 import { useNavigate } from "react-router-dom";
+import { useEnrollments } from "@/hooks/useEnrollments";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Course {
   id: string;
@@ -26,6 +28,9 @@ interface Course {
 
 export default function Courses() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isAuthenticated = !!user;
+  const { isEnrolled, loading: enrollmentsLoading } = useEnrollments();
   const [courses, setCourses] = useState<Course[]>([]);
   const [filteredCourses, setFilteredCourses] = useState<Course[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -211,17 +216,30 @@ export default function Courses() {
                         <span className="text-2xl font-bold text-primary">
                           ${course.price.toFixed(2)}
                         </span>
+                        {isAuthenticated && isEnrolled(course.id) && (
+                          <Badge className="bg-green-100 text-green-800 border-green-200">
+                            ✓ Inscrito
+                          </Badge>
+                        )}
                       </div>
                       <div className="flex gap-2">
                         <Button 
-                          variant="outline" 
+                          variant={isAuthenticated && isEnrolled(course.id) ? "default" : "outline"}
                           size="sm"
                           onClick={() => navigate(`/curso/${course.id}`)}
                           className="flex-1"
                         >
-                          Ver Curso
+                          {isAuthenticated && isEnrolled(course.id) ? "Ir al Curso" : "Ver Curso"}
                         </Button>
-                        {course.price > 0 && (
+                        {course.price > 0 && !isAuthenticated && (
+                          <AddToCartButton
+                            courseId={course.id}
+                            price={course.price}
+                            size="sm"
+                            className="flex-1"
+                          />
+                        )}
+                        {course.price > 0 && isAuthenticated && !isEnrolled(course.id) && (
                           <AddToCartButton
                             courseId={course.id}
                             price={course.price}
