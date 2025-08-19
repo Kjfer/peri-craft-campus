@@ -1,6 +1,33 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
+// Helper to read environment variables in Deno and Node (fallback)
+function getEnv(key: string): string | undefined {
+  try {
+    // Deno
+    // @ts-ignore
+    if (typeof Deno !== 'undefined' && Deno?.env?.get) {
+      // @ts-ignore
+      return Deno.env.get(key);
+    }
+  } catch (e) {
+    // ignore
+  }
+
+  try {
+    // Node.js fallback when running locally for tests
+    // @ts-ignore
+    if (typeof process !== 'undefined' && process?.env) {
+      // @ts-ignore
+      return process.env[key];
+    }
+  } catch (e) {
+    // ignore
+  }
+
+  return undefined;
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -32,8 +59,8 @@ serve(async (req) => {
     }
 
     const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? ""
+      getEnv("SUPABASE_URL") ?? "",
+      getEnv("SUPABASE_ANON_KEY") ?? ""
     );
 
     const token = authHeader.replace("Bearer ", "");
@@ -44,19 +71,21 @@ serve(async (req) => {
     }
 
     const user = userData.user;
-    const { cartItems, totalAmount, paymentMethod, paymentData }: PaymentRequest = await req.json();
+    // Parse and validate request body
+    const body = await req.json() as PaymentRequest;
+    const { cartItems = [], totalAmount, paymentMethod, paymentData } = body;
 
     console.log("Processing payment:", { 
       userId: user.id, 
       totalAmount, 
       paymentMethod, 
-      itemCount: cartItems.length 
+      itemCount: Array.isArray(cartItems) ? cartItems.length : 0 
     });
 
     // Use service role client for database operations
     const supabaseService = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+      getEnv("SUPABASE_URL") ?? "",
+      getEnv("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
     // Create order
@@ -130,22 +159,10 @@ serve(async (req) => {
       console.error('Failed to update order status:', updateError);
     }
 
-    // If payment successful, create enrollments
-    if (paymentResult.success) {
-      const enrollments = cartItems.map(item => ({
-        user_id: user.id,
-        course_id: item.id,
-        enrolled_at: new Date().toISOString()
-      }));
-
-      const { error: enrollmentError } = await supabaseService
-        .from('enrollments')
-        .insert(enrollments);
-
-      if (enrollmentError) {
-        console.error('Failed to create enrollments:', enrollmentError);
-      }
-    }
+  // NOTE: Do NOT create enrollments here. Enrollment creation must be
+  // triggered only after external confirmation (webhook or explicit
+  // confirmation endpoint). This avoids creating enrollments when the
+  // payment provider flow hasn't been finalized.
 
     return new Response(
       JSON.stringify({

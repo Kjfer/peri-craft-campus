@@ -1,4 +1,5 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -19,6 +20,7 @@ const adminRoutes = require('./routes/admin');
 const uploadRoutes = require('./routes/upload');
 const cartRoutes = require('./routes/cart');
 const orderRoutes = require('./routes/orders');
+const checkoutRoutes = require('./routes/checkout');
 
 // Import middleware
 const errorHandler = require('./middleware/errorHandler');
@@ -101,6 +103,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/checkout', checkoutRoutes);
 
 // Welcome endpoint
 app.get('/', (req, res) => {

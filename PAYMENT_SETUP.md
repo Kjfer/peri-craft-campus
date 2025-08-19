@@ -46,6 +46,9 @@ VITE_MERCADOPAGO_PUBLIC_KEY=your_mercadopago_public_key
 # URLs de la aplicación
 VITE_APP_URL=http://localhost:8080
 VITE_API_URL=http://localhost:3003
+ 
+# Número público de Yape (opcional). Si no existe en el perfil del usuario, el backend devolverá este valor como fallback.
+YAPE_NUMBER=999-123-456
 ```
 
 ## 🚀 Configuración del Backend

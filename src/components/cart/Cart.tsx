@@ -68,7 +68,7 @@ export default function Cart() {
 
   const handleCheckout = () => {
     setIsCartOpen(false);
-    openCheckout();
+    navigate('/checkout/carrito');
   };
 
   const cartItemsCount = state.items.length;

@@ -78,6 +78,13 @@ export default function Dashboard() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+
+  // Debug logs
+  console.log('🎯 Dashboard - Estado de auth:', {
+    user: user ? `${user.email} (${user.id})` : 'null',
+    profile: profile ? `${profile.full_name} (${profile.id})` : 'null',
+    loading: loading
+  });
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [progressStats, setProgressStats] = useState<ProgressStats | null>(null);
@@ -90,14 +97,27 @@ export default function Dashboard() {
   });
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      if (!user) return;
+    console.log('🔄 Dashboard useEffect triggered:', { user: !!user, profile: !!profile, loading });
+    
+    if (loading) {
+      console.log('⏳ Still loading auth state...');
+      return;
+    }
 
+    if (!user) {
+      console.log('❌ No user found, redirecting to auth...');
+      navigate('/auth');
+      return;
+    }
+
+    const fetchDashboardData = async () => {
       try {
         setIsLoading(true);
+        console.log('📊 Fetching dashboard data for user:', user.email);
 
         // Fetch user profile
         if (profile) {
+          console.log('✅ Profile found in context:', profile);
           setUserProfile({
             id: profile.id,
             full_name: profile.full_name || '',
@@ -114,6 +134,9 @@ export default function Dashboard() {
             phone: profile.phone || '',
             country: profile.country || ''
           });
+        } else {
+          console.log('⚠️  No profile in context, attempting to refresh...');
+          await refreshAuth();
         }
 
         // For now, set empty arrays since we need to implement proper API endpoints
@@ -127,10 +150,10 @@ export default function Dashboard() {
         });
 
       } catch (error) {
-        console.error('Error fetching dashboard data:', error);
+        console.error('❌ Error fetching dashboard data:', error);
         toast({
           title: "Error",
-          description: "No se pudieron cargar los datos del dashboard",
+          description: "No se pudo cargar la información del dashboard.",
           variant: "destructive",
         });
       } finally {
@@ -139,7 +162,7 @@ export default function Dashboard() {
     };
 
     fetchDashboardData();
-  }, [user, profile, toast]);
+  }, [user, profile, loading, navigate, refreshAuth, toast]);
 
   const handleUpdateProfile = async () => {
     try {

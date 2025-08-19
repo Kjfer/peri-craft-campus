@@ -27,12 +27,15 @@ export default function PaymentInstructions() {
   const [transactionId, setTransactionId] = useState('');
   const [isConfirming, setIsConfirming] = useState(false);
   const [paymentConfirmed, setPaymentConfirmed] = useState(false);
+  const [phoneNumberState, setPhoneNumberState] = useState<string | null>(null);
 
   const paymentMethod = searchParams.get('method') || 'yape';
   const amount = searchParams.get('amount') || '0';
 
-  const phoneNumber = '999-123-456'; // Número de ejemplo para Yape/Plin
+  const phoneNumber = phoneNumberState || '999-123-456'; // Número de ejemplo si no hay otro
   const concept = `Peri Institute - Orden ${orderId?.slice(-8)}`;
+  const qrPayload = `YAPE|phone:${phoneNumber}|amount:${amount}|concept:${encodeURIComponent(concept)}`;
+  const qrUrl = `https://chart.googleapis.com/chart?cht=qr&chs=300x300&chl=${encodeURIComponent(qrPayload)}`;
 
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -95,6 +98,29 @@ export default function PaymentInstructions() {
       setIsConfirming(false);
     }
   };
+
+  // Load user profile to obtain configured Yape number (if any)
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const token = localStorage.getItem('auth_token');
+        if (!token) return;
+        const resp = await fetch('http://localhost:3003/api/users/profile', {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+        const data = await resp.json();
+        if (data?.success && data.profile) {
+          if (data.profile.yape_number) setPhoneNumberState(data.profile.yape_number);
+        }
+      } catch (err) {
+        console.warn('Could not load profile for Yape number', err);
+      }
+    };
+
+    loadProfile();
+  }, []);
 
   const methodConfig = {
     yape: {
@@ -207,6 +233,19 @@ export default function PaymentInstructions() {
                   <Copy className="w-4 h-4" />
                 </Button>
               </div>
+
+              {paymentMethod === 'yape' && (
+                <div className="p-3 bg-muted/50 rounded-lg text-center">
+                  <p className="text-sm text-muted-foreground mb-2">Escanea este QR en Yape para pagar</p>
+                  <div className="flex justify-center mb-2">
+                    <img src={qrUrl} alt="QR Yape" className="w-40 h-40 object-contain" />
+                  </div>
+                  <div className="flex gap-2 justify-center">
+                    <Button variant="outline" size="sm" onClick={() => copyToClipboard(qrUrl, 'QR')}>Copiar QR</Button>
+                    <Button size="sm" onClick={() => copyToClipboard(phoneNumber, 'Número')}>Copiar número</Button>
+                  </div>
+                </div>
+              )}
 
               <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
                 <div>

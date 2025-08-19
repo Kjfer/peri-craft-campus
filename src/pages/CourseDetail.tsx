@@ -167,13 +167,8 @@ export default function CourseDetail() {
 
     if (!course) return;
 
-    // Add to cart if not already there
-    if (!isInCart(course.id)) {
-      await addToCart(course.id);
-    }
-    
-    // Show checkout modal
-    setShowCheckout(true);
+    // Ir directamente al checkout del curso
+    navigate(`/checkout/curso/${course.id}`);
   };
 
   const handleLessonClick = (lesson: Lesson) => {

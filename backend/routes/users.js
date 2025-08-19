@@ -9,9 +9,15 @@ const router = express.Router();
 // @access  Private
 router.get('/profile', authenticateToken, async (req, res, next) => {
   try {
+    // Expose yape_number: prefer DB value, fallback to env var or null
+    const profileWithYape = {
+      ...req.profile,
+      yape_number: req.profile?.yape_number || process.env.YAPE_NUMBER || null
+    };
+
     res.json({
       success: true,
-      profile: req.profile
+      profile: profileWithYape
     });
   } catch (error) {
     next(error);
@@ -23,7 +29,7 @@ router.get('/profile', authenticateToken, async (req, res, next) => {
 // @access  Private
 router.put('/profile', authenticateToken, async (req, res, next) => {
   try {
-    const { full_name, phone, country, avatar_url } = req.body;
+  const { full_name, phone, country, avatar_url, yape_number } = req.body;
     
     console.log('Updating profile for user:', req.user.id);
     console.log('Update data:', { full_name, phone, country, avatar_url });
@@ -33,6 +39,7 @@ router.put('/profile', authenticateToken, async (req, res, next) => {
     if (phone !== undefined) updateData.phone = phone;
     if (country !== undefined) updateData.country = country;
     if (avatar_url !== undefined) updateData.avatar_url = avatar_url;
+  if (yape_number !== undefined) updateData.yape_number = yape_number;
     updateData.updated_at = new Date().toISOString();
 
     // First, check if profile exists
@@ -46,12 +53,12 @@ router.put('/profile', authenticateToken, async (req, res, next) => {
     if (checkError && checkError.code === 'PGRST116') {
       // Profile doesn't exist, create it
       console.log('Profile does not exist, creating new one...');
-      const { data, error } = await supabaseAdmin
+    const { data, error } = await supabaseAdmin
         .from('profiles')
         .insert([{
           user_id: req.user.id,
           email: req.user.email,
-          ...updateData,
+      ...updateData,
           role: 'student'
         }])
         .select()

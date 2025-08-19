@@ -43,6 +43,132 @@ router.post('/register', async (req, res, next) => {
 
     console.log('Auth data:', authData);
 
+    // In development, we'll auto-confirm and create profile immediately
+    if (authData.user && process.env.NODE_ENV === 'development') {
+      try {
+        console.log('🔧 Development mode: Setting up user automatically...');
+
+        // Helper: wait/poll until Supabase Auth reports the user exists (avoid FK race)
+        const waitForSupabaseUser = async (userId, maxAttempts = 8, baseDelay = 500) => {
+          for (let attempt = 0; attempt < maxAttempts; attempt++) {
+            try {
+              // Prefer getUserById; fall back to listing users if needed
+              if (supabaseAdmin.auth && supabaseAdmin.auth.admin && supabaseAdmin.auth.admin.getUserById) {
+                const { data, error } = await supabaseAdmin.auth.admin.getUserById(userId);
+                if (!error && data && data.user) return data.user;
+              } else {
+                const { data: usersData } = await supabaseAdmin.auth.admin.listUsers();
+                const found = usersData.users && usersData.users.find(u => u.id === userId);
+                if (found) return found;
+              }
+            } catch (e) {
+              console.debug('waitForSupabaseUser attempt error (ignored):', e.message || e);
+            }
+
+            // Exponential backoff-ish delay
+            const delay = baseDelay * (attempt + 1);
+            await new Promise(r => setTimeout(r, delay));
+          }
+          return null;
+        };
+
+        // Wait for the auth user to be visible to the admin API (longer polling to handle Supabase propagation)
+        const visibleUser = await waitForSupabaseUser(authData.user.id, 15, 700);
+        if (!visibleUser) {
+          console.warn('User not visible yet to admin API after extended polling; will wait an extra 2s before final attempts.');
+          await new Promise(r => setTimeout(r, 2000));
+        } else {
+          console.log('Supabase auth user is visible to admin API.');
+        }
+
+        // Try to create profile with several retries on FK/visibility errors
+        const createProfileWithRetries = async (attempts = 5) => {
+          for (let i = 0; i < attempts; i++) {
+            try {
+              console.log(`📝 Profile create attempt ${i + 1}/${attempts}...`);
+              const { data: newProfile, error: profileError } = await supabaseAdmin
+                .from('profiles')
+                .insert([{
+                  user_id: authData.user.id,
+                  email: authData.user.email,
+                  full_name: fullName,
+                  role: 'student',
+                  phone: phone || null,
+                  country: country || null
+                }])
+                .select()
+                .single();
+
+              if (!profileError) {
+                return { success: true, profile: newProfile };
+              }
+ 
+              // Log more context for FK errors
+              if (profileError && profileError.code === '23503') {
+                console.warn('FK violation detected when inserting profile (profiles_user_id_fkey). This indicates auth.users row not visible yet.');
+              }
+              console.warn('Profile creation error (will retry):', profileError.message || profileError);
+
+              // If foreign key / visibility issue, wait a bit longer before retrying
+              // Increase delay between retries progressively
+              await new Promise(r => setTimeout(r, 700 * (i + 1)));
+            } catch (e) {
+              console.error('Unexpected profile creation exception:', e.message || e);
+              await new Promise(r => setTimeout(r, 700 * (i + 1)));
+            }
+          }
+          return { success: false };
+        };
+
+        const created = await createProfileWithRetries(6);
+        if (created.success) {
+          console.log('✅ Profile created successfully:', created.profile);
+        } else {
+          console.error('Profile creation failed after retries; will attempt auto-confirm and one final retry.');
+
+          // Try to confirm user first and then a final profile creation
+          try {
+            const { data: confirmedUser, error: confirmError } = await supabaseAdmin.auth.admin.updateUserById(
+              authData.user.id,
+              { email_confirm: true }
+            );
+
+            if (confirmError) {
+              console.error('Auto-confirm error:', confirmError);
+            } else {
+              console.log('✅ Email confirmed automatically');
+            }
+          } catch (e) {
+            console.error('Auto-confirm exception:', e.message || e);
+          }
+
+          // Final short wait then final attempt
+          await new Promise(r => setTimeout(r, 1000));
+          const finalAttempt = await createProfileWithRetries(1);
+          if (finalAttempt.success) {
+            console.log('✅ Profile created on final attempt:', finalAttempt.profile);
+          } else {
+            console.error('Profile creation still failed after final attempt');
+          }
+        }
+
+        return res.status(201).json({
+          success: true,
+          message: 'User registered successfully in development mode',
+          user: {
+            id: authData.user.id,
+            email: authData.user.email,
+            full_name: fullName,
+            email_confirmed: true
+          },
+          autoLogin: true // Signal frontend to do auto-login
+        });
+
+      } catch (devError) {
+        console.error('Development auto-setup error:', devError);
+      }
+    }
+
     // Return success regardless of email confirmation status
     if (authData.user) {
       // Create a simple JWT token since Supabase session might be pending
@@ -351,7 +477,7 @@ router.get('/me', async (req, res) => {
         profile: profileData
       };
       
-      console.log('✅ Returning updated profile with role:', profileData.role);
+      console.log('✅ Returning profile with role:', profileData.role);
       res.json(response);
       
     } catch (dbError) {
@@ -539,9 +665,35 @@ router.post('/confirm-email-dev', async (req, res, next) => {
       });
     }
 
+    // Create or ensure profile exists
+    const { data: existingProfile } = await supabaseAdmin
+      .from('profiles')
+      .select('*')
+      .eq('user_id', user.id)
+      .single();
+
+    if (!existingProfile) {
+      const { data: newProfile, error: profileError } = await supabaseAdmin
+        .from('profiles')
+        .insert([{
+          user_id: user.id,
+          email: user.email,
+          full_name: user.user_metadata?.full_name || 'Usuario',
+          role: 'student',
+          phone: null,
+          country: null
+        }])
+        .select()
+        .single();
+
+      if (profileError) {
+        console.error('Profile creation error:', profileError);
+      }
+    }
+
     return res.json({
       success: true,
-      message: 'Email confirmed successfully',
+      message: 'Email confirmed successfully and profile created',
       user: updatedUser.user
     });
 

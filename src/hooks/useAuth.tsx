@@ -41,10 +41,20 @@ export function useAuth() {
       const response = await authAPI.getProfile();
       console.log('🔍 Profile response:', response);
       
-      setUser({ id: response.user.id, email: response.user.email } as User);
-      setProfile(response.profile);
-      setSession({ user: { id: response.user.id, email: response.user.email } } as Session);
-      console.log('🔍 Auth state updated successfully');
+      if (response.success) {
+        const userData = { id: response.user.id, email: response.user.email } as User;
+        setUser(userData);
+        setProfile(response.profile);
+        setSession({ user: userData } as Session);
+        console.log('✅ Auth state updated successfully:', {
+          user: userData,
+          profile: response.profile
+        });
+      } else {
+        console.error('❌ Profile request failed:', response.error);
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('supabase.auth.token');
+      }
     } catch (error) {
       console.error('🔍 Auth check failed:', error);
       localStorage.removeItem('auth_token');

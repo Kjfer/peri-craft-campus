@@ -268,22 +268,10 @@ router.post('/create-payment', authenticateToken, async (req, res, next) => {
       console.log('✅ Payment status updated successfully');
     }
 
-    // If payment successful, create enrollments
-    if (paymentResult.success) {
-      const enrollments = cartItems.map(item => ({
-        user_id: userId,
-        course_id: item.course?.id || item.course_id || item.id,
-        enrolled_at: new Date().toISOString()
-      }));
-
-      const { error: enrollmentError } = await supabaseAdmin
-        .from('enrollments')
-        .insert(enrollments);
-
-      if (enrollmentError) {
-        console.error('Failed to create enrollments:', enrollmentError);
-      }
-    }
+  // NOTE: Do NOT create enrollments here. Enrollment creation must happen
+  // after a confirmed payment (via /confirm-payment endpoint or webhook).
+  // This prevents accidental enrollments when a payment flow has not
+  // actually been completed by the user.
 
     // Send response
     const response = {
@@ -307,6 +295,157 @@ router.post('/create-payment', authenticateToken, async (req, res, next) => {
       success: false,
       error: error.message
     });
+  }
+});
+
+// @desc    Process an existing order (central payment processing)
+// @route   POST /api/payments/process-order
+// @access  Private
+router.post('/process-order', authenticateToken, async (req, res) => {
+  try {
+    const { orderId, paymentData } = req.body;
+    const userId = req.user.id;
+
+    if (!orderId) {
+      return res.status(400).json({ success: false, error: 'orderId is required' });
+    }
+
+    // Load the order and items
+    const { data: order, error: orderError } = await supabaseAdmin
+      .from('orders')
+      .select(`*, order_items ( id, course_id, price, courses ( id, title ) )`)
+      .eq('id', orderId)
+      .eq('user_id', userId)
+      .single();
+
+    if (orderError || !order) {
+      return res.status(404).json({ success: false, error: 'Order not found' });
+    }
+
+    if (order.payment_status && order.payment_status === 'paid') {
+      return res.status(400).json({ success: false, error: 'Order already paid' });
+    }
+
+    const paymentMethod = order.payment_method;
+
+    // Find payment record associated with this order (if created by checkout.start)
+    let paymentRecord = null;
+    if (order.payment_id) {
+      const { data: p } = await supabaseAdmin.from('payments').select('*').eq('id', order.payment_id).single();
+      paymentRecord = p;
+    }
+
+    // If no payment record, create one for this order
+    if (!paymentRecord) {
+      const { data: payment, error: paymentError } = await supabaseAdmin
+        .from('payments')
+        .insert({
+          user_id: userId,
+          amount: order.total_amount,
+          currency: order.currency,
+          payment_method: paymentMethod,
+          payment_status: 'pending',
+          external_payment_id: `PAY-${order.id}-${Date.now()}`
+        })
+        .select()
+        .single();
+
+      if (paymentError) {
+        console.error('Failed to create payment record for order:', paymentError);
+      } else {
+        paymentRecord = payment;
+        // Attach payment to order
+        await supabaseAdmin.from('orders').update({ payment_id: payment.id }).eq('id', order.id);
+      }
+    }
+
+    // Process payment via local processors
+    let paymentResult = { success: false, message: 'Unsupported payment method', paymentId: null, paymentUrl: null };
+    switch (paymentMethod) {
+      case 'card':
+        paymentResult = await processCardPayment(paymentData, order.id, order.total_amount);
+        break;
+      case 'mercadopago':
+        paymentResult = await processMercadoPagoPayment(order.order_items || [], order.total_amount, order.id);
+        break;
+      case 'yape':
+        paymentResult = await processYapePayment(order.order_items || [], order.total_amount, order.id);
+        break;
+      case 'plin':
+        paymentResult = await processPlinPayment(order.order_items || [], order.total_amount, order.id);
+        break;
+      case 'paypal':
+        paymentResult = await processPayPalPayment(order.order_items || [], order.total_amount, order.id, paymentData);
+        break;
+      case 'googlepay':
+        paymentResult = await processGooglePayPayment(paymentData, order.id, order.total_amount);
+        break;
+      default:
+        paymentResult = { success: false, message: `Unsupported payment method: ${paymentMethod}` };
+    }
+
+    // Update payment records: mark completed or failed
+    const newStatus = paymentResult.success ? 'completed' : 'failed';
+    try {
+      await supabaseAdmin
+        .from('payments')
+        .update({ payment_status: newStatus, external_payment_id: paymentResult.paymentId || undefined, updated_at: new Date().toISOString() })
+        .eq('id', paymentRecord?.id || order.payment_id);
+
+      await supabaseAdmin
+        .from('orders')
+        .update({ payment_status: paymentResult.success ? 'paid' : 'failed' })
+        .eq('id', order.id);
+    } catch (e) {
+      console.error('Error updating payment/order status after processing:', e);
+    }
+
+    // If payment succeeded, create enrollments for order items (avoid duplicates)
+    let enrolledCourses = [];
+    if (paymentResult.success && order.order_items && order.order_items.length > 0) {
+      try {
+        const courseIds = order.order_items.map(i => i.course_id);
+        // Fetch existing enrollments to avoid duplicates
+        const { data: existing } = await supabaseAdmin
+          .from('enrollments')
+          .select('course_id')
+          .eq('user_id', userId)
+          .in('course_id', courseIds);
+
+        const existingIds = (existing || []).map(e => e.course_id);
+        const toCreate = order.order_items.filter(i => !existingIds.includes(i.course_id)).map(i => ({
+          user_id: userId,
+          course_id: i.course_id,
+          enrolled_at: new Date().toISOString(),
+          progress_percentage: 0
+        }));
+
+        if (toCreate.length > 0) {
+          const { error: enrollmentError } = await supabaseAdmin
+            .from('enrollments')
+            .insert(toCreate);
+
+          if (enrollmentError) {
+            console.error('Failed to create enrollments after payment:', enrollmentError);
+          } else {
+            enrolledCourses = toCreate.map(t => t.course_id);
+          }
+        }
+      } catch (e) {
+        console.error('Error creating enrollments after payment:', e);
+      }
+    }
+
+    return res.json({
+      success: paymentResult.success,
+      message: paymentResult.message,
+      paymentUrl: paymentResult.paymentUrl,
+      enrolled_courses: enrolledCourses
+    });
+
+  } catch (error) {
+    console.error('Process-order error:', error);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
@@ -357,8 +496,9 @@ async function processYapePayment(cartItems, amount, orderId) {
     
     console.log('✅ Yape payment processed successfully');
     
+    // For Yape we return a paymentUrl/instructions and wait for manual confirmation
     return {
-      success: true,
+      success: false,
       message: "Redirecting to Yape instructions",
       paymentId: `yape_${orderId}_${Date.now()}`,
       paymentUrl: `http://localhost:8080/payment/instructions/${orderId}?method=yape&amount=${amount}`,
@@ -383,8 +523,9 @@ async function processPlinPayment(cartItems, amount, orderId) {
     
     console.log('✅ Plin payment processed successfully');
     
+    // Return instructions/paymentUrl and await manual confirmation
     return {
-      success: true,
+      success: false,
       message: "Redirecting to Plin instructions",
       paymentId: `plin_${orderId}_${Date.now()}`,
       paymentUrl: `http://localhost:8080/payment/instructions/${orderId}?method=plin&amount=${amount}`,
@@ -403,26 +544,28 @@ async function processPlinPayment(cartItems, amount, orderId) {
 async function processPayPalPayment(cartItems, amount, orderId, paymentData) {
   console.log('💳 Processing PayPal payment:', { orderId, amount });
   
+  // Simulate creating a PayPal checkout session and return a redirect URL
   await new Promise(resolve => setTimeout(resolve, 500));
-  
+  const paymentId = paymentData?.orderID || `pp_${Date.now()}`;
   return {
-    success: true,
-    message: "PayPal payment processed",
-    paymentId: paymentData?.orderID || `pp_${Date.now()}`,
-    paymentUrl: null
+    success: false,
+    message: 'Redirecting to PayPal',
+    paymentId,
+    paymentUrl: `http://localhost:8080/payment/redirect/${orderId}?method=paypal&paymentId=${paymentId}`
   };
 }
 
 async function processGooglePayPayment(paymentData, orderId, amount) {
   console.log('💳 Processing Google Pay payment:', { orderId, amount });
   
+  // Simulate Google Pay checkout creation and return a redirect URL
   await new Promise(resolve => setTimeout(resolve, 500));
-  
+  const paymentId = `gp_${Date.now()}`;
   return {
-    success: true,
-    message: "Google Pay payment processed",
-    paymentId: `gp_${Date.now()}`,
-    paymentUrl: null
+    success: false,
+    message: 'Redirecting to Google Pay',
+    paymentId,
+    paymentUrl: `http://localhost:8080/payment/redirect/${orderId}?method=googlepay&paymentId=${paymentId}`
   };
 }
 
@@ -965,6 +1108,67 @@ router.post('/webhook', async (req, res, next) => {
           updated_at: new Date().toISOString()
         })
         .eq('external_payment_id', payment_intent_id);
+
+      // If status indicates success, find the related order and mark realized + create enrollments
+      if (status === 'completed' || status === 'realized' || status === 'succeeded') {
+        // Find payments with that external id
+        const { data: payments } = await supabase
+          .from('payments')
+          .select('id, user_id, course_id, external_payment_id')
+          .eq('external_payment_id', payment_intent_id);
+
+        if (payments && payments.length > 0) {
+          for (const p of payments) {
+            try {
+              // find orders that reference this payment
+              const { data: orders } = await supabase
+                .from('orders')
+                .select('id')
+                .eq('payment_id', p.id);
+
+              if (orders && orders.length > 0) {
+                for (const o of orders) {
+                  await supabase
+                    .from('orders')
+                    .update({ payment_status: 'realized' })
+                    .eq('id', o.id);
+
+                  // create enrollments from order_items
+                  const { data: orderItems } = await supabase
+                    .from('order_items')
+                    .select('course_id')
+                    .eq('order_id', o.id);
+
+                  if (orderItems && orderItems.length > 0) {
+                    const courseIds = orderItems.map(i => i.course_id);
+                    const { data: existing } = await supabase
+                      .from('enrollments')
+                      .select('course_id')
+                      .eq('user_id', p.user_id)
+                      .in('course_id', courseIds);
+
+                    const existingIds = (existing || []).map(e => e.course_id);
+                    const toCreate = orderItems.filter(i => !existingIds.includes(i.course_id)).map(i => ({
+                      user_id: p.user_id,
+                      course_id: i.course_id,
+                      enrolled_at: new Date().toISOString(),
+                      progress_percentage: 0
+                    }));
+
+                    if (toCreate.length > 0) {
+                      await supabase
+                        .from('enrollments')
+                        .insert(toCreate);
+                    }
+                  }
+                }
+              }
+            } catch (e) {
+              console.error('Webhook post-processing error:', e);
+            }
+          }
+        }
+      }
     }
 
     res.json({
@@ -1000,11 +1204,11 @@ router.post('/confirm-payment', authenticateToken, async (req, res) => {
       });
     }
 
-    // Update payment status
+    // Update payment status to 'realized' when confirmation happens
     const { error: paymentUpdateError } = await supabaseAdmin
       .from('payments')
       .update({
-        payment_status: 'completed',
+        payment_status: 'realized',
         external_payment_id: transactionId || `CONFIRMED-${orderId}-${Date.now()}`
       })
       .eq('user_id', userId)
@@ -1034,9 +1238,30 @@ router.post('/confirm-payment', authenticateToken, async (req, res) => {
         enrolled_at: new Date().toISOString()
       }));
 
-      const { error: enrollmentError } = await supabaseAdmin
+      // Insert enrollments but avoid duplicates
+      const courseIds = enrollments.map(e => e.course_id);
+      const { data: existing } = await supabaseAdmin
         .from('enrollments')
-        .insert(enrollments);
+        .select('course_id')
+        .eq('user_id', userId)
+        .in('course_id', courseIds);
+
+      const existingIds = (existing || []).map(e => e.course_id);
+      const toCreate = enrollments.filter(e => !existingIds.includes(e.course_id));
+
+      if (toCreate.length > 0) {
+        const { error: enrollmentError } = await supabaseAdmin
+          .from('enrollments')
+          .insert(toCreate);
+
+        if (enrollmentError) {
+          console.error('Enrollment creation error:', enrollmentError);
+        } else {
+          console.log('✅ Enrollments created for order:', orderId);
+        }
+      } else {
+        console.log('ℹ️ No new enrollments to create (already enrolled)');
+      }
 
       if (enrollmentError) {
         console.error('Enrollment creation error:', enrollmentError);

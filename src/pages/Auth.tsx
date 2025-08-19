@@ -99,14 +99,29 @@ export default function Auth() {
       } else {
         toast({
           title: "¡Registro exitoso!",
-          description: "Revisa tu email para confirmar tu cuenta.",
+          description: "Tu cuenta ha sido creada. Iniciando sesión...",
         });
         
-        // Refresh auth state to ensure UI updates
-        await refreshAuth();
+        // Auto-login after successful registration in development
+        console.log('🔄 Auto-login after registration...');
+        const loginResult = await signIn(signUpData.email, signUpData.password);
         
-        // Navigate to dashboard
-        navigate("/dashboard");
+        if (loginResult.error) {
+          console.error('Auto-login failed:', loginResult.error);
+          toast({
+            title: "Registro exitoso",
+            description: "Por favor inicia sesión con tus credenciales.",
+          });
+        } else {
+          console.log('✅ Auto-login successful');
+          toast({
+            title: "¡Bienvenido!",
+            description: "Tu cuenta ha sido configurada correctamente.",
+          });
+          
+          // Navigate to dashboard
+          navigate("/dashboard");
+        }
       }
     } catch (error) {
       toast({
@@ -272,6 +287,16 @@ export default function Auth() {
           </a>
           .
         </p>
+        
+        {/* Development Tool */}
+        <div className="text-center">
+          <a 
+            href="/confirm-email" 
+            className="text-xs text-muted-foreground hover:text-primary underline"
+          >
+            Herramienta de confirmación de email (Dev)
+          </a>
+        </div>
       </div>
     </div>
   );
