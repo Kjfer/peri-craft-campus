@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,6 +14,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/hooks/use-toast';
 import { checkoutService, CheckoutItem } from '@/lib/checkoutService';
+import { supabase } from '@/integrations/supabase/client';
 
 interface CheckoutProps {
   mode?: 'cart' | 'single';
@@ -29,10 +31,18 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('');
   const [availablePaymentMethods, setAvailablePaymentMethods] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState<'select_payment' | 'processing' | 'manual_confirmation' | 'completed'>('select_payment');
+  const [step, setStep] = useState<'select_payment' | 'processing' | 'manual_confirmation' | 'completed' | 'paypal'>('select_payment');
   const [currentOrder, setCurrentOrder] = useState<any>(null);
   const [transactionId, setTransactionId] = useState('');
   const [error, setError] = useState<string>('');
+  const [paypalDbOrderId, setPaypalDbOrderId] = useState<string | null>(null);
+
+  // PayPal configuration
+  const paypalOptions = {
+    clientId: "AZDxjDScFpQtjWTOUtWKbyN_bDt4OgqaF4eYXlewfBP4-8aqX3PiV8e1GWU6liB2CUXlkA59kJXE7M6R",
+    currency: "USD",
+    intent: "capture" as const
+  };
 
   useEffect(() => {
     if (!user) {
@@ -111,6 +121,12 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
   let backendMethod = selectedPaymentMethod;
   if (selectedPaymentMethod === 'google_pay') backendMethod = 'googlepay';
 
+  // For PayPal, use embedded PayPal buttons flow
+  if (backendMethod === 'paypal') {
+    setStep('paypal');
+    return;
+  }
+
       const result = await checkoutService.startCheckoutFromCart(items, backendMethod);
       
       if (result.success && result.paymentUrl) {
@@ -121,8 +137,8 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
       
       setCurrentOrder(result.order);
 
-      // For immediate payment methods (PayPal, Google Pay), mark as completed
-      if (backendMethod === 'paypal' || backendMethod === 'googlepay') {
+      // For immediate payment methods (Google Pay), mark as completed
+      if (backendMethod === 'googlepay') {
         setStep('completed');
         if (mode === 'cart') await clearCart();
       } else {
@@ -362,6 +378,73 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
                   Proceder al pago
                 </Button>
               </CardFooter>
+            </Card>
+          )}
+
+          {step === 'paypal' && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Pagar con PayPal</CardTitle>
+                <CardDescription>
+                  Serás redirigido a PayPal para completar el pago.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <PayPalScriptProvider options={paypalOptions}>
+                  <PayPalButtons
+                    style={{ layout: 'vertical', color: 'blue', shape: 'rect', label: 'paypal' }}
+                    createOrder={async () => {
+                      try {
+                        const { data, error } = await supabase.functions.invoke('paypal', {
+                          body: {
+                            action: 'create',
+                            cartItems: items.map(i => ({
+                              id: i.course_id,
+                              title: i.course?.title,
+                              price: i.course?.price,
+                              instructor_name: i.course?.instructor_name,
+                              thumbnail_url: i.course?.thumbnail_url
+                            })),
+                            totalAmount: items.reduce((sum, i) => sum + (i.course?.price || 0), 0)
+                          }
+                        });
+                        if (error || !data?.paypalOrderId) throw new Error(error?.message || 'No se pudo crear la orden de PayPal');
+                        setPaypalDbOrderId(data.dbOrderId);
+                        return data.paypalOrderId as string;
+                      } catch (e: any) {
+                        console.error('PayPal createOrder error:', e);
+                        toast({ title: 'Error de PayPal', description: e.message || 'No se pudo crear la orden.', variant: 'destructive' });
+                        throw e;
+                      }
+                    }}
+                    onApprove={async (data) => {
+                      try {
+                        const { data: cap, error } = await supabase.functions.invoke('paypal', {
+                          body: {
+                            action: 'capture',
+                            orderID: data.orderID,
+                            dbOrderId: paypalDbOrderId
+                          }
+                        });
+                        if (error || !cap?.success) throw new Error(error?.message || cap?.error || 'No se pudo completar el pago con PayPal');
+                        toast({ title: '¡Pago exitoso!', description: 'Tu pago con PayPal se procesó correctamente.' });
+                        if (mode === 'cart') await clearCart();
+                        navigate(`/checkout/success/${cap.orderId}`);
+                      } catch (e: any) {
+                        console.error('PayPal capture error:', e);
+                        toast({ title: 'Error en el pago', description: e.message || 'No se pudo completar el pago con PayPal.', variant: 'destructive' });
+                      }
+                    }}
+                    onError={(err) => {
+                      console.error('PayPal Error:', err);
+                      toast({ title: 'Error de PayPal', description: 'Ocurrió un error con PayPal. Intenta nuevamente.', variant: 'destructive' });
+                    }}
+                  />
+                </PayPalScriptProvider>
+                <div className="mt-4 flex gap-2">
+                  <Button variant="outline" onClick={() => setStep('select_payment')} className="flex-1">Volver</Button>
+                </div>
+              </CardContent>
             </Card>
           )}
 
