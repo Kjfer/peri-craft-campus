@@ -129,54 +129,17 @@ export default function CheckoutModal({
       icon: <Smartphone className="w-6 h-6" />,
       description: "Paga de forma segura con tu cuenta PayPal",
       available: true
+    },
+    {
+      id: "googlepay",
+      name: "Google Pay",
+      icon: <Smartphone className="w-6 h-6" />,
+      description: "Pago rápido con Google Pay",
+      available: true
     }
   ];
 
-  const handlePayPalSuccess = async (details: any) => {
-    setIsProcessing(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('create-payment', {
-        body: {
-          cartItems: cartItems.map(item => ({
-            id: item.course_id,
-            title: item.course.title,
-            price: item.course.price,
-            instructor_name: item.course.instructor_name,
-            thumbnail_url: item.course.thumbnail_url
-          })),
-          totalAmount,
-          paymentMethod: 'paypal',
-          paymentData: {
-            orderID: details.id,
-            payerID: details.payer?.payer_id
-          }
-        }
-      });
-
-      if (error) throw error;
-
-      if (data.success) {
-        toast({
-          title: "¡Pago exitoso!",
-          description: "Tu pago con PayPal se procesó correctamente.",
-        });
-        clearCart();
-        onClose();
-        navigate(`/checkout/success/${data.orderId}`);
-      } else {
-        throw new Error(data.error || 'Error processing payment');
-      }
-    } catch (error: any) {
-      console.error('PayPal payment error:', error);
-      toast({
-        title: "Error en el pago",
-        description: error.message || "No se pudo procesar el pago con PayPal. Intenta nuevamente.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
+  // Removed unused handlePayPalSuccess function
 
   const handleGooglePaySuccess = async (paymentData: any) => {
     setIsProcessing(true);
@@ -464,7 +427,7 @@ export default function CheckoutModal({
           {/* Payment Methods */}
           <div className="lg:col-span-2">
             <Tabs value={selectedMethod} onValueChange={setSelectedMethod}>
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-4">
                 {paymentMethods.map((method) => (
                   <TabsTrigger
                     key={method.id}
@@ -478,33 +441,7 @@ export default function CheckoutModal({
                 ))}
               </TabsList>
               
-              {/* Google Pay Button - Always visible */}
-              <div className="mt-4 p-4 border rounded-lg bg-muted/20">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-medium">Pago Rápido</h3>
-                  <Badge variant="secondary">Google Pay</Badge>
-                </div>
-                <GooglePayButton
-                  environment={googlePayConfig.environment}
-                  paymentRequest={{
-                    apiVersion: googlePayConfig.apiVersion,
-                    apiVersionMinor: googlePayConfig.apiVersionMinor,
-                    allowedPaymentMethods: googlePayConfig.allowedPaymentMethods,
-                    merchantInfo: googlePayConfig.merchantInfo,
-                    transactionInfo: {
-                      totalPriceStatus: "FINAL",
-                      totalPrice: totalAmount.toFixed(2),
-                      currencyCode: "USD",
-                      countryCode: "US"
-                    }
-                  }}
-                  onLoadPaymentData={handleGooglePaySuccess}
-                  existingPaymentMethodRequired={false}
-                  buttonColor="default"
-                  buttonType="pay"
-                  buttonSizeMode="fill"
-                />
-              </div>
+              {/* Moved Google Pay to its own tab */}
 
               {/* Credit/Debit Card Tab */}
               <TabsContent value="card" className="space-y-4">
@@ -762,6 +699,7 @@ export default function CheckoutModal({
                           label: "paypal"
                         }}
                         createOrder={async () => {
+                          console.log('PayPal createOrder called');
                           setIsProcessing(true);
                           try {
                             const { data, error } = await supabase.functions.invoke('paypal', {
@@ -777,12 +715,14 @@ export default function CheckoutModal({
                                 totalAmount
                               }
                             });
+                            console.log('PayPal edge function response:', data, error);
                             if (error || !data?.paypalOrderId) {
                               throw new Error(error?.message || 'No se pudo crear la orden de PayPal');
                             }
                             setPaypalDbOrderId(data.dbOrderId);
                             return data.paypalOrderId as string;
                           } catch (e: any) {
+                            console.error('PayPal createOrder error:', e);
                             toast({
                               title: 'Error de PayPal',
                               description: e.message || 'No se pudo crear la orden.',
@@ -794,6 +734,7 @@ export default function CheckoutModal({
                           }
                         }}
                         onApprove={async (data) => {
+                          console.log('PayPal onApprove called:', data);
                           setIsProcessing(true);
                           try {
                             const { data: cap, error } = await supabase.functions.invoke('paypal', {
@@ -803,6 +744,7 @@ export default function CheckoutModal({
                                 dbOrderId: paypalDbOrderId
                               }
                             });
+                            console.log('PayPal capture response:', cap, error);
                             if (error || !cap?.success) {
                               throw new Error(error?.message || cap?.error || 'No se pudo completar el pago con PayPal');
                             }
@@ -835,6 +777,43 @@ export default function CheckoutModal({
                         disabled={isProcessing}
                       />
                     </PayPalScriptProvider>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Google Pay Tab */}
+              <TabsContent value="googlepay" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <Smartphone className="w-5 h-5 mr-2" />
+                      Google Pay
+                    </CardTitle>
+                    <CardDescription>
+                      Pago rápido y seguro con Google Pay
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <GooglePayButton
+                      environment={googlePayConfig.environment}
+                      paymentRequest={{
+                        apiVersion: googlePayConfig.apiVersion,
+                        apiVersionMinor: googlePayConfig.apiVersionMinor,
+                        allowedPaymentMethods: googlePayConfig.allowedPaymentMethods,
+                        merchantInfo: googlePayConfig.merchantInfo,
+                        transactionInfo: {
+                          totalPriceStatus: "FINAL",
+                          totalPrice: totalAmount.toFixed(2),
+                          currencyCode: "USD",
+                          countryCode: "US"
+                        }
+                      }}
+                      onLoadPaymentData={handleGooglePaySuccess}
+                      existingPaymentMethodRequired={false}
+                      buttonColor="default"
+                      buttonType="pay"
+                      buttonSizeMode="fill"
+                    />
                   </CardContent>
                 </Card>
               </TabsContent>
