@@ -76,7 +76,7 @@ export default function CheckoutModal({
 
   // PayPal configuration
   const paypalOptions = {
-    clientId: "sb",
+    clientId: "AZDxjDScFpQtjWTOUtWKbyN_bDt4OgqaF4eYXlewfBP4-8aqX3PiV8e1GWU6liB2CUXlkA59kJXE7M6R",
     currency: "USD",
     intent: "capture" as const
   };
