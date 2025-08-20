@@ -261,6 +261,7 @@ router.post('/', authenticateToken, requireInstructor, async (req, res, next) =>
             const { data: lessonData, error: lessonError } = await supabaseAdmin
               .from('lessons')
               .insert([{
+                course_id: courseData.id,  // ✅ Add course_id relationship
                 module_id: moduleData.id,
                 title: lesson.title,
                 description: lesson.description || '',
@@ -411,6 +412,7 @@ router.put('/:id', authenticateToken, requireInstructor, async (req, res, next) 
             const { data: lessonData, error: lessonError } = await supabaseAdmin
               .from('lessons')
               .insert([{
+                course_id: id,  // ✅ Add course_id relationship
                 module_id: moduleData.id,
                 title: lesson.title,
                 description: lesson.description || '',

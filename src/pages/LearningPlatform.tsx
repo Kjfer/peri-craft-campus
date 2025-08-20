@@ -65,11 +65,26 @@ interface CourseProgress {
   completed_at?: string;
 }
 
-// YouTube URL parser
+// YouTube URL parser with enhanced debugging
 const getYouTubeVideoId = (url: string): string | null => {
-  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+  console.log('🎥 Processing YouTube URL:', url);
+  
+  if (!url) {
+    console.log('❌ Empty URL provided');
+    return null;
+  }
+  
+  // Enhanced regex to catch more YouTube URL patterns
+  const regExp = /^.*(youtu\.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
   const match = url.match(regExp);
-  return (match && match[2].length === 11) ? match[2] : null;
+  
+  if (match && match[2] && match[2].length === 11) {
+    console.log('✅ YouTube video ID extracted:', match[2]);
+    return match[2];
+  }
+  
+  console.log('❌ Could not extract YouTube video ID from URL:', url);
+  return null;
 };
 
 export default function LearningPlatform() {
@@ -360,17 +375,24 @@ export default function LearningPlatform() {
 
   // YouTube iframe component
   const YouTubePlayer = ({ videoUrl, onTimeUpdate }: { videoUrl: string; onTimeUpdate?: (time: number) => void }) => {
+    console.log('🎬 YouTubePlayer rendering with URL:', videoUrl);
+    
     const videoId = getYouTubeVideoId(videoUrl);
     
     if (!videoId) {
+      console.log('❌ No valid video ID found');
       return (
-        <div className="aspect-video bg-muted flex items-center justify-center">
-          <p className="text-muted-foreground">URL de video inválida</p>
+        <div className="aspect-video bg-muted flex items-center justify-center border-2 border-dashed border-muted-foreground/25 rounded-lg">
+          <div className="text-center">
+            <p className="text-muted-foreground mb-2">URL de video inválida</p>
+            <p className="text-sm text-muted-foreground/70">URL proporcionada: {videoUrl}</p>
+          </div>
         </div>
       );
     }
 
-    const embedUrl = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&modestbranding=1&rel=0`;
+    const embedUrl = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&modestbranding=1&rel=0&origin=${window.location.origin}`;
+    console.log('🎯 Final embed URL:', embedUrl);
     
     return (
       <div className="aspect-video">
@@ -381,6 +403,8 @@ export default function LearningPlatform() {
           frameBorder="0"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           allowFullScreen
+          onLoad={() => console.log('✅ YouTube iframe loaded successfully')}
+          onError={(e) => console.error('❌ YouTube iframe error:', e)}
         />
       </div>
     );
