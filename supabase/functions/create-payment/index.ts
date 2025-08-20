@@ -326,8 +326,7 @@ async function processYapePayment(cartItems: any[], amount: number, orderId: str
     },
     payment_methods: {
       excluded_payment_types: [],
-      excluded_payment_methods: [],
-      default_payment_method_id: 'yape'
+      excluded_payment_methods: []
     },
     external_reference: orderId,
     notification_url: `${getEnv('SUPABASE_URL')}/functions/v1/mercadopago-webhook`,
@@ -394,8 +393,7 @@ async function processPlinPayment(cartItems: any[], amount: number, orderId: str
     },
     payment_methods: {
       excluded_payment_types: [],
-      excluded_payment_methods: [],
-      default_payment_method_id: 'plin'
+      excluded_payment_methods: []
     },
     external_reference: orderId,
     notification_url: `${getEnv('SUPABASE_URL')}/functions/v1/mercadopago-webhook`,  
