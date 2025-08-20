@@ -63,6 +63,7 @@ export default function CheckoutModal({
   const [selectedMethod, setSelectedMethod] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [showMercadoPago, setShowMercadoPago] = useState(false);
+  const [paypalDbOrderId, setPaypalDbOrderId] = useState<string | null>(null);
   
   // Card form state
   const [cardData, setCardData] = useState({
@@ -75,7 +76,7 @@ export default function CheckoutModal({
 
   // PayPal configuration
   const paypalOptions = {
-    clientId: import.meta.env.VITE_PAYPAL_CLIENT_ID || "test",
+    clientId: "sb",
     currency: "USD",
     intent: "capture" as const
   };
@@ -760,24 +761,67 @@ export default function CheckoutModal({
                           shape: "rect",
                           label: "paypal"
                         }}
-                        createOrder={(data, actions) => {
-                          return actions.order.create({
-                            intent: "CAPTURE",
-                            purchase_units: [
-                              {
-                                amount: {
-                                  value: totalAmount.toFixed(2),
-                                  currency_code: "USD"
-                                },
-                                description: `Peri Institute - ${cartItems.length} curso(s)`
+                        createOrder={async () => {
+                          setIsProcessing(true);
+                          try {
+                            const { data, error } = await supabase.functions.invoke('paypal', {
+                              body: {
+                                action: 'create',
+                                cartItems: cartItems.map(item => ({
+                                  id: item.course_id ?? item.id,
+                                  title: item.course?.title ?? item.title,
+                                  price: item.course?.price ?? item.price,
+                                  instructor_name: item.course?.instructor_name ?? item.instructor_name,
+                                  thumbnail_url: item.course?.thumbnail_url ?? item.thumbnail_url
+                                })),
+                                totalAmount
                               }
-                            ]
-                          });
+                            });
+                            if (error || !data?.paypalOrderId) {
+                              throw new Error(error?.message || 'No se pudo crear la orden de PayPal');
+                            }
+                            setPaypalDbOrderId(data.dbOrderId);
+                            return data.paypalOrderId as string;
+                          } catch (e: any) {
+                            toast({
+                              title: 'Error de PayPal',
+                              description: e.message || 'No se pudo crear la orden.',
+                              variant: 'destructive'
+                            });
+                            throw e;
+                          } finally {
+                            setIsProcessing(false);
+                          }
                         }}
-                        onApprove={async (data, actions) => {
-                          const details = await actions.order?.capture();
-                          if (details) {
-                            handlePayPalSuccess(details);
+                        onApprove={async (data) => {
+                          setIsProcessing(true);
+                          try {
+                            const { data: cap, error } = await supabase.functions.invoke('paypal', {
+                              body: {
+                                action: 'capture',
+                                orderID: data.orderID,
+                                dbOrderId: paypalDbOrderId
+                              }
+                            });
+                            if (error || !cap?.success) {
+                              throw new Error(error?.message || cap?.error || 'No se pudo completar el pago con PayPal');
+                            }
+                            toast({
+                              title: '¡Pago exitoso!',
+                              description: 'Tu pago con PayPal se procesó correctamente.',
+                            });
+                            clearCart();
+                            onClose();
+                            navigate(`/checkout/success/${cap.orderId}`);
+                          } catch (e: any) {
+                            console.error('PayPal capture error:', e);
+                            toast({
+                              title: 'Error en el pago',
+                              description: e.message || 'No se pudo completar el pago con PayPal.',
+                              variant: 'destructive'
+                            });
+                          } finally {
+                            setIsProcessing(false);
                           }
                         }}
                         onError={(err) => {
