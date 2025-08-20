@@ -128,14 +128,7 @@ serve(async (req) => {
         paymentResult = await processCardPayment(paymentData, order.id, totalAmount);
         break;
       case 'mercadopago':
-      case 'mercadopago_card':
         paymentResult = await processMercadoPagoPayment(cartItems, totalAmount, order.id, paymentData);
-        break;
-      case 'yape':
-        paymentResult = await processYapePayment(cartItems, totalAmount, order.id, paymentData);
-        break;
-      case 'plin':
-        paymentResult = await processPlinPayment(cartItems, totalAmount, order.id, paymentData);
         break;
       case 'paypal':
         paymentResult = await processPayPalPayment(cartItems, totalAmount, order.id, paymentData);
@@ -249,13 +242,13 @@ async function processMercadoPagoPayment(cartItems: any[], amount: number, order
     throw new Error('MERCADOPAGO_ACCESS_TOKEN not configured');
   }
 
-  // Create MercadoPago preference
+  // Create MercadoPago preference with PEN currency for Peruvian users
   const preference = {
     items: cartItems.map(item => ({
       title: item.title,
       quantity: 1,
-      unit_price: item.price,
-      currency_id: 'USD'
+      unit_price: Math.round(item.price * 3.75), // Convert to PEN
+      currency_id: 'PEN'
     })),
     payer: {
       email: paymentData?.user?.email || 'test@test.com',
@@ -297,140 +290,6 @@ async function processMercadoPagoPayment(cartItems: any[], amount: number, order
     };
   } catch (error) {
     console.error('MercadoPago payment error:', error);
-    return {
-      success: false,
-      message: error.message,
-      paymentId: null,
-      paymentUrl: null
-    };
-  }
-}
-
-async function processYapePayment(cartItems: any[], amount: number, orderId: string, paymentData?: any) {
-  const accessToken = getEnv('MERCADOPAGO_ACCESS_TOKEN');
-  if (!accessToken) {
-    throw new Error('MERCADOPAGO_ACCESS_TOKEN not configured');
-  }
-
-  // Create MercadoPago preference with Yape as preferred payment method
-  const preference = {
-    items: cartItems.map(item => ({
-      title: item.title,
-      quantity: 1,
-      unit_price: Math.round(item.price * 3.75), // Convert to PEN
-      currency_id: 'PEN'
-    })),
-    payer: {
-      email: paymentData?.user?.email || 'test@test.com',
-      name: paymentData?.user?.name || 'Test User'
-    },
-    payment_methods: {
-      excluded_payment_types: [],
-      excluded_payment_methods: []
-    },
-    external_reference: orderId,
-    notification_url: `${getEnv('SUPABASE_URL')}/functions/v1/mercadopago-webhook`,
-    back_urls: {
-      success: `https://idjmabhvzupcdygguqzm.supabase.co/checkout/success/${orderId}`,
-      failure: `https://idjmabhvzupcdygguqzm.supabase.co/checkout/failed`,
-      pending: `https://idjmabhvzupcdygguqzm.supabase.co/checkout/pending`
-    },
-    auto_return: 'approved'
-  };
-
-  try {
-    const response = await fetch('https://api.mercadopago.com/checkout/preferences', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(preference)
-    });
-
-    if (!response.ok) {
-      const errorData = await response.text();
-      console.error('MercadoPago Yape API error:', errorData);
-      throw new Error(`MercadoPago Yape API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    
-    return {
-      success: true,
-      message: "Redirecting to Yape via MercadoPago",
-      paymentId: data.id,
-      paymentUrl: data.init_point
-    };
-  } catch (error) {
-    console.error('Yape payment error:', error);
-    return {
-      success: false,
-      message: error.message,
-      paymentId: null,
-      paymentUrl: null
-    };
-  }
-}
-
-async function processPlinPayment(cartItems: any[], amount: number, orderId: string, paymentData?: any) {
-  const accessToken = getEnv('MERCADOPAGO_ACCESS_TOKEN');
-  if (!accessToken) {
-    throw new Error('MERCADOPAGO_ACCESS_TOKEN not configured');
-  }
-
-  // Create MercadoPago preference with Plin as preferred payment method
-  const preference = {
-    items: cartItems.map(item => ({
-      title: item.title,
-      quantity: 1,
-      unit_price: Math.round(item.price * 3.75), // Convert to PEN
-      currency_id: 'PEN'
-    })),
-    payer: {
-      email: paymentData?.user?.email || 'test@test.com',
-      name: paymentData?.user?.name || 'Test User'
-    },
-    payment_methods: {
-      excluded_payment_types: [],
-      excluded_payment_methods: []
-    },
-    external_reference: orderId,
-    notification_url: `${getEnv('SUPABASE_URL')}/functions/v1/mercadopago-webhook`,  
-    back_urls: {
-      success: `https://idjmabhvzupcdygguqzm.supabase.co/checkout/success/${orderId}`,
-      failure: `https://idjmabhvzupcdygguqzm.supabase.co/checkout/failed`,
-      pending: `https://idjmabhvzupcdygguqzm.supabase.co/checkout/pending`
-    },
-    auto_return: 'approved'
-  };
-
-  try {
-    const response = await fetch('https://api.mercadopago.com/checkout/preferences', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(preference)
-    });
-
-    if (!response.ok) {
-      const errorData = await response.text();
-      console.error('MercadoPago Plin API error:', errorData);
-      throw new Error(`MercadoPago Plin API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    
-    return {
-      success: true,
-      message: "Redirecting to Plin via MercadoPago",
-      paymentId: data.id,
-      paymentUrl: data.init_point
-    };
-  } catch (error) {
-    console.error('Plin payment error:', error);
     return {
       success: false,
       message: error.message,

@@ -78,7 +78,7 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
     const items = getCheckoutItems();
     const usdTotal = items.reduce((sum, item) => sum + (item.course?.price || 0), 0);
     
-    if (selectedPaymentMethod === 'yape' || selectedPaymentMethod === 'plin') {
+    if (selectedPaymentMethod === 'mercadopago') {
       return {
         amount: checkoutService.convertToPEN(usdTotal),
         currency: 'PEN'
@@ -125,9 +125,6 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
       if (backendMethod === 'paypal' || backendMethod === 'googlepay') {
         setStep('completed');
         if (mode === 'cart') await clearCart();
-      } else if (backendMethod === 'yape' || backendMethod === 'plin') {
-        // For manual payment methods, go to manual confirmation
-        setStep('manual_confirmation');
       } else {
         // For other methods, process normally
         setStep('processing');
@@ -198,10 +195,9 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
 
   const getPaymentMethodIcon = (method: any) => {
     switch (method.id) {
-      case 'yape':
-      case 'plin':
-        return <Smartphone className="w-5 h-5" />;
-      case 'google_pay':
+      case 'mercadopago':
+        return <DollarSign className="w-5 h-5" />;
+      case 'googlepay':
       case 'paypal':
       case 'card':
         return <CreditCard className="w-5 h-5" />;
@@ -275,16 +271,16 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
                       {item.course?.instructor_name}
                     </p>
                   </div>
-                  <div className="text-right">
-                    <p className="font-medium">
-                      {checkoutService.formatPrice(
-                        selectedPaymentMethod === 'yape' || selectedPaymentMethod === 'plin' 
-                          ? checkoutService.convertToPEN(item.course?.price || 0)
-                          : item.course?.price || 0,
-                        selectedPaymentMethod === 'yape' || selectedPaymentMethod === 'plin' ? 'PEN' : 'USD'
-                      )}
-                    </p>
-                  </div>
+                   <div className="text-right">
+                     <p className="font-medium">
+                       {checkoutService.formatPrice(
+                         selectedPaymentMethod === 'mercadopago'
+                           ? checkoutService.convertToPEN(item.course?.price || 0)
+                           : item.course?.price || 0,
+                         selectedPaymentMethod === 'mercadopago' ? 'PEN' : 'USD'
+                       )}
+                     </p>
+                   </div>
                 </div>
               ))}
               
@@ -328,14 +324,14 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
                     >
                       <div className="flex items-center space-x-3">
                         {getPaymentMethodIcon(method)}
-                        <div className="flex-1">
-                          <p className="font-medium">{method.name}</p>
-                          {(method.id === 'yape' || method.id === 'plin') && (
-                            <p className="text-sm text-muted-foreground">
-                              Pago manual con ID de transacción
-                            </p>
-                          )}
-                        </div>
+                         <div className="flex-1">
+                           <p className="font-medium">{method.name}</p>
+                           {method.description && (
+                             <p className="text-sm text-muted-foreground">
+                               {method.description}
+                             </p>
+                           )}
+                         </div>
                         <div className={`w-4 h-4 rounded-full border-2 ${
                           selectedPaymentMethod === method.id
                             ? 'border-primary bg-primary'
@@ -344,16 +340,16 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
                       </div>
                     </div>
                   ))}
-                  {/* Hint: show help if Yape/Plin not available but user profile not Peru */}
-                  {!(availablePaymentMethods.some(m => m.id === 'yape' || m.id === 'plin')) && (
-                    <div className="mt-3 p-3 border rounded bg-yellow-50">
-                      <p className="text-sm">¿Quieres pagar con Yape o Plin? Estos métodos están disponibles solo para usuarios en Perú.</p>
-                      <div className="mt-2 flex gap-2">
-                        <Button variant="outline" size="sm" onClick={() => navigate('/profile')}>Editar perfil</Button>
-                        <Button size="sm" onClick={() => navigate('/auth')}>Ir a mi cuenta</Button>
-                      </div>
-                    </div>
-                  )}
+                   {/* Hint: show help if MercadoPago not available but user profile not Peru */}
+                   {!(availablePaymentMethods.some(m => m.id === 'mercadopago')) && (
+                     <div className="mt-3 p-3 border rounded bg-yellow-50">
+                       <p className="text-sm">¿Quieres pagar con MercadoPago (Yape, tarjetas)? Este método está disponible solo para usuarios en Perú.</p>
+                       <div className="mt-2 flex gap-2">
+                         <Button variant="outline" size="sm" onClick={() => navigate('/profile')}>Editar perfil</Button>
+                         <Button size="sm" onClick={() => navigate('/auth')}>Ir a mi cuenta</Button>
+                       </div>
+                     </div>
+                   )}
                 </div>
               </CardContent>
               <CardFooter>

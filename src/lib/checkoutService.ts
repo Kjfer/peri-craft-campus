@@ -206,10 +206,22 @@ class CheckoutService {
   }
 
   // Obtener métodos de pago disponibles para el usuario
-  async getAvailablePaymentMethods() {
+  async getAvailablePaymentMethods(): Promise<Array<{
+    id: string;
+    name: string;
+    icon: string;
+    type: string;
+    description?: string;
+  }>> {
     const canUsePeruvian = await this.canUsePeruvianPayments();
     
-    const baseMethods = [
+    const baseMethods: Array<{
+      id: string;
+      name: string;
+      icon: string;
+      type: string;
+      description?: string;
+    }> = [
       {
         id: 'googlepay',
         name: 'Google Pay',
@@ -233,16 +245,11 @@ class CheckoutService {
     if (canUsePeruvian) {
       baseMethods.push(
         {
-          id: 'yape',
-          name: 'Yape',
-          icon: '📱',
-          type: 'mobile_payment'
-        },
-        {
-          id: 'plin',
-          name: 'Plin',
-          icon: '📱',
-          type: 'mobile_payment'
+          id: 'mercadopago',
+          name: 'MercadoPago',
+          icon: '🏦',
+          type: 'digital_wallet',
+          description: 'Yape, Tarjetas y más métodos peruanos'
         }
       );
     }
@@ -268,7 +275,7 @@ class CheckoutService {
 
   // Obtener precio en la moneda correcta según el método de pago
   getPriceForPaymentMethod(usdPrice: number, paymentMethod: string) {
-    if (paymentMethod === 'yape' || paymentMethod === 'plin') {
+    if (paymentMethod === 'mercadopago') {
       return {
         amount: this.convertToPEN(usdPrice),
         currency: 'PEN'
