@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import Cart from "@/components/cart/Cart";
+import CartPreview from '@/components/ui/CartPreview';
 import { Menu, User, LogOut, BookOpen, Award, Settings, ShoppingCart } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/contexts/CartContext";
@@ -69,7 +69,7 @@ export function Header() {
 
           {/* User Actions */}
           <div className="flex items-center space-x-4">
-            {user && <Cart />}
+            {user && <CartPreview />}
             
             {user ? (
               <>

@@ -1,1 +1,33 @@
 project_id = "idjmabhvzupcdygguqzm"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[auth]
+enabled = true
+port = 54324
+site_url = "http://localhost:5173"
+additional_redirect_urls = ["https://idjmabhvzupcdygguqzm.supabase.co"]
+jwt_expiry = 3600
+refresh_token_rotation_enabled = true
+security_update_password_require_reauthentication = false
+
+[auth.email]
+enabled = true
+
+[db]
+enabled = true
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[functions]
+enabled = true
+verify_jwt = true
+
+[functions.mercadopago-webhook]
+verify_jwt = false

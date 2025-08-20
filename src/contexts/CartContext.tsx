@@ -2,6 +2,7 @@ import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { cartAPI, courseAPI } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface CartItem {
   id: string;
@@ -145,55 +146,55 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // Validate with backend first
-      const token = localStorage.getItem('auth_token');
-      const response = await fetch('http://localhost:3003/api/cart', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ course_id: courseId })
-      });
+      // Validate with Supabase - check if user is already enrolled
+      const { data: existingEnrollment } = await supabase
+        .from('enrollments')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('course_id', courseId)
+        .single();
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Error validating course for cart');
+      if (existingEnrollment) {
+        toast({
+          title: "Ya estás inscrito",
+          description: "Ya estás inscrito en este curso. Puedes acceder desde tu dashboard.",
+          variant: "destructive",
+        });
+        return;
       }
 
-      if (!data.success) {
-        // Handle specific error cases
-        if (data.enrolled) {
-          toast({
-            title: "Ya estás inscrito",
-            description: "Ya estás inscrito en este curso. Puedes acceder desde tu dashboard.",
-            variant: "destructive",
-          });
-          return;
-        }
-        
-        if (data.pending) {
-          toast({
-            title: "Orden pendiente",
-            description: "Ya tienes una orden pendiente para este curso. Completa el pago para continuar.",
-            variant: "destructive",
-          });
-          return;
-        }
+      // Check if user has pending order for this course
+      const { data: pendingOrder } = await supabase
+        .from('orders')
+        .select(`
+          id,
+          order_items!inner(course_id)
+        `)
+        .eq('user_id', user.id)
+        .eq('payment_status', 'pending')
+        .eq('order_items.course_id', courseId)
+        .single();
 
-        throw new Error(data.error);
+      if (pendingOrder) {
+        toast({
+          title: "Orden pendiente",
+          description: "Ya tienes una orden pendiente para este curso. Completa el pago para continuar.",
+          variant: "destructive",
+        });
+        return;
       }
 
-      // Get course details
-      const courseResponse = await courseAPI.getById(courseId);
-      console.log('🛒 Course details:', courseResponse);
+      // Get course details from Supabase
+      const { data: course, error: courseError } = await supabase
+        .from('courses')
+        .select('*')
+        .eq('id', courseId)
+        .eq('is_active', true)
+        .single();
 
-      if (!courseResponse || !courseResponse.course) {
+      if (courseError || !course) {
         throw new Error('Course not found');
       }
-
-      const course = courseResponse.course;
       
       // Create cart item
       const newCartItem: CartItem = {
