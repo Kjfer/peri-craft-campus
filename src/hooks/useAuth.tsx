@@ -23,85 +23,88 @@ export function useAuth() {
 
   useEffect(() => {
     console.log('🔄 useAuth - Setting up auth listener...');
-    
-    // Initial session check first
-    const getInitialSession = async () => {
-      console.log('🔍 Checking initial session...');
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) {
-          console.error('❌ Error getting initial session:', error);
-          setLoading(false);
-          return;
-        }
-        
-        if (session?.user) {
-          console.log('👤 Initial session found, fetching profile...');
-          const { data: profileData, error: profileError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('user_id', session.user.id)
-            .single();
-          
-          if (profileError) {
-            console.error('❌ Profile fetch failed:', profileError);
-            setProfile(null);
-          } else {
-            console.log('✅ Profile loaded:', profileData);
-            setProfile(profileData);
-          }
-          
-          setUser(session.user);
-          setSession(session);
-        } else {
-          console.log('🚪 No initial session');
-          setUser(null);
-          setProfile(null);
-          setSession(null);
-        }
-      } catch (error) {
-        console.error('❌ Unexpected error during initial session check:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+    let isMounted = true;
     
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('🔄 Auth state changed:', event, session?.user?.id);
         
+        if (!isMounted) return;
+        
         if (session?.user) {
-          console.log('👤 User authenticated, fetching profile...');
-          const { data: profileData, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('user_id', session.user.id)
-            .single();
-          
-          if (error) {
-            console.error('❌ Profile fetch failed:', error);
-            setProfile(null);
-          } else {
-            console.log('✅ Profile loaded:', profileData);
-            setProfile(profileData);
-          }
-          
           setUser(session.user);
           setSession(session);
+          
+          // Defer profile fetch to avoid deadlocks
+          setTimeout(async () => {
+            if (!isMounted) return;
+            
+            console.log('👤 User authenticated, fetching profile...');
+            try {
+              const { data: profileData, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('user_id', session.user.id)
+                .single();
+              
+              if (!isMounted) return;
+              
+              if (error) {
+                console.error('❌ Profile fetch failed:', error);
+                setProfile(null);
+              } else {
+                console.log('✅ Profile loaded:', profileData);
+                setProfile(profileData);
+              }
+            } catch (error) {
+              console.error('❌ Unexpected error fetching profile:', error);
+              if (isMounted) setProfile(null);
+            } finally {
+              if (isMounted) setLoading(false);
+            }
+          }, 0);
         } else {
           console.log('🚪 User logged out');
           setUser(null);
           setProfile(null);
           setSession(null);
+          setLoading(false);
         }
       }
     );
+
+    // Initial session check
+    const getInitialSession = async () => {
+      if (!isMounted) return;
+      
+      console.log('🔍 Checking initial session...');
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (!isMounted) return;
+        
+        if (error) {
+          console.error('❌ Error getting initial session:', error);
+          setLoading(false);
+          return;
+        }
+        
+        // Let the auth state change listener handle the session
+        if (!session) {
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('❌ Unexpected error during initial session check:', error);
+        if (isMounted) setLoading(false);
+      }
+    };
     
     getInitialSession();
 
     return () => {
       console.log('🧹 Cleaning up auth subscription');
+      isMounted = false;
       subscription.unsubscribe();
     };
   }, []);
@@ -134,6 +137,8 @@ export function useAuth() {
   const signIn = async (email: string, password: string) => {
     try {
       console.log('🔐 Signing in user:', email);
+      setLoading(true);
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
@@ -147,6 +152,8 @@ export function useAuth() {
       console.error('❌ SignIn error:', error);
       const message = error instanceof Error ? error.message : 'Error desconocido';
       return { error: { message } };
+    } finally {
+      // Don't set loading to false here - let the auth state change handle it
     }
   };
 
