@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import Checkout from '@/components/checkout/Checkout';
-import { courseAPI } from '@/lib/api';
+import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function CourseCheckout() {
@@ -31,10 +31,17 @@ export default function CourseCheckout() {
   const loadCourseData = async () => {
     try {
       setLoading(true);
-      const response = await courseAPI.getById(courseId!);
       
-      if (response && response.course) {
-        setCourseData(response.course);
+      const { data: courseData, error } = await supabase
+        .from('courses')
+        .select('*')
+        .eq('id', courseId)
+        .single();
+      
+      if (error) throw error;
+      
+      if (courseData) {
+        setCourseData(courseData);
       } else {
         setError('Curso no encontrado');
       }

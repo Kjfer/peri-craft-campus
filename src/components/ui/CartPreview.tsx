@@ -43,8 +43,8 @@ export default function CartPreview() {
           )}
         </Button>
       </SheetTrigger>
-      <SheetContent className="w-full sm:max-w-lg">
-        <SheetHeader>
+      <SheetContent className="w-full sm:max-w-lg flex flex-col h-full max-h-screen">
+        <SheetHeader className="flex-shrink-0">
           <SheetTitle className="flex items-center gap-2">
             <ShoppingCart className="w-5 h-5" />
             Mi Carrito
@@ -57,7 +57,7 @@ export default function CartPreview() {
           </SheetDescription>
         </SheetHeader>
 
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col flex-1 min-h-0 py-4">
           {cartState.items.length === 0 ? (
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center text-muted-foreground">
@@ -68,7 +68,7 @@ export default function CartPreview() {
             </div>
           ) : (
             <>
-              <ScrollArea className="flex-1 py-4">
+              <ScrollArea className="flex-1 min-h-0 pr-4">
                 <div className="space-y-4">
                   {cartState.items.map((item) => (
                     <Card key={item.id} className="relative">
@@ -78,7 +78,7 @@ export default function CartPreview() {
                             <img
                               src={item.course.thumbnail_url}
                               alt={item.course.title}
-                              className="w-16 h-16 rounded object-cover"
+                              className="w-16 h-16 rounded object-cover flex-shrink-0"
                             />
                           )}
                           <div className="flex-1 min-w-0">
@@ -109,7 +109,7 @@ export default function CartPreview() {
                 </div>
               </ScrollArea>
 
-              <div className="border-t pt-4 space-y-4">
+              <div className="border-t pt-4 space-y-4 flex-shrink-0">
                 <div className="flex items-center justify-between">
                   <span className="font-semibold">Total:</span>
                   <span className="font-bold text-lg text-primary">

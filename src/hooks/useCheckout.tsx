@@ -35,7 +35,8 @@ export function useCheckout(options: CheckoutOptions = {}) {
       return;
     }
 
-    setIsOpen(true);
+    // Navigate to cart checkout page
+    window.location.href = '/checkout/carrito';
   };
 
   const closeCheckout = () => {
