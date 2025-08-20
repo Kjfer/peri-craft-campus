@@ -28,18 +28,28 @@ export function useAuth() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('🔄 Auth state changed:', event, session?.user?.id);
+        setLoading(true);
         
         if (session?.user) {
-          const { data: profileData } = await supabase
+          console.log('👤 User authenticated, fetching profile...');
+          const { data: profileData, error } = await supabase
             .from('profiles')
             .select('*')
             .eq('user_id', session.user.id)
             .single();
           
+          if (error) {
+            console.error('❌ Profile fetch failed:', error);
+            setProfile(null);
+          } else {
+            console.log('✅ Profile loaded:', profileData);
+            setProfile(profileData);
+          }
+          
           setUser(session.user);
-          setProfile(profileData);
           setSession(session);
         } else {
+          console.log('🚪 User logged out');
           setUser(null);
           setProfile(null);
           setSession(null);
@@ -49,53 +59,23 @@ export function useAuth() {
     );
 
     // Initial session check
-    checkAuthStatus();
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const checkAuthStatus = async () => {
-    try {
+    const getInitialSession = async () => {
+      console.log('🔍 Checking initial session...');
       const { data: { session } } = await supabase.auth.getSession();
-      console.log('🔍 checkAuthStatus - session:', session ? 'Present' : 'Missing');
-      
-      if (session?.user) {
-        console.log('🔍 Getting user profile...');
-        const { data: profileData, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('user_id', session.user.id)
-          .single();
-        
-        if (error) {
-          console.error('❌ Profile fetch failed:', error);
-        } else {
-          setUser(session.user);
-          setProfile(profileData);
-          setSession(session);
-          console.log('✅ Auth state updated successfully:', {
-            user: session.user,
-            profile: profileData
-          });
-        }
-      } else {
-        console.log('🔍 No session found');
-        setUser(null);
-        setProfile(null);
-        setSession(null);
-      }
-    } catch (error) {
-      console.error('🔍 Auth check failed:', error);
-      setUser(null);
-      setProfile(null);
-      setSession(null);
-    } finally {
-      setLoading(false);
-    }
-  };
+      // The auth state change listener will handle this automatically
+    };
+    
+    getInitialSession();
+
+    return () => {
+      console.log('🧹 Cleaning up auth subscription');
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const signUp = async (email: string, password: string, fullName: string) => {
     try {
+      console.log('📝 Signing up user:', email);
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -109,9 +89,10 @@ export function useAuth() {
       
       if (error) throw error;
       
+      console.log('✅ Signup successful');
       return { error: null };
     } catch (error: unknown) {
-      console.error('SignUp error:', error);
+      console.error('❌ SignUp error:', error);
       const message = error instanceof Error ? error.message : 'Error desconocido';
       return { error: { message } };
     }
@@ -119,7 +100,7 @@ export function useAuth() {
 
   const signIn = async (email: string, password: string) => {
     try {
-      console.log('🔐 useAuth - Starting sign in process...');
+      console.log('🔐 Signing in user:', email);
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
@@ -127,10 +108,10 @@ export function useAuth() {
       
       if (error) throw error;
       
-      console.log('🔐 useAuth - Login successful');
+      console.log('✅ Login successful');
       return { error: null };
     } catch (error: unknown) {
-      console.error('SignIn error:', error);
+      console.error('❌ SignIn error:', error);
       const message = error instanceof Error ? error.message : 'Error desconocido';
       return { error: { message } };
     }
@@ -138,16 +119,22 @@ export function useAuth() {
 
   const signOut = async () => {
     try {
-      await supabase.auth.signOut();
+      console.log('🚪 Signing out user');
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      
+      console.log('✅ Logout successful');
+      return { error: null };
     } catch (error) {
-      console.error('SignOut error:', error);
+      console.error('❌ SignOut error:', error);
+      return { error: null }; // Return success even if error to ensure cleanup
     }
-    
-    return { error: null };
   };
 
   const refreshAuth = async () => {
-    await checkAuthStatus();
+    console.log('🔄 Refreshing auth...');
+    const { data: { session } } = await supabase.auth.getSession();
+    // The auth state change listener will handle this automatically
   };
 
   return {

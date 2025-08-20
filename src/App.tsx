@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { CartProvider } from "@/contexts/CartContext";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { AuthDebug } from "@/components/AuthDebug";
 import Home from "./pages/Home";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -88,6 +89,7 @@ const App = () => (
                 </Routes>
               </main>
               <Footer />
+              <AuthDebug />
             </div>
           </BrowserRouter>
         </CartProvider>

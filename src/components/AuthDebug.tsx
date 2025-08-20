@@ -16,7 +16,8 @@ export function AuthDebug() {
         <div>User: {user ? `${user.email} (${user.id})` : 'null'}</div>
         <div>Profile: {profile ? `${profile.full_name} (${profile.role})` : 'null'}</div>
         <div>Session: {session ? 'exists' : 'null'}</div>
-        <div>LocalStorage Token: {localStorage.getItem('auth_token') ? 'exists' : 'null'}</div>
+        <div>User ID: {user?.id || 'none'}</div>
+        <div>Email Confirmed: {user?.email_confirmed_at ? 'yes' : 'no'}</div>
       </div>
     </div>
   );
