@@ -17,16 +17,22 @@ export function useCheckout(options: CheckoutOptions = {}) {
   const { toast } = useToast();
 
   const openCheckout = () => {
+    console.log('🛒 Opening checkout...', { user: !!user, cartItems: cartState.items.length });
+    
     if (!user) {
+      console.log('🚫 User not authenticated, redirecting to login');
       toast({
         title: "Inicia sesión",
         description: "Debes iniciar sesión para realizar una compra.",
         variant: "destructive",
       });
+      // Redirect to auth page
+      window.location.href = '/auth';
       return;
     }
 
     if (cartState.items.length === 0) {
+      console.log('🛒 Cart is empty');
       toast({
         title: "Carrito vacío",
         description: "Agrega cursos al carrito antes de proceder al checkout.",
@@ -35,6 +41,7 @@ export function useCheckout(options: CheckoutOptions = {}) {
       return;
     }
 
+    console.log('✅ Navigating to cart checkout');
     // Navigate to cart checkout page
     window.location.href = '/checkout/carrito';
   };

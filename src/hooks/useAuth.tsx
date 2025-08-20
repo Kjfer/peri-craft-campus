@@ -24,11 +24,52 @@ export function useAuth() {
   useEffect(() => {
     console.log('🔄 useAuth - Setting up auth listener...');
     
+    // Initial session check first
+    const getInitialSession = async () => {
+      console.log('🔍 Checking initial session...');
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('❌ Error getting initial session:', error);
+          setLoading(false);
+          return;
+        }
+        
+        if (session?.user) {
+          console.log('👤 Initial session found, fetching profile...');
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('user_id', session.user.id)
+            .single();
+          
+          if (profileError) {
+            console.error('❌ Profile fetch failed:', profileError);
+            setProfile(null);
+          } else {
+            console.log('✅ Profile loaded:', profileData);
+            setProfile(profileData);
+          }
+          
+          setUser(session.user);
+          setSession(session);
+        } else {
+          console.log('🚪 No initial session');
+          setUser(null);
+          setProfile(null);
+          setSession(null);
+        }
+      } catch (error) {
+        console.error('❌ Unexpected error during initial session check:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('🔄 Auth state changed:', event, session?.user?.id);
-        setLoading(true);
         
         if (session?.user) {
           console.log('👤 User authenticated, fetching profile...');
@@ -54,16 +95,8 @@ export function useAuth() {
           setProfile(null);
           setSession(null);
         }
-        setLoading(false);
       }
     );
-
-    // Initial session check
-    const getInitialSession = async () => {
-      console.log('🔍 Checking initial session...');
-      const { data: { session } } = await supabase.auth.getSession();
-      // The auth state change listener will handle this automatically
-    };
     
     getInitialSession();
 
@@ -120,6 +153,12 @@ export function useAuth() {
   const signOut = async () => {
     try {
       console.log('🚪 Signing out user');
+      
+      // Clear auth state first
+      setUser(null);
+      setProfile(null);
+      setSession(null);
+      
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       

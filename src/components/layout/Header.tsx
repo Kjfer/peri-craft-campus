@@ -69,7 +69,7 @@ export function Header() {
 
           {/* User Actions */}
           <div className="flex items-center space-x-4">
-            {user && <CartPreview />}
+            <CartPreview />
             
             {user ? (
               <>

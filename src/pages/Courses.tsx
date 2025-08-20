@@ -28,7 +28,7 @@ interface Course {
 
 export default function Courses() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const isAuthenticated = !!user;
   const { isEnrolled, loading: enrollmentsLoading } = useEnrollments();
   const [courses, setCourses] = useState<Course[]>([]);
@@ -88,7 +88,7 @@ export default function Courses() {
   const categories = [...new Set(courses.map(course => course.category))];
   const levels = [...new Set(courses.map(course => course.level))];
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center">
