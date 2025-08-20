@@ -111,64 +111,32 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
   let backendMethod = selectedPaymentMethod;
   if (selectedPaymentMethod === 'google_pay') backendMethod = 'googlepay';
 
-  const result = await checkoutService.startCheckoutFromCart(items, backendMethod);
+      const result = await checkoutService.startCheckoutFromCart(items, backendMethod);
+      
+      if (result.success && result.paymentUrl) {
+        // Redirect to payment URL for MercadoPago methods
+        window.location.href = result.paymentUrl;
+        return;
+      }
       
       setCurrentOrder(result.order);
 
-      if (result.next_step === 'manual_confirmation') {
+      // For immediate payment methods (PayPal, Google Pay), mark as completed
+      if (backendMethod === 'paypal' || backendMethod === 'googlepay') {
+        setStep('completed');
+        if (mode === 'cart') await clearCart();
+      } else if (backendMethod === 'yape' || backendMethod === 'plin') {
+        // For manual payment methods, go to manual confirmation
         setStep('manual_confirmation');
       } else {
-        // Para otros métodos de pago, procesar la respuesta: si viene paymentUrl redirigimos,
-        // si viene success=false mostramos mensaje, si success=true y no hay URL marcamos completado.
+        // For other methods, process normally
         setStep('processing');
-        if (result.paymentUrl) {
-          // Abrir pasarela en nueva pestaña y esperar confirmación via webhook/confirm endpoint
-          window.open(result.paymentUrl, '_blank');
-          toast({
-            title: 'Redireccionando',
-            description: 'Se ha abierto la pasarela de pago en una nueva pestaña. Completa el pago para finalizar la orden.',
-            variant: 'default'
-          });
-          setStep('select_payment');
-        } else if (result.next_step && (result.next_step === 'paypal_redirect' || result.next_step === 'google_pay_redirect')) {
-          // If backend indicates a redirect-based flow but didn't return paymentUrl, request processing endpoint
-          try {
-            const processResp = await fetch(`http://localhost:3003/api/payments/process-order`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-              },
-              body: JSON.stringify({ orderId: result.order.id })
-            });
-
-            const processData = await processResp.json();
-            if (processData && processData.paymentUrl) {
-              window.open(processData.paymentUrl, '_blank');
-              toast({
-                title: 'Redireccionando',
-                description: 'Se ha abierto la pasarela de pago en una nueva pestaña. Completa el pago para finalizar la orden.',
-                variant: 'default'
-              });
-            } else {
-              toast({ title: 'Pago', description: processData.message || 'No fue posible iniciar la pasarela', variant: 'destructive' });
-            }
-          } catch (e) {
-            console.error('Error calling process-order:', e);
-            toast({ title: 'Error', description: 'No se pudo procesar la orden para redirección', variant: 'destructive' });
-          }
-          setStep('select_payment');
-        } else if (result.success === true) {
-          setStep('completed');
-          if (mode === 'cart') await clearCart();
-        } else {
-          toast({
-            title: 'Pago',
-            description: result.message || `${selectedPaymentMethod} será implementado próximamente`,
-            variant: 'default'
-          });
-          setStep('select_payment');
-        }
+        toast({
+          title: 'Pago',
+          description: `${selectedPaymentMethod} será implementado próximamente`,
+          variant: 'default'
+        });
+        setStep('select_payment');
       }
 
     } catch (error: any) {

@@ -1,3 +1,5 @@
+import { supabase } from "@/integrations/supabase/client";
+
 // Servicio de checkout para manejar todo el flujo de pagos
 export interface CheckoutItem {
   course_id: string;
@@ -39,35 +41,40 @@ export interface PaymentConfirmation {
 }
 
 class CheckoutService {
-  private baseURL = 'http://localhost:3003/api/checkout';
-
-  private getAuthHeaders() {
-    const token = localStorage.getItem('auth_token');
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    };
-  }
-
   // Iniciar checkout desde el carrito
   async startCheckoutFromCart(cartItems: CheckoutItem[], paymentMethod: string) {
     try {
-      const response = await fetch(`${this.baseURL}/start`, {
-        method: 'POST',
-        headers: this.getAuthHeaders(),
-        body: JSON.stringify({
-          cart_items: cartItems,
-          payment_method: paymentMethod
-        })
+      const { data, error } = await supabase.functions.invoke('create-payment', {
+        body: {
+          cartItems: cartItems.map(item => ({
+            id: item.course_id,
+            title: item.course?.title || '',
+            price: item.course?.price || 0,
+            instructor_name: item.course?.instructor_name || '',
+            thumbnail_url: item.course?.thumbnail_url || ''
+          })),
+          totalAmount: cartItems.reduce((sum, item) => sum + (item.course?.price || 0), 0),
+          paymentMethod: paymentMethod,
+          paymentData: {
+            user: {
+              email: (await supabase.auth.getUser()).data.user?.email,
+              name: (await supabase.auth.getUser()).data.user?.user_metadata?.full_name
+            }
+          }
+        }
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Error al iniciar el checkout');
+      if (error) throw error;
+      
+      if (data.success) {
+        return {
+          success: true,
+          order: data.order,
+          paymentUrl: data.paymentUrl
+        };
+      } else {
+        throw new Error(data.error || 'Error creating payment');
       }
-
-      return data;
     } catch (error) {
       console.error('Error in startCheckoutFromCart:', error);
       throw error;
@@ -92,26 +99,15 @@ class CheckoutService {
     return this.startCheckoutFromCart([checkoutItem], paymentMethod);
   }
 
-  // Confirmar pago manual (Yape/Plin)
+  // Confirmar pago manual (Yape/Plin) - Esta funcionalidad se maneja via webhook
   async confirmManualPayment(orderId: string, transactionId: string, paymentMethod: 'yape' | 'plin') {
     try {
-      const response = await fetch(`${this.baseURL}/confirm-payment`, {
-        method: 'POST',
-        headers: this.getAuthHeaders(),
-        body: JSON.stringify({
-          order_id: orderId,
-          transaction_id: transactionId,
-          payment_method: paymentMethod
-        })
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Error al confirmar el pago');
-      }
-
-      return data;
+      // En el flujo con MercadoPago y webhooks, no necesitamos confirmación manual
+      // El webhook se encarga de actualizar el estado automáticamente
+      return {
+        success: true,
+        message: 'El pago se procesará automáticamente via MercadoPago'
+      };
     } catch (error) {
       console.error('Error in confirmManualPayment:', error);
       throw error;
@@ -121,26 +117,35 @@ class CheckoutService {
   // Obtener órdenes del usuario
   async getUserOrders(page = 1, limit = 10, status?: string) {
     try {
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: limit.toString()
-      });
+      let query = supabase
+        .from('orders')
+        .select(`
+          *,
+          order_items (
+            *,
+            courses:course_id (
+              id,
+              title,
+              thumbnail_url,
+              instructor_name
+            )
+          )
+        `)
+        .order('created_at', { ascending: false })
+        .range((page - 1) * limit, page * limit - 1);
 
-      if (status) {
-        params.append('status', status);
+      if (status && status !== 'all') {
+        query = query.eq('payment_status', status);
       }
 
-      const response = await fetch(`${this.baseURL}/orders?${params}`, {
-        headers: this.getAuthHeaders()
-      });
+      const { data, error } = await query;
 
-      const data = await response.json();
+      if (error) throw error;
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Error al obtener las órdenes');
-      }
-
-      return data;
+      return {
+        success: true,
+        orders: data || []
+      };
     } catch (error) {
       console.error('Error in getUserOrders:', error);
       throw error;
@@ -150,17 +155,29 @@ class CheckoutService {
   // Obtener detalles de una orden específica
   async getOrderDetails(orderId: string) {
     try {
-      const response = await fetch(`${this.baseURL}/orders/${orderId}`, {
-        headers: this.getAuthHeaders()
-      });
+      const { data, error } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          order_items (
+            *,
+            courses:course_id (
+              id,
+              title,
+              thumbnail_url,
+              instructor_name
+            )
+          )
+        `)
+        .eq('id', orderId)
+        .single();
 
-      const data = await response.json();
+      if (error) throw error;
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Error al obtener los detalles de la orden');
-      }
-
-      return data;
+      return {
+        success: true,
+        order: data
+      };
     } catch (error) {
       console.error('Error in getOrderDetails:', error);
       throw error;
@@ -170,22 +187,18 @@ class CheckoutService {
   // Verificar si el usuario puede usar Yape/Plin
   async canUsePeruvianPayments() {
     try {
-      const token = localStorage.getItem('auth_token');
-      const response = await fetch('http://localhost:3003/api/users/profile', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return false;
 
-      if (response.ok) {
-        const data = await response.json();
-        const country = data.profile?.country || '';
-        const normalized = country.toString().trim().toLowerCase();
-        // Accept both 'peru' and 'perú'
-        return normalized === 'peru' || normalized === 'perú';
-      }
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('country')
+        .eq('user_id', user.id)
+        .single();
 
-      return false;
+      const country = profile?.country || '';
+      const normalized = country.toString().trim().toLowerCase();
+      return normalized === 'peru' || normalized === 'perú';
     } catch (error) {
       console.error('Error checking Peruvian payments:', error);
       return false;
@@ -198,7 +211,7 @@ class CheckoutService {
     
     const baseMethods = [
       {
-  id: 'googlepay',
+        id: 'googlepay',
         name: 'Google Pay',
         icon: '💳',
         type: 'digital_wallet'

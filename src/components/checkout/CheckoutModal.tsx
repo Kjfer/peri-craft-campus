@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 import GooglePayButton from "@google-pay/button-react";
-import PaymentInstructionsModal from "./PaymentInstructionsModal";
 import {
   Dialog,
   DialogContent,
@@ -64,12 +63,6 @@ export default function CheckoutModal({
   const [selectedMethod, setSelectedMethod] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [showMercadoPago, setShowMercadoPago] = useState(false);
-  const [showPaymentInstructions, setShowPaymentInstructions] = useState(false);
-  const [paymentData, setPaymentData] = useState<{
-    orderId: string;
-    method: 'yape' | 'plin';
-    amount: number;
-  } | null>(null);
   
   // Card form state
   const [cardData, setCardData] = useState({
@@ -813,25 +806,6 @@ export default function CheckoutModal({
           </span>
         </div>
       </DialogContent>
-
-      {/* Payment Instructions Modal */}
-      {paymentData && (
-        <PaymentInstructionsModal
-          isOpen={showPaymentInstructions}
-          onClose={() => {
-            setShowPaymentInstructions(false);
-            setPaymentData(null);
-          }}
-          orderId={paymentData.orderId}
-          paymentMethod={paymentData.method}
-          amount={paymentData.amount}
-          onPaymentConfirmed={() => {
-            clearCart();
-            const cartKey = `cart_${JSON.stringify(cartItems.map(item => item.id).sort())}`;
-            localStorage.removeItem(cartKey);
-          }}
-        />
-      )}
     </Dialog>
   );
 }

@@ -35,7 +35,11 @@ export default function OrderHistory() {
         statusFilter === 'all' ? undefined : statusFilter
       );
       
-      setOrders(response.orders || []);
+      if (response.success) {
+        setOrders(response.orders || []);
+      } else {  
+        throw new Error('Error loading orders');
+      }
     } catch (error: any) {
       console.error('Error loading orders:', error);
       setError('Error al cargar las órdenes');

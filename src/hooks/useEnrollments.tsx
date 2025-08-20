@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
 export const useEnrollments = () => {
   const [enrollments, setEnrollments] = useState<string[]>([]);
@@ -14,19 +15,17 @@ export const useEnrollments = () => {
     }
 
     try {
-      const token = localStorage.getItem('auth_token');
-      const response = await fetch('http://localhost:3003/api/enrollments/my-courses', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const { data, error } = await supabase
+        .from('enrollments')
+        .select('course_id')
+        .eq('user_id', user.id);
 
-      if (response.ok) {
-        const data = await response.json();
-        setEnrollments(data.courseIds || []);
-      } else {
-        console.error('Failed to fetch enrollments');
+      if (error) {
+        console.error('Error fetching enrollments:', error);
         setEnrollments([]);
+      } else {
+        const courseIds = data?.map(enrollment => enrollment.course_id) || [];
+        setEnrollments(courseIds);
       }
     } catch (error) {
       console.error('Error fetching enrollments:', error);

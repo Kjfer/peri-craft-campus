@@ -21,14 +21,12 @@ import LearningPlatform from "./pages/LearningPlatform";
 import VerifyCertificate from "./pages/VerifyCertificate";
 import PaymentResult from "./pages/PaymentResult";
 import PaymentSuccess from "./pages/PaymentSuccess";
-import PaymentInstructions from "./pages/PaymentInstructions";
 import PaymentRedirect from "./pages/PaymentRedirect";
 import Checkout from "./pages/Checkout";
 import CheckoutSuccess from "./pages/CheckoutSuccess";
 import CartCheckout from "./pages/CartCheckout";
 import CourseCheckout from "./pages/CourseCheckout";
 import OrderHistory from "./pages/OrderHistory";
-import EmailConfirmation from "./pages/EmailConfirmation";
 import CheckoutFailed from "./pages/CheckoutFailed";
 import CheckoutPending from "./pages/CheckoutPending";
 import NotFound from "./pages/NotFound";
@@ -63,7 +61,6 @@ const App = () => (
                   <Route path="/nosotros" element={<About />} />
                   <Route path="/contacto" element={<Contact />} />
                   <Route path="/verificar-certificado" element={<VerifyCertificate />} />
-                  <Route path="/confirm-email" element={<EmailConfirmation />} />
                   <Route path="/checkout" element={<Checkout />} />
                   <Route path="/checkout/carrito" element={<CartCheckout />} />
                   <Route path="/checkout/curso/:courseId" element={<CourseCheckout />} />
@@ -71,7 +68,6 @@ const App = () => (
                   <Route path="/checkout/success/:orderId" element={<CheckoutSuccess />} />
                   <Route path="/checkout/failed" element={<CheckoutFailed />} />
                   <Route path="/checkout/pending" element={<CheckoutPending />} />
-                  <Route path="/payment/instructions/:orderId" element={<PaymentInstructions />} />
                   <Route path="/payment/redirect/:orderId" element={<PaymentRedirect />} />
                   <Route path="/payment/success/:orderId" element={<PaymentSuccess />} />
                   <Route path="/payment/success" element={<PaymentResult />} />
