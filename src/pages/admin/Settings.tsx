@@ -27,7 +27,7 @@ interface PlatformSettings {
   };
 }
 
-export default function Settings() {
+function Settings() {
   const [settings, setSettings] = useState<PlatformSettings>({
     site_name: "Peri Institute",
     site_description: "Plataforma de educación en línea especializada en diseño y confección",
@@ -326,3 +326,5 @@ export default function Settings() {
     </AdminLayout>
   );
 }
+
+export default Settings;

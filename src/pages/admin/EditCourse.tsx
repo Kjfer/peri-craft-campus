@@ -40,7 +40,7 @@ interface CourseFormData {
   modules: Module[];
 }
 
-export default function EditCourse() {
+function EditCourse() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -596,3 +596,5 @@ export default function EditCourse() {
     </AdminLayout>
   );
 }
+
+export default EditCourse;
