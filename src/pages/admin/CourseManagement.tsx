@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/table";
 import { Plus, Search, Edit, Trash2, Eye } from "lucide-react";
 import { Link } from "react-router-dom";
-import { adminAPI } from "@/lib/api";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 interface Course {
@@ -41,8 +41,13 @@ export default function CourseManagement() {
 
   const fetchCourses = async () => {
     try {
-      const data = await adminAPI.getCourses();
-      setCourses(data.courses || []);
+      const { data, error } = await supabase
+        .from('courses')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setCourses(data || []);
     } catch (error: any) {
       console.error('Error fetching courses:', error);
       toast({
@@ -61,20 +66,26 @@ export default function CourseManagement() {
     }
 
     try {
-      await adminAPI.deleteCourse(courseId);
+      const { error } = await supabase
+        .from('courses')
+        .update({ is_active: false, status: 'inactive' })
+        .eq('id', courseId);
+
+      if (error) throw error;
       
-      // Actualizar la lista local eliminando el curso
-      setCourses(courses.filter(course => course.id !== courseId));
+      setCourses(courses.map(course => 
+        course.id === courseId ? { ...course, is_active: false } : course
+      ));
       
       toast({
         title: "Éxito",
-        description: `Curso "${courseTitle}" eliminado correctamente`
+        description: `Curso "${courseTitle}" desactivado correctamente`
       });
     } catch (error: any) {
       console.error('Error deleting course:', error);
       toast({
         title: "Error",
-        description: error.message || "No se pudo eliminar el curso",
+        description: error.message || "No se pudo desactivar el curso",
         variant: "destructive"
       });
     }
@@ -82,28 +93,24 @@ export default function CourseManagement() {
 
   const toggleCourseStatus = async (courseId: string, currentStatus: boolean) => {
     try {
-      // Encontrar el curso actual para obtener sus datos
-      const currentCourse = courses.find(course => course.id === courseId);
-      if (!currentCourse) return;
+      const newStatus = !currentStatus;
 
-      // Actualizar usando el endpoint de actualización general
-      await adminAPI.updateCourse(courseId, {
-        title: currentCourse.title,
-        description: currentCourse.title, // Por ahora usar title como description
-        price: currentCourse.price,
-        status: !currentStatus ? 'active' : 'inactive'
-      });
+      const { error } = await supabase
+        .from('courses')
+        .update({ is_active: newStatus, status: newStatus ? 'active' : 'inactive' })
+        .eq('id', courseId);
 
-      // Actualizar estado local
+      if (error) throw error;
+
       setCourses(courses.map(course => 
         course.id === courseId 
-          ? { ...course, is_active: !currentStatus }
+          ? { ...course, is_active: newStatus }
           : course
       ));
 
       toast({
         title: "Éxito",
-        description: `Curso ${!currentStatus ? 'activado' : 'desactivado'} correctamente`
+        description: `Curso ${newStatus ? 'activado' : 'desactivado'} correctamente`
       });
     } catch (error: any) {
       console.error('Error toggling course status:', error);
