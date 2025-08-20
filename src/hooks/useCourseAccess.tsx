@@ -32,20 +32,49 @@ export function useCourseAccess(courseId: string): {
       setLoading(true);
       setError(null);
 
+      console.log('🔍 Checking course access for:', { userId: user.id, courseId });
+
       // Check if user is admin
       const { data: profile } = await supabase
         .from('profiles')
         .select('role')
-        .eq('id', user.id)
+        .eq('user_id', user.id)
         .single();
 
       if (profile?.role === 'admin') {
+        console.log('✅ Admin access granted');
         setAccess({ hasAccess: true, isPaid: true });
         setLoading(false);
         return;
       }
 
-      // Check if course is free
+      // Check for enrollment first - this is the primary access control
+      const { data: enrollment, error: enrollmentError } = await supabase
+        .from('enrollments')
+        .select('enrolled_at')
+        .eq('user_id', user.id)
+        .eq('course_id', courseId)
+        .single();
+
+      if (enrollmentError && enrollmentError.code !== 'PGRST116') {
+        console.error('❌ Error checking enrollment:', enrollmentError);
+        setError('Error verificando acceso al curso');
+        setLoading(false);
+        return;
+      }
+
+      if (enrollment) {
+        console.log('✅ Enrollment found, granting access');
+        setAccess({
+          hasAccess: true,
+          isPaid: true,
+          enrollmentDate: enrollment.enrolled_at
+        });
+        setLoading(false);
+        return;
+      }
+
+      // If no enrollment, check if course is free
       const { data: course } = await supabase
         .from('courses')
         .select('price')
@@ -53,89 +82,37 @@ export function useCourseAccess(courseId: string): {
         .single();
 
       if (course?.price === 0) {
-        // Free course - create enrollment if not exists
-        const { data: enrollment } = await supabase
+        console.log('📚 Free course, auto-enrolling user');
+        // Free course - create enrollment
+        const { error: enrollError } = await supabase
           .from('enrollments')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('course_id', courseId)
-          .single();
-
-        if (!enrollment) {
-          await supabase
-            .from('enrollments')
-            .insert({
-              user_id: user.id,
-              course_id: courseId,
-              enrolled_at: new Date().toISOString()
-            });
-        }
-
-        setAccess({ hasAccess: true, isPaid: true });
-        setLoading(false);
-        return;
-      }
-
-      // Check for enrollment first
-      const { data: enrollment, error: enrollmentError } = await supabase
-        .from('enrollments')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('course_id', courseId)
-        .single();
-
-      if (enrollmentError && enrollmentError.code !== 'PGRST116') {
-        console.error('Error checking enrollment:', enrollmentError);
-        setError('Error verificando acceso al curso');
-        setLoading(false);
-        return;
-      }
-
-      if (enrollment) {
-        // Check if there's a completed payment for this course
-        const { data: completedPayment } = await supabase
-          .from('payments')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('course_id', courseId)
-          .eq('payment_status', 'completed')
-          .single();
-
-        if (completedPayment) {
-          setAccess({
-            hasAccess: true,
-            isPaid: true,
-            enrollmentDate: enrollment.enrolled_at,
-            paymentStatus: completedPayment.payment_status,
-            orderId: completedPayment.id
+          .insert({
+            user_id: user.id,
+            course_id: courseId,
+            enrolled_at: new Date().toISOString()
           });
+
+        if (enrollError) {
+          console.error('❌ Error creating enrollment:', enrollError);
+          setError('Error creando matrícula');
         } else {
-          setAccess({
-            hasAccess: false,
-            isPaid: false,
-            paymentStatus: 'none'
-          });
+          setAccess({ hasAccess: true, isPaid: true });
         }
-      } else {
-        // Check for pending payments
-        const { data: pendingPayment } = await supabase
-          .from('payments')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('course_id', courseId)
-          .eq('payment_status', 'pending')
-          .single();
-
-        setAccess({
-          hasAccess: false,
-          isPaid: false,
-          paymentStatus: pendingPayment ? 'pending' : 'none'
-        });
+        setLoading(false);
+        return;
       }
+
+      // No enrollment and course is paid - deny access
+      console.log('❌ No enrollment found, access denied');
+      setAccess({
+        hasAccess: false,
+        isPaid: false,
+        paymentStatus: 'none'
+      });
 
       setLoading(false);
     } catch (err) {
-      console.error('Error checking course access:', err);
+      console.error('❌ Error checking course access:', err);
       setError('Error verificando acceso al curso');
       setLoading(false);
     }

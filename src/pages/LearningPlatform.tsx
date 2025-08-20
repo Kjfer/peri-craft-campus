@@ -88,7 +88,15 @@ export default function LearningPlatform() {
       return;
     }
 
+    console.log('🔍 LearningPlatform access check:', {
+      hasUser: !!user,
+      courseId,
+      accessLoading,
+      hasAccess: access?.hasAccess
+    });
+
     if (!accessLoading && (!access || !access.hasAccess)) {
+      console.log('❌ Access denied, redirecting to course detail');
       toast({
         title: "Acceso denegado",
         description: "No tienes acceso a este curso. Adquiere el curso para continuar.",
