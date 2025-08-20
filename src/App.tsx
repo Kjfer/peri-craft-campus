@@ -34,6 +34,9 @@ import AdminDashboard from "./pages/admin/Dashboard";
 import CourseManagement from "./pages/admin/CourseManagement";
 import CreateCourse from "./pages/admin/CreateCourse";
 import EditCourse from "./pages/admin/EditCourse";
+import UserManagement from "./pages/admin/UserManagement";
+import CertificateManagement from "./pages/admin/CertificateManagement";
+import Settings from "./pages/admin/Settings";
 
 const queryClient = new QueryClient();
 
@@ -79,6 +82,9 @@ const App = () => (
                   <Route path="/admin/cursos" element={<CourseManagement />} />
                   <Route path="/admin/cursos/crear" element={<CreateCourse />} />
                   <Route path="/admin/cursos/editar/:id" element={<EditCourse />} />
+                  <Route path="/admin/usuarios" element={<UserManagement />} />
+                  <Route path="/admin/certificados" element={<CertificateManagement />} />
+                  <Route path="/admin/configuracion" element={<Settings />} />
                   
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
