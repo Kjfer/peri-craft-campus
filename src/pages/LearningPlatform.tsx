@@ -19,7 +19,9 @@ import {
   ArrowLeft,
   ArrowRight,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  PlayCircle,
+  Pause
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -63,6 +65,13 @@ interface CourseProgress {
   completed_at?: string;
 }
 
+// YouTube URL parser
+const getYouTubeVideoId = (url: string): string | null => {
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+  const match = url.match(regExp);
+  return (match && match[2].length === 11) ? match[2] : null;
+};
+
 export default function LearningPlatform() {
   const { courseId, lessonId } = useParams();
   const { user } = useAuth();
@@ -76,6 +85,8 @@ export default function LearningPlatform() {
   const [courseProgress, setCourseProgress] = useState<CourseProgress[]>([]);
   const [loading, setLoading] = useState(true);
   const [openModules, setOpenModules] = useState<Set<string>>(new Set());
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [watchTime, setWatchTime] = useState(0);
 
   useEffect(() => {
     if (!user) {
@@ -129,6 +140,7 @@ export default function LearningPlatform() {
   const fetchCourseData = async () => {
     try {
       setLoading(true);
+      console.log('📚 Fetching course data for:', courseId);
 
       // Fetch course details
       const { data: courseData, error: courseError } = await supabase
@@ -137,7 +149,12 @@ export default function LearningPlatform() {
         .eq('id', courseId!)
         .single();
 
-      if (courseError) throw courseError;
+      if (courseError) {
+        console.error('❌ Error fetching course:', courseError);
+        throw courseError;
+      }
+      
+      console.log('✅ Course data fetched:', courseData);
       setCourse(courseData);
 
       // Fetch modules with lessons
@@ -145,18 +162,24 @@ export default function LearningPlatform() {
         .from('modules')
         .select(`
           *,
-          lessons (*)
+          lessons!lessons_module_id_fkey (*)
         `)
         .eq('course_id', courseId!)
         .order('order_number');
 
-      if (modulesError) throw modulesError;
+      if (modulesError) {
+        console.error('❌ Error fetching modules:', modulesError);
+        throw modulesError;
+      }
+      
+      console.log('📋 Raw modules data:', modulesData);
       
       const sortedModules = (modulesData || []).map(module => ({
         ...module,
         lessons: (module.lessons || []).sort((a: any, b: any) => a.order_number - b.order_number)
       }));
       
+      console.log('📚 Processed modules:', sortedModules);
       setModules(sortedModules);
       
       // Open first module by default
@@ -171,13 +194,14 @@ export default function LearningPlatform() {
         .eq('user_id', user!.id);
 
       if (progressError) {
-        console.error('Error fetching progress:', progressError);
+        console.error('❌ Error fetching progress:', progressError);
       } else {
+        console.log('📊 Progress data:', progressData);
         setCourseProgress(progressData || []);
       }
 
     } catch (error) {
-      console.error('Error fetching course data:', error);
+      console.error('❌ Error fetching course data:', error);
       toast({
         title: "Error",
         description: "No se pudieron cargar los datos del curso.",
@@ -189,9 +213,11 @@ export default function LearningPlatform() {
   };
 
   const findAndSetCurrentLesson = (lessonId: string) => {
+    console.log('🔍 Finding lesson:', lessonId);
     for (const module of modules) {
       const lesson = module.lessons.find(l => l.id === lessonId);
       if (lesson) {
+        console.log('✅ Found lesson:', lesson);
         setCurrentLesson(lesson);
         setOpenModules(prev => new Set(prev).add(module.id));
         break;
@@ -212,11 +238,14 @@ export default function LearningPlatform() {
   };
 
   const selectLesson = (lesson: Lesson) => {
+    console.log('🎯 Selecting lesson:', lesson.title);
     navigate(`/learn/${courseId}/lesson/${lesson.id}`);
   };
 
   const markLessonComplete = async (lessonId: string) => {
     try {
+      console.log('✅ Marking lesson complete:', lessonId);
+      
       const { error } = await supabase
         .from('course_progress')
         .upsert({
@@ -224,7 +253,7 @@ export default function LearningPlatform() {
           lesson_id: lessonId,
           completed: true,
           completed_at: new Date().toISOString(),
-          watch_time_seconds: 0 // You can track actual watch time
+          watch_time_seconds: watchTime
         });
 
       if (error) throw error;
@@ -243,7 +272,7 @@ export default function LearningPlatform() {
             id: `${user!.id}-${lessonId}`,
             lesson_id: lessonId,
             completed: true,
-            watch_time_seconds: 0,
+            watch_time_seconds: watchTime,
             completed_at: new Date().toISOString()
           }];
         }
@@ -253,8 +282,16 @@ export default function LearningPlatform() {
         title: "¡Lección completada!",
         description: "Tu progreso ha sido guardado.",
       });
+
+      // Auto-advance to next lesson
+      const nextLesson = getNextLesson();
+      if (nextLesson) {
+        setTimeout(() => {
+          selectLesson(nextLesson);
+        }, 1500);
+      }
     } catch (error) {
-      console.error('Error marking lesson complete:', error);
+      console.error('❌ Error marking lesson complete:', error);
       toast({
         title: "Error",
         description: "No se pudo guardar el progreso.",
@@ -321,6 +358,34 @@ export default function LearningPlatform() {
     return totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
   };
 
+  // YouTube iframe component
+  const YouTubePlayer = ({ videoUrl, onTimeUpdate }: { videoUrl: string; onTimeUpdate?: (time: number) => void }) => {
+    const videoId = getYouTubeVideoId(videoUrl);
+    
+    if (!videoId) {
+      return (
+        <div className="aspect-video bg-muted flex items-center justify-center">
+          <p className="text-muted-foreground">URL de video inválida</p>
+        </div>
+      );
+    }
+
+    const embedUrl = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&modestbranding=1&rel=0`;
+    
+    return (
+      <div className="aspect-video">
+        <iframe
+          src={embedUrl}
+          title="Video lesson"
+          className="w-full h-full rounded-lg"
+          frameBorder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+        />
+      </div>
+    );
+  };
+
   if (accessLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -371,59 +436,74 @@ export default function LearningPlatform() {
 
           <ScrollArea className="h-[calc(100vh-200px)]">
             <div className="p-4 space-y-2">
-              {modules.map((module) => (
-                <Collapsible 
-                  key={module.id} 
-                  open={openModules.has(module.id)}
-                  onOpenChange={() => toggleModule(module.id)}
-                >
-                  <CollapsibleTrigger className="flex items-center justify-between w-full p-3 text-left hover:bg-muted rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <BookOpen className="h-4 w-4" />
-                      <span className="font-medium">{module.title}</span>
-                    </div>
-                    {openModules.has(module.id) ? (
-                      <ChevronDown className="h-4 w-4" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4" />
-                    )}
-                  </CollapsibleTrigger>
-                  
-                  <CollapsibleContent className="ml-6 space-y-1">
-                    {module.lessons.map((lesson) => (
-                      <Button
-                        key={lesson.id}
-                        variant={currentLesson?.id === lesson.id ? "secondary" : "ghost"}
-                        size="sm"
-                        className="w-full justify-start h-auto p-3"
-                        onClick={() => selectLesson(lesson)}
-                      >
-                        <div className="flex items-start gap-2 w-full">
-                          {isLessonCompleted(lesson.id) ? (
-                            <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                          ) : (
-                            <Circle className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                          )}
-                          <div className="flex-1 text-left">
-                            <div className="text-sm font-medium line-clamp-2">
-                              {lesson.title}
+              {modules.length === 0 ? (
+                <div className="text-center py-8">
+                  <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">No hay módulos disponibles</p>
+                </div>
+              ) : (
+                modules.map((module) => (
+                  <Collapsible 
+                    key={module.id} 
+                    open={openModules.has(module.id)}
+                    onOpenChange={() => toggleModule(module.id)}
+                  >
+                    <CollapsibleTrigger className="flex items-center justify-between w-full p-3 text-left hover:bg-muted rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <BookOpen className="h-4 w-4" />
+                        <span className="font-medium">{module.title}</span>
+                      </div>
+                      {openModules.has(module.id) ? (
+                        <ChevronDown className="h-4 w-4" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4" />
+                      )}
+                    </CollapsibleTrigger>
+                    
+                    <CollapsibleContent className="ml-6 space-y-1">
+                      {module.lessons.length === 0 ? (
+                        <p className="text-sm text-muted-foreground p-2">No hay lecciones</p>
+                      ) : (
+                        module.lessons.map((lesson) => (
+                          <Button
+                            key={lesson.id}
+                            variant={currentLesson?.id === lesson.id ? "secondary" : "ghost"}
+                            size="sm"
+                            className="w-full justify-start h-auto p-3"
+                            onClick={() => selectLesson(lesson)}
+                          >
+                            <div className="flex items-start gap-2 w-full">
+                              <div className="flex items-center gap-2">
+                                {isLessonCompleted(lesson.id) ? (
+                                  <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
+                                ) : currentLesson?.id === lesson.id ? (
+                                  <PlayCircle className="h-4 w-4 text-primary flex-shrink-0" />
+                                ) : (
+                                  <Circle className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                )}
+                              </div>
+                              <div className="flex-1 text-left">
+                                <div className="text-sm font-medium line-clamp-2">
+                                  {lesson.title}
+                                </div>
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                                  <Clock className="h-3 w-3" />
+                                  {lesson.duration_minutes} min
+                                  {lesson.is_free && (
+                                    <Badge variant="outline" className="text-xs">
+                                      Gratis
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                              <Clock className="h-3 w-3" />
-                              {lesson.duration_minutes} min
-                              {lesson.is_free && (
-                                <Badge variant="outline" className="text-xs">
-                                  Gratis
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </Button>
-                    ))}
-                  </CollapsibleContent>
-                </Collapsible>
-              ))}
+                          </Button>
+                        ))
+                      )}
+                    </CollapsibleContent>
+                  </Collapsible>
+                ))
+              )}
             </div>
           </ScrollArea>
         </div>
@@ -435,12 +515,10 @@ export default function LearningPlatform() {
               {/* Video Player */}
               <Card className="mb-6">
                 <CardContent className="p-0">
-                  <div className="aspect-video bg-black rounded-lg overflow-hidden">
-                    <video
-                      src={currentLesson.video_url}
-                      controls
-                      className="w-full h-full"
-                      poster={course?.thumbnail_url}
+                  <div className="bg-black rounded-lg overflow-hidden">
+                    <YouTubePlayer 
+                      videoUrl={currentLesson.video_url}
+                      onTimeUpdate={setWatchTime}
                     />
                   </div>
                 </CardContent>
@@ -452,12 +530,16 @@ export default function LearningPlatform() {
                   <div className="flex-1">
                     <h1 className="text-2xl font-bold mb-2">{currentLesson.title}</h1>
                     <p className="text-muted-foreground mb-4">
-                      {currentLesson.description}
+                      {currentLesson.description || 'No hay descripción disponible.'}
                     </p>
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <div className="flex items-center gap-1">
                         <Clock className="h-4 w-4" />
                         {currentLesson.duration_minutes} minutos
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <BookOpen className="h-4 w-4" />
+                        {modules.find(m => m.lessons.some(l => l.id === currentLesson.id))?.title}
                       </div>
                     </div>
                   </div>
@@ -506,31 +588,40 @@ export default function LearningPlatform() {
                       if (prevLesson) selectLesson(prevLesson);
                     }}
                     disabled={!getPreviousLesson()}
+                    className="gap-2"
                   >
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Lección anterior
+                    <ArrowLeft className="h-4 w-4" />
+                    Lección Anterior
                   </Button>
-
+                  
                   <Button
                     onClick={() => {
                       const nextLesson = getNextLesson();
-                      if (nextLesson) selectLesson(nextLesson);
+                      if (nextLesson) {
+                        selectLesson(nextLesson);
+                      } else {
+                        toast({
+                          title: "¡Curso completado!",
+                          description: "Has terminado todas las lecciones del curso.",
+                        });
+                      }
                     }}
                     disabled={!getNextLesson()}
+                    className="gap-2"
                   >
-                    Siguiente lección
-                    <ArrowRight className="h-4 w-4 ml-2" />
+                    Siguiente Lección
+                    <ArrowRight className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="flex items-center justify-center h-full">
+            <div className="p-6 flex items-center justify-center min-h-[60vh]">
               <div className="text-center">
-                <Play className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Selecciona una lección</h3>
+                <Play className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                <h2 className="text-xl font-semibold mb-2">Selecciona una lección</h2>
                 <p className="text-muted-foreground">
-                  Elige una lección del menú lateral para comenzar a aprender.
+                  Elige una lección del menú lateral para comenzar tu aprendizaje.
                 </p>
               </div>
             </div>
