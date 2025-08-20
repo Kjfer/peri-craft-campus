@@ -69,11 +69,11 @@ serve(async (req) => {
       getEnv("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    // Find order by payment ID
+    // Find order by payment ID or external reference
     const { data: orders, error: orderError } = await supabaseService
       .from('orders')
       .select('*')
-      .eq('payment_id', payment.external_reference || paymentId)
+      .or(`payment_id.eq.${paymentId},payment_id.eq.${payment.external_reference}`)
       .limit(1);
 
     if (orderError) {
@@ -82,7 +82,7 @@ serve(async (req) => {
     }
 
     if (!orders || orders.length === 0) {
-      console.log("📦 No order found for payment ID:", payment.external_reference || paymentId);
+      console.log("📦 No order found for payment:", { paymentId, external_reference: payment.external_reference });
       return new Response("Order not found", { status: 404 });
     }
 

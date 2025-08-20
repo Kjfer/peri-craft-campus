@@ -254,19 +254,10 @@ export default function CheckoutModal({
 
       if (data.success) {
         if (data.paymentUrl) {
-          window.open(data.paymentUrl, '_blank');
-          toast({
-            title: "Redirigiendo a MercadoPago",
-            description: "Completa el pago en la ventana que se abrió.",
-          });
+          // Redirect to MercadoPago for card payment
+          window.location.href = data.paymentUrl;
         } else {
-          toast({
-            title: "¡Pago exitoso!",
-            description: "Tu pago con tarjeta se procesó correctamente.",
-          });
-          clearCart();
-          onClose();
-          navigate(`/checkout/success/${data.orderId}`);
+          throw new Error('No payment URL received from MercadoPago');
         }
       } else {
         throw new Error(data.error || 'Error processing card payment');
@@ -310,20 +301,10 @@ export default function CheckoutModal({
 
       if (data.success) {
         if (data.paymentUrl) {
-          window.open(data.paymentUrl, '_blank');
-          toast({
-            title: "Redirigiendo a Yape",
-            description: "Completa el pago en la ventana que se abrió.",
-          });
-          onClose();
+          // Redirect to Yape via MercadoPago
+          window.location.href = data.paymentUrl;
         } else {
-          toast({
-            title: "¡Pago exitoso!",
-            description: "Tu pago con Yape se procesó correctamente.",
-          });
-          clearCart();
-          onClose();
-          navigate(`/checkout/success/${data.orderId}`);
+          throw new Error('No payment URL received for Yape');
         }
       } else {
         throw new Error(data.error || 'Error processing Yape payment');
@@ -367,20 +348,10 @@ export default function CheckoutModal({
 
       if (data.success) {
         if (data.paymentUrl) {
-          window.open(data.paymentUrl, '_blank');
-          toast({
-            title: "Redirigiendo a Plin",
-            description: "Completa el pago en la ventana que se abrió.",
-          });
-          onClose();
+          // Redirect to Plin via MercadoPago
+          window.location.href = data.paymentUrl;
         } else {
-          toast({
-            title: "¡Pago exitoso!",
-            description: "Tu pago con Plin se procesó correctamente.",
-          });
-          clearCart();
-          onClose();
-          navigate(`/checkout/success/${data.orderId}`);
+          throw new Error('No payment URL received for Plin');
         }
       } else {
         throw new Error(data.error || 'Error processing Plin payment');
@@ -424,13 +395,11 @@ export default function CheckoutModal({
       
       if (data.success) {
         if (data.paymentUrl) {
-          window.open(data.paymentUrl, '_blank');
+          // Redirect to MercadoPago checkout
+          window.location.href = data.paymentUrl;
+        } else {
+          throw new Error('No payment URL received from MercadoPago');
         }
-        toast({
-          title: "Redirigiendo a MercadoPago",
-          description: "Se abrirá una nueva ventana para completar el pago.",
-        });
-        onClose();
       } else {
         throw new Error(data.error || 'Error creating payment preference');
       }

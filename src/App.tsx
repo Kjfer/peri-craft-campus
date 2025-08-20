@@ -28,6 +28,8 @@ import CartCheckout from "./pages/CartCheckout";
 import CourseCheckout from "./pages/CourseCheckout";
 import OrderHistory from "./pages/OrderHistory";
 import EmailConfirmation from "./pages/EmailConfirmation";
+import CheckoutFailed from "./pages/CheckoutFailed";
+import CheckoutPending from "./pages/CheckoutPending";
 import NotFound from "./pages/NotFound";
 import AdminDashboard from "./pages/admin/Dashboard";
 import CourseManagement from "./pages/admin/CourseManagement";
@@ -66,6 +68,8 @@ const App = () => (
                   <Route path="/checkout/curso/:courseId" element={<CourseCheckout />} />
                   <Route path="/ordenes" element={<OrderHistory />} />
                   <Route path="/checkout/success/:orderId" element={<CheckoutSuccess />} />
+                  <Route path="/checkout/failed" element={<CheckoutFailed />} />
+                  <Route path="/checkout/pending" element={<CheckoutPending />} />
                   <Route path="/payment/instructions/:orderId" element={<PaymentInstructions />} />
                   <Route path="/payment/redirect/:orderId" element={<PaymentRedirect />} />
                   <Route path="/payment/success/:orderId" element={<PaymentSuccess />} />

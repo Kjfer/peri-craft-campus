@@ -147,17 +147,43 @@ serve(async (req) => {
         throw new Error(`Unsupported payment method: ${paymentMethod}`);
     }
 
-    // Update order with payment result
+    // Update order with payment result - keep as pending for external payment methods
+    let finalStatus = 'pending';
+    if (paymentMethod === 'paypal' || paymentMethod === 'googlepay') {
+      // These are processed immediately
+      finalStatus = paymentResult.success ? 'completed' : 'failed';
+    } else if (!paymentResult.success) {
+      finalStatus = 'failed';
+    }
+    
     const { error: updateError } = await supabaseService
       .from('orders')
       .update({
-        payment_status: paymentResult.success ? 'completed' : 'failed',
+        payment_status: finalStatus,
         payment_id: paymentResult.paymentId
       })
       .eq('id', order.id);
 
     if (updateError) {
       console.error('Failed to update order status:', updateError);
+    }
+
+    // Create enrollments only for immediately processed payments
+    if (finalStatus === 'completed') {
+      const enrollments = cartItems.map(item => ({
+        user_id: user.id,
+        course_id: item.id,
+        enrolled_at: new Date().toISOString(),
+        progress_percentage: 0
+      }));
+
+      const { error: enrollError } = await supabaseService
+        .from('enrollments')
+        .insert(enrollments);
+
+      if (enrollError) {
+        console.error('Failed to create enrollments:', enrollError);
+      }
     }
 
   // NOTE: Do NOT create enrollments here. Enrollment creation must be
@@ -238,9 +264,9 @@ async function processMercadoPagoPayment(cartItems: any[], amount: number, order
     external_reference: orderId,
     notification_url: `${getEnv('SUPABASE_URL')}/functions/v1/mercadopago-webhook`,
     back_urls: {
-      success: `${getEnv('SUPABASE_URL')}/checkout/success/${orderId}`,
-      failure: `${getEnv('SUPABASE_URL')}/checkout/failed/${orderId}`,
-      pending: `${getEnv('SUPABASE_URL')}/checkout/pending/${orderId}`
+      success: `https://idjmabhvzupcdygguqzm.supabase.co/checkout/success/${orderId}`,
+      failure: `https://idjmabhvzupcdygguqzm.supabase.co/checkout/failed`,
+      pending: `https://idjmabhvzupcdygguqzm.supabase.co/checkout/pending`
     },
     auto_return: 'approved'
   };
@@ -306,9 +332,9 @@ async function processYapePayment(cartItems: any[], amount: number, orderId: str
     external_reference: orderId,
     notification_url: `${getEnv('SUPABASE_URL')}/functions/v1/mercadopago-webhook`,
     back_urls: {
-      success: `${getEnv('SUPABASE_URL')}/checkout/success/${orderId}`,
-      failure: `${getEnv('SUPABASE_URL')}/checkout/failed/${orderId}`,
-      pending: `${getEnv('SUPABASE_URL')}/checkout/pending/${orderId}`
+      success: `https://idjmabhvzupcdygguqzm.supabase.co/checkout/success/${orderId}`,
+      failure: `https://idjmabhvzupcdygguqzm.supabase.co/checkout/failed`,
+      pending: `https://idjmabhvzupcdygguqzm.supabase.co/checkout/pending`
     },
     auto_return: 'approved'
   };
@@ -372,11 +398,11 @@ async function processPlinPayment(cartItems: any[], amount: number, orderId: str
       default_payment_method_id: 'plin'
     },
     external_reference: orderId,
-    notification_url: `${getEnv('SUPABASE_URL')}/functions/v1/mercadopago-webhook`,
+    notification_url: `${getEnv('SUPABASE_URL')}/functions/v1/mercadopago-webhook`,  
     back_urls: {
-      success: `${getEnv('SUPABASE_URL')}/checkout/success/${orderId}`,
-      failure: `${getEnv('SUPABASE_URL')}/checkout/failed/${orderId}`,
-      pending: `${getEnv('SUPABASE_URL')}/checkout/pending/${orderId}`
+      success: `https://idjmabhvzupcdygguqzm.supabase.co/checkout/success/${orderId}`,
+      failure: `https://idjmabhvzupcdygguqzm.supabase.co/checkout/failed`,
+      pending: `https://idjmabhvzupcdygguqzm.supabase.co/checkout/pending`
     },
     auto_return: 'approved'
   };

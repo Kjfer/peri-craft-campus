@@ -163,24 +163,33 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // Check if user has pending order for this course
-      const { data: pendingOrder } = await supabase
+      // Check if user has pending or completed order for this course
+      const { data: existingOrder } = await supabase
         .from('orders')
         .select(`
           id,
+          payment_status,
           order_items!inner(course_id)
         `)
         .eq('user_id', user.id)
-        .eq('payment_status', 'pending')
+        .in('payment_status', ['pending', 'completed'])
         .eq('order_items.course_id', courseId)
-        .single();
+        .maybeSingle();
 
-      if (pendingOrder) {
-        toast({
-          title: "Orden pendiente",
-          description: "Ya tienes una orden pendiente para este curso. Completa el pago para continuar.",
-          variant: "destructive",
-        });
+      if (existingOrder) {
+        if (existingOrder.payment_status === 'completed') {
+          toast({
+            title: "Ya tienes este curso",
+            description: "Ya compraste este curso. Puedes acceder desde tu dashboard.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Orden pendiente",
+            description: "Ya tienes una orden pendiente para este curso. Completa el pago para continuar.",
+            variant: "destructive",
+          });
+        }
         return;
       }
 
