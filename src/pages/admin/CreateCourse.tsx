@@ -8,7 +8,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useNavigate } from "react-router-dom";
-import { courseAPI } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Plus, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -203,33 +202,81 @@ export default function CreateCourse() {
       console.log('Creating course with data:', formData);
       console.log('Modules to create:', modules);
       
-      // Prepare course data with modules for backend
-      const courseDataWithModules = {
-        ...formData,
-        modules: modules
-      };
-      
-      console.log('🚀 SENDING TO BACKEND - Full object:');
-      console.log('📋 Course data:', formData);
-      console.log('📚 Modules array:', modules);
-      console.log('🔗 Combined payload:', JSON.stringify(courseDataWithModules, null, 2));
-      
-      // Send to backend - it will handle creating course, modules, and lessons
-      console.log('🎯 CALLING courseAPI.create() now...');
-      const result = await courseAPI.create(courseDataWithModules);
-      console.log('🎯 courseAPI.create() FINISHED with result:', result);
-      console.log('Course creation result:', result);
+      // Create course in Supabase
+      const { data: courseData, error: courseError } = await supabase
+        .from('courses')
+        .insert({
+          title: formData.title,
+          description: formData.description,
+          short_description: formData.short_description,
+          category: formData.category,
+          level: formData.level,
+          instructor_name: formData.instructor_name,
+          duration_hours: formData.duration_hours,
+          price: formData.price,
+          discounted_price: formData.discounted_price,
+          thumbnail_url: formData.thumbnail_url,
+          what_you_learn: formData.what_you_learn,
+          requirements: formData.requirements,
+          featured: formData.featured,
+          is_active: true
+        })
+        .select()
+        .single();
 
-      if (result.success && result.course) {
-        toast({
-          title: "Éxito",
-          description: `Curso creado correctamente con ${modules.length} módulos y ${modules.reduce((acc, m) => acc + m.lessons.length, 0)} lecciones`
-        });
-
-        navigate('/admin/cursos');
-      } else {
-        throw new Error(result.error || 'Error creating course');
+      if (courseError) {
+        throw new Error(courseError.message);
       }
+
+      console.log('Course created:', courseData);
+
+      // Create modules and lessons
+      for (const module of modules) {
+        const { data: moduleData, error: moduleError } = await supabase
+          .from('modules')
+          .insert({
+            course_id: courseData.id,
+            title: module.title,
+            description: module.description,
+            order_number: module.order_number
+          })
+          .select()
+          .single();
+
+        if (moduleError) {
+          throw new Error(`Error creating module: ${moduleError.message}`);
+        }
+
+        console.log('Module created:', moduleData);
+
+        // Create lessons for this module
+        for (const lesson of module.lessons) {
+          const { error: lessonError } = await supabase
+            .from('lessons')
+            .insert({
+              module_id: moduleData.id,
+              title: lesson.title,
+              description: lesson.description,
+              content: lesson.content,
+              video_url: lesson.video_url,
+              duration_minutes: lesson.duration_minutes,
+              order_number: lesson.order_number,
+              is_free: lesson.is_free
+            });
+
+          if (lessonError) {
+            throw new Error(`Error creating lesson: ${lessonError.message}`);
+          }
+        }
+      }
+
+      toast({
+        title: "Éxito",
+        description: `Curso creado correctamente con ${modules.length} módulos y ${modules.reduce((acc, m) => acc + m.lessons.length, 0)} lecciones`
+      });
+
+      navigate('/admin/cursos');
+      
     } catch (error: unknown) {
       console.error('Create course error:', error);
       toast({
