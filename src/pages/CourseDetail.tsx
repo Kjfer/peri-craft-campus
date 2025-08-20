@@ -24,7 +24,7 @@ import {
   ArrowLeft
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { courseAPI } from "@/lib/api";
+
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/hooks/use-toast";
@@ -42,10 +42,15 @@ interface Course {
   level: string;
   duration_hours: number;
   price: number;
-  is_free: boolean;
+  discounted_price?: number;
+  is_active: boolean;
+  featured: boolean;
   requirements?: string[];
   what_you_learn?: string[];
   modules?: Module[];
+  created_at: string;
+  updated_at: string;
+  status?: string;
 }
 
 interface Module {
@@ -95,15 +100,29 @@ export default function CourseDetail() {
     try {
       setLoading(true);
       
-      // Fetch course using API
-      const courseResponse = await courseAPI.getById(id!);
-      
-      if (courseResponse.success && courseResponse.course) {
-        setCourse(courseResponse.course);
-        setModules(courseResponse.course.modules || []);
-      } else {
-        throw new Error('Course not found');
-      }
+      // Fetch course from Supabase
+      const { data: courseData, error: courseError } = await supabase
+        .from('courses')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (courseError) throw courseError;
+
+      // Fetch modules and lessons
+      const { data: modulesData, error: modulesError } = await supabase
+        .from('modules')
+        .select(`
+          *,
+          lessons (*)
+        `)
+        .eq('course_id', id)
+        .order('order_number');
+
+      if (modulesError) throw modulesError;
+
+      setCourse(courseData);
+      setModules(modulesData || []);
     } catch (error: unknown) {
       console.error('Error fetching course data:', error);
       toast({
@@ -230,7 +249,7 @@ export default function CourseDetail() {
 
   const isPaid = access?.hasAccess;
   const isInCartNow = isInCart(course.id);
-  const isFree = course.is_free || course.price === 0;
+  const isFree = course.price === 0;
 
   return (
     <div className="min-h-screen bg-gray-50">

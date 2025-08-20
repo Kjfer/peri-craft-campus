@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { User, Session } from "@supabase/supabase-js";
-import { authAPI } from "@/lib/api";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Profile {
   id: string;
@@ -22,43 +22,73 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    console.log('🔄 useAuth - Checking auth status on mount...');
+    console.log('🔄 useAuth - Setting up auth listener...');
+    
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('🔄 Auth state changed:', event, session?.user?.id);
+        
+        if (session?.user) {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('user_id', session.user.id)
+            .single();
+          
+          setUser(session.user);
+          setProfile(profileData);
+          setSession(session);
+        } else {
+          setUser(null);
+          setProfile(null);
+          setSession(null);
+        }
+        setLoading(false);
+      }
+    );
+
+    // Initial session check
     checkAuthStatus();
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const checkAuthStatus = async () => {
     try {
-      const token = localStorage.getItem('auth_token');
-      console.log('🔍 checkAuthStatus - token:', token ? 'Present' : 'Missing');
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log('🔍 checkAuthStatus - session:', session ? 'Present' : 'Missing');
       
-      if (!token) {
-        console.log('🔍 No token found, setting loading to false');
-        setLoading(false);
-        return;
-      }
-
-      console.log('🔍 Making request to getProfile...');
-      const response = await authAPI.getProfile();
-      console.log('🔍 Profile response:', response);
-      
-      if (response.success) {
-        const userData = { id: response.user.id, email: response.user.email } as User;
-        setUser(userData);
-        setProfile(response.profile);
-        setSession({ user: userData } as Session);
-        console.log('✅ Auth state updated successfully:', {
-          user: userData,
-          profile: response.profile
-        });
+      if (session?.user) {
+        console.log('🔍 Getting user profile...');
+        const { data: profileData, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', session.user.id)
+          .single();
+        
+        if (error) {
+          console.error('❌ Profile fetch failed:', error);
+        } else {
+          setUser(session.user);
+          setProfile(profileData);
+          setSession(session);
+          console.log('✅ Auth state updated successfully:', {
+            user: session.user,
+            profile: profileData
+          });
+        }
       } else {
-        console.error('❌ Profile request failed:', response.error);
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('supabase.auth.token');
+        console.log('🔍 No session found');
+        setUser(null);
+        setProfile(null);
+        setSession(null);
       }
     } catch (error) {
       console.error('🔍 Auth check failed:', error);
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('supabase.auth.token');
+      setUser(null);
+      setProfile(null);
+      setSession(null);
     } finally {
       setLoading(false);
     }
@@ -66,21 +96,18 @@ export function useAuth() {
 
   const signUp = async (email: string, password: string, fullName: string) => {
     try {
-      const response = await authAPI.register({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        fullName: fullName  // Changed from full_name to fullName
+        options: {
+          data: {
+            full_name: fullName
+          },
+          emailRedirectTo: `${window.location.origin}/`
+        }
       });
       
-      localStorage.setItem('auth_token', response.token);
-      localStorage.setItem('supabase.auth.token', JSON.stringify({ 
-        access_token: response.token 
-      }));
-      
-      const userData = { id: response.user.id, email: response.user.email } as User;
-      setUser(userData);
-      setProfile(response.profile);
-      setSession({ user: userData } as Session);
+      if (error) throw error;
       
       return { error: null };
     } catch (error: unknown) {
@@ -93,25 +120,14 @@ export function useAuth() {
   const signIn = async (email: string, password: string) => {
     try {
       console.log('🔐 useAuth - Starting sign in process...');
-      const response = await authAPI.login({ email, password });
-      console.log('🔐 useAuth - Login response:', response);
-      
-      localStorage.setItem('auth_token', response.token);
-      localStorage.setItem('supabase.auth.token', JSON.stringify({ 
-        access_token: response.token 
-      }));
-      
-      const userData = { id: response.user.id, email: response.user.email } as User;
-      setUser(userData);
-      setProfile(response.profile);
-      setSession({ user: userData } as Session);
-      
-      console.log('🔐 useAuth - Auth state updated:', {
-        user: userData,
-        profile: response.profile,
-        session: { user: userData }
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
       });
       
+      if (error) throw error;
+      
+      console.log('🔐 useAuth - Login successful');
       return { error: null };
     } catch (error: unknown) {
       console.error('SignIn error:', error);
@@ -122,15 +138,9 @@ export function useAuth() {
 
   const signOut = async () => {
     try {
-      await authAPI.logout();
+      await supabase.auth.signOut();
     } catch (error) {
       console.error('SignOut error:', error);
-    } finally {
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('supabase.auth.token');
-      setUser(null);
-      setProfile(null);
-      setSession(null);
     }
     
     return { error: null };
