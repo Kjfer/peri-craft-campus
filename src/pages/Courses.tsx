@@ -226,7 +226,13 @@ export default function Courses() {
                         <Button 
                           variant={isAuthenticated && isEnrolled(course.id) ? "default" : "outline"}
                           size="sm"
-                          onClick={() => navigate(`/curso/${course.id}`)}
+                          onClick={() => {
+                            if (isAuthenticated && isEnrolled(course.id)) {
+                              navigate(`/learn/${course.id}`);
+                            } else {
+                              navigate(`/curso/${course.id}`);
+                            }
+                          }}
                           className="flex-1"
                         >
                           {isAuthenticated && isEnrolled(course.id) ? "Ir al Curso" : "Ver Curso"}

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { apiCall, API_CONFIG } from "@/lib/api";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -139,15 +139,76 @@ export default function Dashboard() {
           await refreshAuth();
         }
 
-        // For now, set empty arrays since we need to implement proper API endpoints
-        setEnrollments([]);
-        setCertificates([]);
-        setProgressStats({
-          total_enrollments: 0,
-          completed_courses: 0,
-          average_progress: 0,
-          completion_rate: 0
-        });
+        // Fetch enrollments from Supabase
+        try {
+          const { data: enrollmentsData, error: enrollmentsError } = await supabase
+            .from('enrollments')
+            .select(`
+              id,
+              progress_percentage,
+              enrolled_at,
+              completed_at,
+              courses (
+                id,
+                title,
+                description,
+                thumbnail_url,
+                instructor_name,
+                duration_hours,
+                category,
+                level
+              )
+            `)
+            .eq('user_id', user.id);
+
+          if (enrollmentsError) {
+            console.error('❌ Error fetching enrollments:', enrollmentsError);
+          } else {
+            console.log('✅ Enrollments fetched:', enrollmentsData);
+            setEnrollments(enrollmentsData || []);
+          }
+
+          // Fetch certificates
+          const { data: certificatesData, error: certificatesError } = await supabase
+            .from('certificates')
+            .select(`
+              id,
+              certificate_code,
+              certificate_url,
+              issued_at,
+              courses (
+                id,
+                title,
+                instructor_name,
+                duration_hours
+              )
+            `)
+            .eq('user_id', user.id);
+
+          if (certificatesError) {
+            console.error('❌ Error fetching certificates:', certificatesError);
+          } else {
+            console.log('✅ Certificates fetched:', certificatesData);
+            setCertificates(certificatesData || []);
+          }
+
+          // Calculate progress stats
+          const enrollmentsCount = enrollmentsData?.length || 0;
+          const completedCount = enrollmentsData?.filter(e => e.completed_at).length || 0;
+          const totalProgress = enrollmentsData?.reduce((sum, e) => sum + e.progress_percentage, 0) || 0;
+          const avgProgress = enrollmentsCount > 0 ? Math.round(totalProgress / enrollmentsCount) : 0;
+          const completionRate = enrollmentsCount > 0 ? Math.round((completedCount / enrollmentsCount) * 100) : 0;
+
+          setProgressStats({
+            total_enrollments: enrollmentsCount,
+            completed_courses: completedCount,
+            average_progress: avgProgress,
+            completion_rate: completionRate
+          });
+
+        } catch (error) {
+          console.error('❌ Error fetching dashboard data:', error);
+        }
 
       } catch (error) {
         console.error('❌ Error fetching dashboard data:', error);
@@ -166,10 +227,14 @@ export default function Dashboard() {
 
   const handleUpdateProfile = async () => {
     try {
-      const response = await apiCall(API_CONFIG.ENDPOINTS.USERS.PROFILE, {
-        method: 'PUT',
-        body: JSON.stringify(editedProfile)
-      });
+      if (!user) throw new Error('No user found');
+
+      const { error } = await supabase
+        .from('profiles')
+        .update(editedProfile)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
       
       // Update local state
       setUserProfile(prev => prev ? { ...prev, ...editedProfile } : null);
@@ -318,7 +383,11 @@ export default function Dashboard() {
                         </div>
                       </div>
                       
-                      <Button variant="outline" className="w-full">
+                      <Button 
+                        variant="outline" 
+                        className="w-full"
+                        onClick={() => navigate(`/learn/${enrollment.courses.id}`)}
+                      >
                         Continuar Curso
                       </Button>
                     </div>
