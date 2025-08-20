@@ -8,10 +8,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, UserPlus, Edit, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { adminAPI } from "@/lib/api";
+import { supabase } from "@/integrations/supabase/client";
 
 interface User {
   id: string;
+  user_id: string;
   email: string;
   full_name: string;
   role: 'student' | 'admin' | 'instructor';
@@ -31,14 +32,27 @@ export default function UserManagement() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const params: any = {};
-      if (searchTerm) params.search = searchTerm;
-      if (roleFilter !== "all") params.role = roleFilter;
       
-      const response = await adminAPI.getUsers(params);
-      if (response.success) {
-        setUsers(response.data || []);
+      let query = supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (searchTerm) {
+        query = query.or(`full_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`);
       }
+      
+      if (roleFilter !== "all") {
+        query = query.eq('role', roleFilter as 'student' | 'admin' | 'instructor');
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) {
+        throw error;
+      }
+      
+      setUsers(data || []);
     } catch (error) {
       console.error('Error fetching users:', error);
       toast({
@@ -51,27 +65,24 @@ export default function UserManagement() {
     }
   };
 
-  const updateUserRole = async (userId: string, newRole: string) => {
+  const updateUserRole = async (userId: string, newRole: 'student' | 'admin' | 'instructor') => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/admin/users/${userId}/role`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ role: newRole })
-      });
+      const { error } = await supabase
+        .from('profiles')
+        .update({ role: newRole })
+        .eq('user_id', userId);
       
-      if (response.ok) {
-        toast({
-          title: "Éxito",
-          description: "Rol actualizado correctamente"
-        });
-        fetchUsers();
-      } else {
-        throw new Error('Error al actualizar rol');
+      if (error) {
+        throw error;
       }
+      
+      toast({
+        title: "Éxito",
+        description: "Rol actualizado correctamente"
+      });
+      fetchUsers();
     } catch (error) {
+      console.error('Error updating user role:', error);
       toast({
         title: "Error",
         description: "No se pudo actualizar el rol del usuario",
@@ -200,7 +211,7 @@ export default function UserManagement() {
                       <div className="flex space-x-2">
                         <Select
                           value={user.role}
-                          onValueChange={(newRole) => updateUserRole(user.id, newRole)}
+                          onValueChange={(newRole: 'student' | 'admin' | 'instructor') => updateUserRole(user.user_id, newRole)}
                         >
                           <SelectTrigger className="w-32">
                             <SelectValue />
