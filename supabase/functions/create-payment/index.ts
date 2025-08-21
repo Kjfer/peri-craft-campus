@@ -135,7 +135,7 @@ serve(async (req) => {
         paymentResult = await processCardPayment(paymentData, order.id, totalAmount);
         break;
       case 'mercadopago':
-        paymentResult = await processMercadoPagoPayment(cartItems, totalAmount, order.id, paymentData);
+        paymentResult = await processMercadoPagoPayment(cartItems, totalAmount, order.id, paymentData, authHeader);
         break;
       case 'paypal':
         paymentResult = await processPayPalPayment(cartItems, totalAmount, order.id, paymentData);
@@ -243,91 +243,45 @@ async function processCardPayment(paymentData: any, orderId: string, amount: num
   };
 }
 
-async function processMercadoPagoPayment(cartItems: any[], amount: number, orderId: string, paymentData?: any) {
-  const accessToken = getEnv('MERCADOPAGO_ACCESS_TOKEN')
-    || getEnv('MP_ACCESS_TOKEN')
-    || getEnv('MERCADO_PAGO_ACCESS_TOKEN');
-  console.log("🔑 Checking MERCADO(PAGO) token availability:", accessToken ? "✓ Found" : "✗ Missing");
-  if (!accessToken) {
-    throw new Error('MERCADOPAGO_ACCESS_TOKEN not configured');
-  }
-
-  // Create MercadoPago preference with PEN currency for Peruvian users
-  const isSandbox = accessToken.startsWith('TEST-');
-  const providedEmail = paymentData?.user?.email as string | undefined;
-  const payerEmail = isSandbox
-    ? (providedEmail && providedEmail.endsWith('@testuser.com')
-        ? providedEmail
-        : `test_user_${Math.floor(Math.random()*100000)}@testuser.com`)
-    : (providedEmail || 'buyer@example.com');
-
-  const preference = {
-    items: cartItems.map(item => ({
-      title: item.title,
-      quantity: 1,
-      unit_price: parseFloat(((item.price || 0) * 3.75).toFixed(2)), // Convert to PEN
-      currency_id: 'PEN'
-    })),
-    payer: {
-      email: payerEmail,
-      name: paymentData?.user?.name || 'Test User'
-    },
-    external_reference: orderId,
-    notification_url: `${getEnv('SUPABASE_URL')}/functions/v1/mercadopago-webhook`,
-    back_urls: {
-      success: `https://idjmabhvzupcdygguqzm.supabase.co/checkout/success/${orderId}`,
-      failure: `https://idjmabhvzupcdygguqzm.supabase.co/checkout/failed`,
-      pending: `https://idjmabhvzupcdygguqzm.supabase.co/checkout/pending`
-    },
-    auto_return: 'approved',
-    // Force sandbox tests to use card (exclude wallets like Yape/Plin that often fail in sandbox)
-    payment_methods: {
-      excluded_payment_methods: [
-        { id: 'yape' },
-        { id: 'plin' }
-      ],
-      excluded_payment_types: [
-        { id: 'ticket' },
-        { id: 'atm' },
-        { id: 'bank_transfer' }
-      ],
-      default_payment_method_id: 'visa',
-      installments: 1
-    }
-  };
-
+async function processMercadoPagoPayment(
+  cartItems: any[],
+  amount: number,
+  orderId: string,
+  paymentData?: any,
+  authHeader?: string | null
+) {
   try {
-    const response = await fetch('https://api.mercadopago.com/checkout/preferences', {
+    const url = `${getEnv('SUPABASE_URL')}/functions/v1/mp-preference`;
+    const resp = await fetch(url, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        ...(authHeader ? { Authorization: authHeader } : {}),
       },
-      body: JSON.stringify(preference)
+      body: JSON.stringify({
+        cartItems,
+        totalAmount: amount,
+        orderId,
+        paymentData,
+      }),
     });
 
-    if (!response.ok) {
-      const errorData = await response.text();
-      console.error('MercadoPago API error:', errorData);
-      throw new Error(`MercadoPago API error: ${response.status}`);
+    if (!resp.ok) {
+      const text = await resp.text();
+      console.error('mp-preference proxy error:', resp.status, text);
+      return { success: false, message: 'Failed to create preference', paymentId: null, paymentUrl: null };
     }
 
-    const data = await response.json();
-    
+    const data = await resp.json();
     return {
-      success: true,
-      message: "Redirecting to MercadoPago",
-      paymentId: data.id,
-      paymentUrl: (isSandbox && data.sandbox_init_point) ? data.sandbox_init_point : data.init_point
+      success: !!data.success,
+      message: data.message,
+      paymentId: data.paymentId,
+      paymentUrl: data.paymentUrl,
     };
-  } catch (error) {
-    console.error('MercadoPago payment error:', error);
-    return {
-      success: false,
-      message: error.message,
-      paymentId: null,
-      paymentUrl: null
-    };
+  } catch (error: any) {
+    console.error('MercadoPago proxy error:', error);
+    return { success: false, message: error?.message || 'Error', paymentId: null, paymentUrl: null };
   }
 }
 
