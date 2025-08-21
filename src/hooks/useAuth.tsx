@@ -157,20 +157,60 @@ export function useAuth() {
     try {
       console.log('🔐 Signing in user:', email);
       setLoading(true);
-      
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-      
-      if (error) {
-        // If email not confirmed, provide a better error message
-        if (error.message.includes('Email not confirmed')) {
-          throw new Error('Tu email aún no ha sido confirmado. En modo desarrollo, esto debería hacerse automáticamente.');
-        }
-        throw error;
+
+      // Clean limbo auth state before attempting sign-in
+      try {
+        Object.keys(localStorage).forEach((key) => {
+          if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
+            localStorage.removeItem(key);
+          }
+        });
+        Object.keys(sessionStorage || {}).forEach((key) => {
+          if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
+            sessionStorage.removeItem(key);
+          }
+        });
+        await supabase.auth.signOut({ scope: 'global' } as any);
+      } catch (_) {
+        // ignore cleanup errors
       }
       
+      let { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        const msg = (error as any)?.message || '';
+        const needsConfirm = msg.toLowerCase().includes('email not confirmed');
+        if (needsConfirm) {
+          console.log('📧 Email not confirmed, attempting auto-confirm via edge function...');
+          try {
+            const { data: confirmRes, error: confirmErr } = await supabase.functions.invoke('confirm-email-dev', {
+              body: { email },
+            });
+            if (confirmErr) {
+              console.warn('Auto-confirm failed:', confirmErr);
+              throw new Error('Tu email no está confirmado. Usa la herramienta "Confirmar Email" o revisa tu bandeja.');
+            }
+            // Retry sign-in after short delay
+            await new Promise((r) => setTimeout(r, 800));
+            const retry = await supabase.auth.signInWithPassword({ email, password });
+            if (retry.error) {
+              throw retry.error;
+            }
+            console.log('✅ Login successful after auto-confirm');
+            return { data: retry.data, error: null };
+          } catch (autoErr: any) {
+            console.error('❌ Auto-confirm sign-in error:', autoErr);
+            const message = autoErr?.message || 'Tu email no está confirmado.';
+            return { error: { message } };
+          }
+        }
+        // Other errors
+        throw error;
+      }
+
       console.log('✅ Login successful');
       return { data, error: null };
     } catch (error: unknown) {
@@ -178,7 +218,7 @@ export function useAuth() {
       const message = error instanceof Error ? error.message : 'Error desconocido';
       return { error: { message } };
     } finally {
-      // Don't set loading to false here - let the auth state change handle it
+      // Let onAuthStateChange drive loading to false
     }
   };
 
