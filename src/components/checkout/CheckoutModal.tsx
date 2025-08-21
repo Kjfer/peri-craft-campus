@@ -96,31 +96,29 @@ export default function CheckoutModal({
         tokenizationSpecification: {
           type: "PAYMENT_GATEWAY" as const,
           parameters: {
-            gateway: "stripe",
-            gatewayMerchantId: import.meta.env.VITE_STRIPE_MERCHANT_ID || "",
+            gateway: "example",
+            gatewayMerchantId: "exampleGatewayMerchantId",
           },
         },
       },
     ],
     merchantInfo: {
-      merchantId: import.meta.env.VITE_GOOGLE_PAY_MERCHANT_ID || "",
+      merchantId: "BCR2DN4T2C5UXTUD",
       merchantName: "Peri Institute",
+    },
+    transactionInfo: {
+      totalPriceStatus: "FINAL" as const,
+      totalPrice: totalAmount.toString(),
+      currencyCode: "USD",
     },
   };
 
   const paymentMethods: PaymentMethod[] = [
     {
-      id: "card",
-      name: "Tarjeta",
-      icon: <CreditCard className="w-6 h-6" />,
-      description: "Tarjeta de débito o crédito",
-      available: true
-    },
-    {
       id: "mercadopago",
       name: "MercadoPago",
       icon: <Wallet className="w-6 h-6" />,
-      description: "Yape, Plin, tarjetas y más métodos peruanos",
+      description: "Yape y tarjetas de crédito o débito",
       available: true
     },
     {
@@ -144,7 +142,7 @@ export default function CheckoutModal({
   const handleGooglePaySuccess = async (paymentData: any) => {
     setIsProcessing(true);
     try {
-      const { data, error } = await supabase.functions.invoke('create-payment', {
+      const { data, error } = await supabase.functions.invoke('googlepay', {
         body: {
           cartItems: cartItems.map(item => ({
             id: item.course_id,
@@ -154,7 +152,6 @@ export default function CheckoutModal({
             thumbnail_url: item.course.thumbnail_url
           })),
           totalAmount,
-          paymentMethod: 'googlepay',
           paymentData: paymentData
         }
       });
@@ -427,7 +424,7 @@ export default function CheckoutModal({
           {/* Payment Methods */}
           <div className="lg:col-span-2">
             <Tabs value={selectedMethod} onValueChange={setSelectedMethod}>
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className="grid w-full grid-cols-3">
                 {paymentMethods.map((method) => (
                   <TabsTrigger
                     key={method.id}
@@ -441,121 +438,47 @@ export default function CheckoutModal({
                 ))}
               </TabsList>
               
-              {/* Moved Google Pay to its own tab */}
-
-              {/* Credit/Debit Card Tab */}
-              <TabsContent value="card" className="space-y-4">
+              {/* Google Pay Tab */}
+              <TabsContent value="googlepay" className="space-y-4">
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center">
-                      <CreditCard className="w-5 h-5 mr-2" />
-                      Tarjeta de Débito/Crédito
+                      <Smartphone className="w-5 h-5 mr-2" />
+                      Google Pay
                     </CardTitle>
                     <CardDescription>
-                      Paga de forma segura con tu tarjeta Visa, Mastercard o American Express
+                      Pago rápido y seguro con Google Pay
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="card-number">Número de tarjeta</Label>
-                        <Input
-                          id="card-number"
-                          placeholder="1234 5678 9012 3456"
-                          value={cardData.number}
-                          onChange={(e) => {
-                            let value = e.target.value.replace(/\s/g, '').replace(/\D/g, '');
-                            value = value.replace(/(.{4})/g, '$1 ').trim();
-                            if (value.length <= 19) {
-                              setCardData(prev => ({ ...prev, number: value }));
-                            }
-                          }}
-                          maxLength={19}
-                        />
-                      </div>
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <h4 className="font-medium mb-2">Pago con Google Pay</h4>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Usa tu cuenta de Google para realizar el pago de forma rápida y segura.
+                      </p>
                       
-                      <div className="space-y-2">
-                        <Label htmlFor="card-name">Nombre del titular</Label>
-                        <Input
-                          id="card-name"
-                          placeholder="Juan Pérez"
-                          value={cardData.name}
-                          onChange={(e) => setCardData(prev => ({ ...prev, name: e.target.value }))}
-                        />
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="card-expiry">Fecha de vencimiento</Label>
-                          <Input
-                            id="card-expiry"
-                            placeholder="MM/YY"
-                            value={cardData.expiry}
-                            onChange={(e) => {
-                              let value = e.target.value.replace(/\D/g, '');
-                              if (value.length >= 2) {
-                                value = value.substring(0, 2) + '/' + value.substring(2, 4);
-                              }
-                              if (value.length <= 5) {
-                                setCardData(prev => ({ ...prev, expiry: value }));
-                              }
-                            }}
-                            maxLength={5}
-                          />
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <Label htmlFor="card-cvc">CVC</Label>
-                          <Input
-                            id="card-cvc"
-                            placeholder="123"
-                            value={cardData.cvc}
-                            onChange={(e) => {
-                              const value = e.target.value.replace(/\D/g, '');
-                              if (value.length <= 4) {
-                                setCardData(prev => ({ ...prev, cvc: value }));
-                              }
-                            }}
-                            maxLength={4}
-                          />
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="email">Email para confirmación</Label>
-                        <Input
-                          id="email"
-                          type="email"
-                          placeholder="tu@email.com"
-                          value={cardData.email}
-                          onChange={(e) => setCardData(prev => ({ ...prev, email: e.target.value }))}
-                        />
-                      </div>
+                      <GooglePayButton
+                        environment={googlePayConfig.environment}
+                        paymentRequest={googlePayConfig}
+                        onLoadPaymentData={handleGooglePaySuccess}
+                        onError={(error) => {
+                          console.error('Google Pay error:', error);
+                          toast({
+                            title: "Error en Google Pay",
+                            description: "No se pudo inicializar Google Pay. Intenta con otro método.",
+                            variant: "destructive",
+                          });
+                        }}
+                        buttonColor="black"
+                        buttonType="pay"
+                        buttonSizeMode="fill"
+                      />
                     </div>
                     
-                    <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                      <Lock className="w-4 h-4" />
-                      <span>Tus datos están protegidos con encriptación SSL de 256 bits</span>
+                    <div className="flex items-center text-xs text-muted-foreground">
+                      <Shield className="w-3 h-3 mr-1" />
+                      Tu información de pago está protegida por Google
                     </div>
-                    
-                    <Button
-                      onClick={handleCardPayment}
-                      disabled={isProcessing || !cardData.number || !cardData.name || !cardData.expiry || !cardData.cvc}
-                      className="w-full"
-                      size="lg"
-                    >
-                      {isProcessing ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Procesando pago...
-                        </>
-                      ) : (
-                        <>
-                          <CreditCard className="w-4 h-4 mr-2" />
-                          Pagar ${totalAmount.toFixed(2)}
-                        </>
-                      )}
-                    </Button>
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -781,42 +704,6 @@ export default function CheckoutModal({
                 </Card>
               </TabsContent>
 
-              {/* Google Pay Tab */}
-              <TabsContent value="googlepay" className="space-y-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <Smartphone className="w-5 h-5 mr-2" />
-                      Google Pay
-                    </CardTitle>
-                    <CardDescription>
-                      Pago rápido y seguro con Google Pay
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <GooglePayButton
-                      environment={googlePayConfig.environment}
-                      paymentRequest={{
-                        apiVersion: googlePayConfig.apiVersion,
-                        apiVersionMinor: googlePayConfig.apiVersionMinor,
-                        allowedPaymentMethods: googlePayConfig.allowedPaymentMethods,
-                        merchantInfo: googlePayConfig.merchantInfo,
-                        transactionInfo: {
-                          totalPriceStatus: "FINAL",
-                          totalPrice: totalAmount.toFixed(2),
-                          currencyCode: "USD",
-                          countryCode: "US"
-                        }
-                      }}
-                      onLoadPaymentData={handleGooglePaySuccess}
-                      existingPaymentMethodRequired={false}
-                      buttonColor="default"
-                      buttonType="pay"
-                      buttonSizeMode="fill"
-                    />
-                  </CardContent>
-                </Card>
-              </TabsContent>
             </Tabs>
           </div>
         </div>

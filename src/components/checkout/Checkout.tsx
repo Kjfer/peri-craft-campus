@@ -214,8 +214,8 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
       case 'mercadopago':
         return <DollarSign className="w-5 h-5" />;
       case 'googlepay':
+        return <Smartphone className="w-5 h-5" />;
       case 'paypal':
-      case 'card':
         return <CreditCard className="w-5 h-5" />;
       default:
         return <DollarSign className="w-5 h-5" />;

@@ -223,22 +223,18 @@ class CheckoutService {
       description?: string;
     }> = [
       {
-        id: 'googlepay',
-        name: 'Google Pay',
-        icon: '💳',
-        type: 'digital_wallet'
-      },
-      {
         id: 'paypal',
         name: 'PayPal',
         icon: '🅿️',
-        type: 'digital_wallet'
+        type: 'digital_wallet',
+        description: 'Paga de forma segura con tu cuenta PayPal'
       },
       {
-        id: 'card',
-        name: 'Tarjeta de Crédito/Débito',
+        id: 'googlepay',
+        name: 'Google Pay',
         icon: '💳',
-        type: 'card'
+        type: 'digital_wallet',
+        description: 'Pago rápido con Google Pay'
       }
     ];
 
@@ -249,7 +245,7 @@ class CheckoutService {
           name: 'MercadoPago',
           icon: '🏦',
           type: 'digital_wallet',
-          description: 'Yape, Tarjetas y más métodos peruanos'
+          description: 'Yape y tarjetas de crédito o débito'
         }
       );
     }
