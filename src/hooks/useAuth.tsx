@@ -130,19 +130,14 @@ export function useAuth() {
         console.log('🔧 Development mode: Auto-confirming email...');
         try {
           // Call the edge function to confirm email in development
-          const response = await fetch('https://idjmabhvzupcdygguqzm.supabase.co/functions/v1/confirm-email-dev', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlkam1hYmh2enVwY2R5Z2d1cXptIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MTk5MDEsImV4cCI6MjA3MDQ5NTkwMX0.Dep7HS-4EwRIa9vCXWdwC20ARnTvHoB-oyBPGRV3VAg'}`,
-            },
-            body: JSON.stringify({ email: data.user.email }),
+          const { data: confirmData, error: confirmError } = await supabase.functions.invoke('confirm-email-dev', {
+            body: { email: data.user.email }
           });
           
-          if (response.ok) {
-            console.log('✅ Email auto-confirmed in development');
+          if (confirmError) {
+            console.warn('⚠️ Email auto-confirmation failed:', confirmError);
           } else {
-            console.warn('⚠️ Email auto-confirmation failed, but signup was successful');
+            console.log('✅ Email auto-confirmed in development');
           }
         } catch (confirmError) {
           console.warn('⚠️ Email auto-confirmation error:', confirmError);

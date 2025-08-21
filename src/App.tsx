@@ -37,6 +37,7 @@ import EditCourse from "./pages/admin/EditCourse";
 import UserManagement from "./pages/admin/UserManagement";
 import CertificateManagement from "./pages/admin/CertificateManagement";
 import Settings from "./pages/admin/Settings";
+import ConfirmEmail from "./pages/ConfirmEmail";
 
 const queryClient = new QueryClient();
 
@@ -54,6 +55,7 @@ const App = () => (
                 <Routes>
                   <Route path="/" element={<Home />} />
                   <Route path="/auth" element={<Auth />} />
+                  <Route path="/confirm-email" element={<ConfirmEmail />} />
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/cursos" element={<Courses />} />
             <Route path="/courses/:courseId/lessons/:lessonId" element={<LessonPlayer />} />
