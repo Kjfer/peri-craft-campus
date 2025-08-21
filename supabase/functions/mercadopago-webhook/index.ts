@@ -73,7 +73,7 @@ serve(async (req) => {
     const { data: orders, error: orderError } = await supabaseService
       .from('orders')
       .select('*')
-      .or(`id.eq.${payment.external_reference},payment_id.eq.${paymentId}`)
+      .or(`id.eq.${payment.external_reference},order_number.eq.${payment.external_reference},payment_id.eq.${paymentId}`)
       .limit(1);
 
     if (orderError) {
@@ -83,7 +83,8 @@ serve(async (req) => {
 
     if (!orders || orders.length === 0) {
       console.log("📦 No order found for payment:", { paymentId, external_reference: payment.external_reference });
-      return new Response("Order not found", { status: 404 });
+      // Acknowledge to avoid repeated delivery retries from MercadoPago
+      return new Response("OK", { status: 200, headers: corsHeaders });
     }
 
     const order = orders[0];
