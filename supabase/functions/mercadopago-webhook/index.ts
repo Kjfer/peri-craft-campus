@@ -73,7 +73,7 @@ serve(async (req) => {
     const { data: orders, error: orderError } = await supabaseService
       .from('orders')
       .select('*')
-      .or(`payment_id.eq.${paymentId},payment_id.eq.${payment.external_reference}`)
+      .or(`id.eq.${payment.external_reference},payment_id.eq.${paymentId}`)
       .limit(1);
 
     if (orderError) {
@@ -97,13 +97,14 @@ serve(async (req) => {
       newStatus = 'failed';
     }
 
+    console.log("📦 Payment status detail:", payment.status, payment.status_detail);
     console.log("📦 Updating order status to:", newStatus);
-
     // Update order
     const { error: updateError } = await supabaseService
       .from('orders')
       .update({
         payment_status: newStatus,
+        payment_id: payment.id,
         updated_at: new Date().toISOString()
       })
       .eq('id', order.id);

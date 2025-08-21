@@ -243,15 +243,23 @@ async function processMercadoPagoPayment(cartItems: any[], amount: number, order
   }
 
   // Create MercadoPago preference with PEN currency for Peruvian users
+  const isSandbox = accessToken.startsWith('TEST-');
+  const providedEmail = paymentData?.user?.email as string | undefined;
+  const payerEmail = isSandbox
+    ? (providedEmail && providedEmail.endsWith('@testuser.com')
+        ? providedEmail
+        : `test_user_${Math.floor(Math.random()*100000)}@testuser.com`)
+    : (providedEmail || 'buyer@example.com');
+
   const preference = {
     items: cartItems.map(item => ({
       title: item.title,
       quantity: 1,
-      unit_price: Math.round(item.price * 3.75), // Convert to PEN
+      unit_price: parseFloat(((item.price || 0) * 3.75).toFixed(2)), // Convert to PEN
       currency_id: 'PEN'
     })),
     payer: {
-      email: paymentData?.user?.email || 'test@test.com',
+      email: payerEmail,
       name: paymentData?.user?.name || 'Test User'
     },
     external_reference: orderId,
@@ -286,7 +294,7 @@ async function processMercadoPagoPayment(cartItems: any[], amount: number, order
       success: true,
       message: "Redirecting to MercadoPago",
       paymentId: data.id,
-      paymentUrl: data.init_point
+      paymentUrl: (isSandbox && data.sandbox_init_point) ? data.sandbox_init_point : data.init_point
     };
   } catch (error) {
     console.error('MercadoPago payment error:', error);
