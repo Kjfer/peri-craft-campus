@@ -254,6 +254,7 @@ export default function CreateCourse() {
           const { error: lessonError } = await supabase
             .from('lessons')
             .insert({
+              course_id: courseData.id,
               module_id: moduleData.id,
               title: lesson.title,
               description: lesson.description,
