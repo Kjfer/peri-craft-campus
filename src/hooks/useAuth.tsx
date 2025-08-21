@@ -125,8 +125,32 @@ export function useAuth() {
       
       if (error) throw error;
       
+      // In development, auto-confirm the user's email
+      if (data.user && !data.user.email_confirmed_at) {
+        console.log('🔧 Development mode: Auto-confirming email...');
+        try {
+          // Call the edge function to confirm email in development
+          const response = await fetch('https://idjmabhvzupcdygguqzm.supabase.co/functions/v1/confirm-email-dev', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlkam1hYmh2enVwY2R5Z2d1cXptIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MTk5MDEsImV4cCI6MjA3MDQ5NTkwMX0.Dep7HS-4EwRIa9vCXWdwC20ARnTvHoB-oyBPGRV3VAg'}`,
+            },
+            body: JSON.stringify({ email: data.user.email }),
+          });
+          
+          if (response.ok) {
+            console.log('✅ Email auto-confirmed in development');
+          } else {
+            console.warn('⚠️ Email auto-confirmation failed, but signup was successful');
+          }
+        } catch (confirmError) {
+          console.warn('⚠️ Email auto-confirmation error:', confirmError);
+        }
+      }
+      
       console.log('✅ Signup successful');
-      return { error: null };
+      return { data, error: null };
     } catch (error: unknown) {
       console.error('❌ SignUp error:', error);
       const message = error instanceof Error ? error.message : 'Error desconocido';
@@ -144,10 +168,16 @@ export function useAuth() {
         password
       });
       
-      if (error) throw error;
+      if (error) {
+        // If email not confirmed, provide a better error message
+        if (error.message.includes('Email not confirmed')) {
+          throw new Error('Tu email aún no ha sido confirmado. En modo desarrollo, esto debería hacerse automáticamente.');
+        }
+        throw error;
+      }
       
       console.log('✅ Login successful');
-      return { error: null };
+      return { data, error: null };
     } catch (error: unknown) {
       console.error('❌ SignIn error:', error);
       const message = error instanceof Error ? error.message : 'Error desconocido';

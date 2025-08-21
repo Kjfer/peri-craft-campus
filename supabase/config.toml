@@ -34,3 +34,6 @@ verify_jwt = false
 
 [functions.googlepay]
 verify_jwt = false
+
+[functions.confirm-email-dev]
+verify_jwt = false

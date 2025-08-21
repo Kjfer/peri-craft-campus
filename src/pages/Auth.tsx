@@ -102,26 +102,32 @@ export default function Auth() {
           description: "Tu cuenta ha sido creada. Iniciando sesión...",
         });
         
-        // Auto-login after successful registration in development
+        // Wait a moment for email confirmation, then auto-login
         console.log('🔄 Auto-login after registration...');
-        const loginResult = await signIn(signUpData.email, signUpData.password);
         
-        if (loginResult.error) {
-          console.error('Auto-login failed:', loginResult.error);
-          toast({
-            title: "Registro exitoso",
-            description: "Por favor inicia sesión con tus credenciales.",
-          });
-        } else {
-          console.log('✅ Auto-login successful');
-          toast({
-            title: "¡Bienvenido!",
-            description: "Tu cuenta ha sido configurada correctamente.",
-          });
+        // Add a small delay to allow email confirmation to process
+        setTimeout(async () => {
+          const loginResult = await signIn(signUpData.email, signUpData.password);
           
-          // Navigate to dashboard
-          navigate("/dashboard");
-        }
+          if (loginResult.error) {
+            console.error('Auto-login failed:', loginResult.error);
+            toast({
+              title: "Registro exitoso",
+              description: "Por favor inicia sesión con tus credenciales.",
+            });
+          } else {
+            console.log('✅ Auto-login successful');
+            toast({
+              title: "¡Bienvenido!",
+              description: "Tu cuenta ha sido configurada correctamente.",
+            });
+            
+            // Use a slight delay before navigation to ensure auth state is updated
+            setTimeout(() => {
+              navigate("/dashboard");
+            }, 500);
+          }
+        }, 2000); // Wait 2 seconds for email confirmation to process
       }
     } catch (error) {
       toast({
