@@ -69,12 +69,23 @@ serve(async (req) => {
       getEnv("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    // Find order by payment ID or external reference
-    const { data: orders, error: orderError } = await supabaseService
-      .from('orders')
-      .select('*')
-      .or(`id.eq.${payment.external_reference},order_number.eq.${payment.external_reference},payment_id.eq.${paymentId}`)
-      .limit(1);
+    // Find order by payment ID or external reference (retry once to avoid race conditions)
+    async function findOrder() {
+      const { data, error } = await supabaseService
+        .from('orders')
+        .select('*')
+        .or(`id.eq.${payment.external_reference},order_number.eq.${payment.external_reference},payment_id.eq.${paymentId}`)
+        .limit(1);
+      return { data, error } as { data: any[] | null, error: any };
+    }
+
+    let { data: orders, error: orderError } = await findOrder();
+
+    if ((!orders || orders.length === 0) && !orderError) {
+      // Brief wait in case the order write hasn't propagated yet
+      await new Promise((r) => setTimeout(r, 1200));
+      ({ data: orders, error: orderError } = await findOrder());
+    }
 
     if (orderError) {
       console.error("📦 Error finding order:", orderError);

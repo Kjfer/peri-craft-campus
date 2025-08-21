@@ -269,7 +269,21 @@ async function processMercadoPagoPayment(cartItems: any[], amount: number, order
       failure: `https://idjmabhvzupcdygguqzm.supabase.co/checkout/failed`,
       pending: `https://idjmabhvzupcdygguqzm.supabase.co/checkout/pending`
     },
-    auto_return: 'approved'
+    auto_return: 'approved',
+    // Force sandbox tests to use card (exclude wallets like Yape/Plin that often fail in sandbox)
+    payment_methods: {
+      excluded_payment_methods: [
+        { id: 'yape' },
+        { id: 'plin' }
+      ],
+      excluded_payment_types: [
+        { id: 'ticket' },
+        { id: 'atm' },
+        { id: 'bank_transfer' }
+      ],
+      default_payment_method_id: 'visa',
+      installments: 1
+    }
   };
 
   try {
