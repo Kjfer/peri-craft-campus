@@ -52,6 +52,13 @@ serve(async (req) => {
   }
 
   try {
+    // Log env visibility for debugging (safe - only keys)
+    try {
+      // @ts-ignore
+      const envKeys = (typeof Deno !== 'undefined' && Deno?.env?.toObject) ? Object.keys(Deno.env.toObject()) : [];
+      console.log("🔎 Env keys present:", envKeys.filter(k => k.includes('SUPABASE') || k.includes('MERCADOPAGO')));
+    } catch (_e) { /* ignore */ }
+
     // Get user from request
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
