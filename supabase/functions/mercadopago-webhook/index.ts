@@ -30,15 +30,126 @@ serve(async (req) => {
     const body = await req.json();
     console.log("📦 Webhook payload:", JSON.stringify(body, null, 2));
 
-    // MercadoPago webhook structure
-    const { type, data } = body;
-    
-    if (type !== 'payment') {
-      console.log("📦 Ignoring non-payment webhook");
-      return new Response("OK", { status: 200 });
+    // MercadoPago webhook structure - handle both "payment" and "merchant_order" topics
+    const { type, data, action, topic, resource } = body as any;
+
+    let eventKind: 'payment' | 'merchant_order' | 'unknown' = 'unknown';
+    let paymentIdFromEvent: string | undefined;
+    let merchantOrderId: string | undefined;
+
+    if (type === 'payment' || topic === 'payment' || (action?.startsWith('payment') && data?.id)) {
+      eventKind = 'payment';
+      paymentIdFromEvent = data?.id;
+    } else if (topic === 'merchant_order' || (typeof resource === 'string' && resource.includes('/merchant_orders/'))) {
+      eventKind = 'merchant_order';
+      merchantOrderId = data?.id || (typeof resource === 'string' ? resource.split('/').pop() : undefined);
     }
 
-    const paymentId = data?.id;
+    if (eventKind === 'unknown') {
+      console.log("📦 Ignoring unsupported webhook");
+      return new Response("OK", { status: 200, headers: corsHeaders });
+    }
+
+    // If merchant_order, fetch details and update order accordingly, then return early
+    if (eventKind === 'merchant_order') {
+      try {
+        const accessToken = getEnv('MERCADOPAGO_ACCESS_TOKEN');
+        if (!accessToken) {
+          throw new Error('MERCADOPAGO_ACCESS_TOKEN not configured');
+        }
+        if (!merchantOrderId) {
+          console.log("📦 No merchant order ID");
+          return new Response("OK", { status: 200, headers: corsHeaders });
+        }
+
+        const moResp = await fetch(`https://api.mercadopago.com/merchant_orders/${merchantOrderId}`, {
+          headers: { 'Authorization': `Bearer ${accessToken}` }
+        });
+        if (!moResp.ok) {
+          console.error("📦 Failed to fetch merchant order:", moResp.status);
+          return new Response("OK", { status: 200, headers: corsHeaders });
+        }
+        const merchantOrder = await moResp.json();
+        console.log("📦 Merchant order:", JSON.stringify(merchantOrder, null, 2));
+
+        const externalRef = merchantOrder.external_reference as string | undefined;
+        const payments = Array.isArray(merchantOrder.payments) ? merchantOrder.payments : [];
+        const approved = payments.find((p: any) => p.status === 'approved');
+        const rejectedOnly = payments.length > 0 && payments.every((p: any) => p.status === 'rejected' || p.status === 'cancelled');
+
+        let newStatus = 'pending';
+        if (approved) newStatus = 'completed';
+        else if (rejectedOnly) newStatus = 'failed';
+
+        const supabaseServiceMO = createClient(
+          getEnv("SUPABASE_URL") ?? "",
+          getEnv("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+        );
+
+        // Find the order by external reference or payment id
+        const { data: moOrders, error: moErr } = await supabaseServiceMO
+          .from('orders')
+          .select('*')
+          .or(
+            externalRef
+              ? `id.eq.${externalRef},order_number.eq.${externalRef}`
+              : 'id.eq.__none__'
+          )
+          .limit(1);
+
+        if (moErr) {
+          console.error("📦 Error finding order (merchant_order):", moErr);
+          return new Response("OK", { status: 200, headers: corsHeaders });
+        }
+        if (!moOrders || moOrders.length === 0) {
+          console.log("📦 No order matched merchant_order external_ref:", externalRef);
+          return new Response("OK", { status: 200, headers: corsHeaders });
+        }
+
+        const order = moOrders[0];
+        const { error: updErr } = await supabaseServiceMO
+          .from('orders')
+          .update({
+            payment_status: newStatus,
+            payment_id: approved?.id ?? payments[0]?.id ?? null,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', order.id);
+
+        if (updErr) {
+          console.error("📦 Error updating order (merchant_order):", updErr);
+        }
+
+        if (newStatus === 'completed') {
+          const { data: orderItems, error: itemsError } = await supabaseServiceMO
+            .from('order_items')
+            .select('course_id')
+            .eq('order_id', order.id);
+
+          if (!itemsError && orderItems) {
+            const enrollments = orderItems.map((item: any) => ({
+              user_id: order.user_id,
+              course_id: item.course_id,
+              enrolled_at: new Date().toISOString(),
+              progress_percentage: 0
+            }));
+            const { error: enrollError } = await supabaseServiceMO.from('enrollments').insert(enrollments);
+            if (enrollError) {
+              console.error("📦 Enrollment error (merchant_order):", enrollError);
+            }
+          }
+        }
+
+        console.log("📦 Merchant_order processed");
+        return new Response("OK", { status: 200, headers: corsHeaders });
+      } catch (e) {
+        console.error("📦 Merchant_order handling error:", e);
+        return new Response("OK", { status: 200, headers: corsHeaders });
+      }
+    }
+
+    // Payment event path continues below
+    const paymentId = paymentIdFromEvent ?? data?.id;
     if (!paymentId) {
       console.log("📦 No payment ID in webhook");
       return new Response("No payment ID", { status: 400 });
