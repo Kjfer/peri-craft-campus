@@ -238,6 +238,7 @@ async function processCardPayment(paymentData: any, orderId: string, amount: num
 
 async function processMercadoPagoPayment(cartItems: any[], amount: number, orderId: string, paymentData?: any) {
   const accessToken = getEnv('MERCADOPAGO_ACCESS_TOKEN');
+  console.log("🔑 Checking MERCADOPAGO_ACCESS_TOKEN availability:", accessToken ? "✓ Found" : "✗ Missing");
   if (!accessToken) {
     throw new Error('MERCADOPAGO_ACCESS_TOKEN not configured');
   }

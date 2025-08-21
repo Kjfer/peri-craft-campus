@@ -54,9 +54,9 @@ export function useCourseAccess(courseId: string): {
         .select('enrolled_at')
         .eq('user_id', user.id)
         .eq('course_id', courseId)
-        .single();
+        .maybeSingle();
 
-      if (enrollmentError && enrollmentError.code !== 'PGRST116') {
+      if (enrollmentError) {
         console.error('❌ Error checking enrollment:', enrollmentError);
         setError('Error verificando acceso al curso');
         setLoading(false);
