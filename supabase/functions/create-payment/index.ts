@@ -127,21 +127,39 @@ serve(async (req) => {
       throw new Error(`Failed to create order items: ${itemsError.message}`);
     }
 
+    // Create initial payment record
+    const { data: payment, error: paymentError } = await supabaseService
+      .from('payments')
+      .insert({
+        user_id: user.id,
+        order_id: order.id,
+        amount: totalAmount,
+        currency: 'USD',
+        payment_method: paymentMethod,
+        payment_provider: paymentMethod === 'mercadopago' ? 'mercadopago' : paymentMethod
+      })
+      .select()
+      .single();
+
+    if (paymentError) {
+      console.error('Failed to create payment record:', paymentError);
+    }
+
     // Process payment based on method
     let paymentResult;
     
     switch (paymentMethod) {
       case 'card':
-        paymentResult = await processCardPayment(paymentData, order.id, totalAmount);
+        paymentResult = await processCardPayment(paymentData, order.id, totalAmount, payment?.id);
         break;
       case 'mercadopago':
-        paymentResult = await processMercadoPagoPayment(cartItems, totalAmount, order.id, paymentData, authHeader);
+        paymentResult = await processMercadoPagoPayment(cartItems, totalAmount, order.id, paymentData, authHeader, payment?.id);
         break;
       case 'paypal':
-        paymentResult = await processPayPalPayment(cartItems, totalAmount, order.id, paymentData);
+        paymentResult = await processPayPalPayment(cartItems, totalAmount, order.id, paymentData, payment?.id);
         break;
       case 'googlepay':
-        paymentResult = await processGooglePayPayment(paymentData, order.id, totalAmount);
+        paymentResult = await processGooglePayPayment(paymentData, order.id, totalAmount, payment?.id);
         break;
       default:
         throw new Error(`Unsupported payment method: ${paymentMethod}`);
@@ -166,6 +184,16 @@ serve(async (req) => {
 
     if (updateError) {
       console.error('Failed to update order status:', updateError);
+    }
+
+    // Update payment record with provider payment ID if available
+    if (payment && paymentResult.paymentId) {
+      await supabaseService
+        .from('payments')
+        .update({
+          payment_provider_id: paymentResult.paymentId
+        })
+        .eq('id', payment.id);
     }
 
     // Create enrollments only for immediately processed payments
@@ -221,7 +249,7 @@ serve(async (req) => {
 });
 
 // Mock payment processors - replace with real implementations
-async function processCardPayment(paymentData: any, orderId: string, amount: number) {
+async function processCardPayment(paymentData: any, orderId: string, amount: number, paymentId?: string) {
   // Simulate card processing delay
   await new Promise(resolve => setTimeout(resolve, 1000));
   
@@ -248,7 +276,8 @@ async function processMercadoPagoPayment(
   amount: number,
   orderId: string,
   paymentData?: any,
-  authHeader?: string | null
+  authHeader?: string | null,
+  paymentId?: string
 ) {
   try {
     const url = `${getEnv('SUPABASE_URL')}/functions/v1/mp-preference`;
@@ -285,7 +314,7 @@ async function processMercadoPagoPayment(
   }
 }
 
-async function processPayPalPayment(cartItems: any[], amount: number, orderId: string, paymentData?: any) {
+async function processPayPalPayment(cartItems: any[], amount: number, orderId: string, paymentData?: any, paymentId?: string) {
   // Mock PayPal integration
   await new Promise(resolve => setTimeout(resolve, 500));
   
@@ -297,7 +326,7 @@ async function processPayPalPayment(cartItems: any[], amount: number, orderId: s
   };
 }
 
-async function processGooglePayPayment(paymentData: any, orderId: string, amount: number) {
+async function processGooglePayPayment(paymentData: any, orderId: string, amount: number, paymentId?: string) {
   // Mock Google Pay integration
   await new Promise(resolve => setTimeout(resolve, 500));
   

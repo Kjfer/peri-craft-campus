@@ -116,6 +116,21 @@ serve(async (req) => {
           })
           .eq('id', order.id);
 
+        // Create/update payment record
+        if (approved?.id) {
+          await supabaseServiceMO
+            .from('payments')
+            .upsert({
+              user_id: order.user_id,
+              order_id: order.id,
+              amount: order.total_amount,
+              currency: order.currency,
+              payment_method: order.payment_method,
+              payment_provider: 'mercadopago',
+              payment_provider_id: approved.id
+            }, { onConflict: 'order_id' });
+        }
+
         if (updErr) {
           console.error("📦 Error updating order (merchant_order):", updErr);
         }
@@ -231,6 +246,19 @@ serve(async (req) => {
         updated_at: new Date().toISOString()
       })
       .eq('id', order.id);
+
+    // Create/update payment record
+    await supabaseService
+      .from('payments')
+      .upsert({
+        user_id: order.user_id,
+        order_id: order.id,
+        amount: order.total_amount,
+        currency: order.currency,
+        payment_method: order.payment_method,
+        payment_provider: 'mercadopago',
+        payment_provider_id: payment.id
+      }, { onConflict: 'order_id' });
 
     if (updateError) {
       console.error("📦 Error updating order:", updateError);
