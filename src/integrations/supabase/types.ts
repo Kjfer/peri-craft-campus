@@ -428,6 +428,81 @@ export type Database = {
           },
         ]
       }
+      plan_courses: {
+        Row: {
+          course_id: string
+          created_at: string
+          id: string
+          plan_id: string
+        }
+        Insert: {
+          course_id: string
+          created_at?: string
+          id?: string
+          plan_id: string
+        }
+        Update: {
+          course_id?: string
+          created_at?: string
+          id?: string
+          plan_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_courses_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_courses_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plans: {
+        Row: {
+          all_courses_included: boolean
+          created_at: string
+          currency: string
+          description: string
+          duration_months: number
+          id: string
+          is_active: boolean
+          name: string
+          price: number
+          updated_at: string
+        }
+        Insert: {
+          all_courses_included?: boolean
+          created_at?: string
+          currency?: string
+          description: string
+          duration_months: number
+          id?: string
+          is_active?: boolean
+          name: string
+          price: number
+          updated_at?: string
+        }
+        Update: {
+          all_courses_included?: boolean
+          created_at?: string
+          currency?: string
+          description?: string
+          duration_months?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          price?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -503,6 +578,50 @@ export type Database = {
         }
         Relationships: []
       }
+      user_subscriptions: {
+        Row: {
+          created_at: string
+          end_date: string
+          id: string
+          payment_id: string | null
+          plan_id: string
+          start_date: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          end_date: string
+          id?: string
+          payment_id?: string | null
+          plan_id: string
+          start_date?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string
+          id?: string
+          payment_id?: string | null
+          plan_id?: string
+          start_date?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -515,6 +634,23 @@ export type Database = {
       get_current_user_role: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_user_active_subscriptions: {
+        Args: { user_uuid: string }
+        Returns: {
+          all_courses_included: boolean
+          days_remaining: number
+          end_date: string
+          plan_description: string
+          plan_name: string
+          start_date: string
+          status: string
+          subscription_id: string
+        }[]
+      }
+      user_has_course_access: {
+        Args: { course_uuid: string; user_uuid: string }
+        Returns: boolean
       }
       verify_certificate_code: {
         Args: { certificate_code_input: string }
