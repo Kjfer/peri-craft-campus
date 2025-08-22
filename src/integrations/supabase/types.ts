@@ -364,49 +364,59 @@ export type Database = {
       payments: {
         Row: {
           amount: number
-          course_id: string | null
           created_at: string
           currency: string
-          external_payment_id: string | null
           id: string
+          order_id: string | null
           payment_method: string
-          payment_status: Database["public"]["Enums"]["payment_status"]
+          payment_provider: string | null
+          payment_provider_id: string | null
+          plan_id: string | null
           subscription_id: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           amount: number
-          course_id?: string | null
           created_at?: string
           currency?: string
-          external_payment_id?: string | null
           id?: string
+          order_id?: string | null
           payment_method: string
-          payment_status?: Database["public"]["Enums"]["payment_status"]
+          payment_provider?: string | null
+          payment_provider_id?: string | null
+          plan_id?: string | null
           subscription_id?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           amount?: number
-          course_id?: string | null
           created_at?: string
           currency?: string
-          external_payment_id?: string | null
           id?: string
+          order_id?: string | null
           payment_method?: string
-          payment_status?: Database["public"]["Enums"]["payment_status"]
+          payment_provider?: string | null
+          payment_provider_id?: string | null
+          plan_id?: string | null
           subscription_id?: string | null
           updated_at?: string
           user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "payments_course_id_fkey"
-            columns: ["course_id"]
+            foreignKeyName: "payments_order_id_fkey"
+            columns: ["order_id"]
             isOneToOne: false
-            referencedRelation: "courses"
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
             referencedColumns: ["id"]
           },
           {
