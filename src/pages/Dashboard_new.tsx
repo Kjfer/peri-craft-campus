@@ -156,16 +156,19 @@ export default function Dashboard() {
               continue;
             }
             
-            // Check for completed payment
-            const { data: payment } = await supabase
-              .from('payments')
-              .select('*')
+            // Check for completed payment through orders
+            const { data: order } = await supabase
+              .from('orders')
+              .select(`
+                *,
+                order_items!inner(course_id)
+              `)
               .eq('user_id', user.id)
-              .eq('course_id', enrollment.course_id)
+              .eq('order_items.course_id', enrollment.course_id)
               .eq('payment_status', 'completed')
               .single();
-              
-            if (payment) {
+            
+            if (order) {
               validEnrollments.push(enrollment);
             }
           }
