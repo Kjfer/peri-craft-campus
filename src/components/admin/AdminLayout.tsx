@@ -9,7 +9,8 @@ import {
   Settings, 
   FileText,
   Home,
-  LogOut
+  LogOut,
+  Crown
 } from "lucide-react";
 
 interface AdminLayoutProps {
@@ -34,6 +35,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     { icon: BookOpen, label: "Cursos", path: "/admin/cursos" },
     { icon: Users, label: "Usuarios", path: "/admin/usuarios" },
     { icon: FileText, label: "Certificados", path: "/admin/certificados" },
+    { icon: Crown, label: "Planes", path: "/admin/planes" },
     { icon: Settings, label: "Configuración", path: "/admin/configuracion" },
   ];
 
