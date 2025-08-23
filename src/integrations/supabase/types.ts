@@ -150,6 +150,33 @@ export type Database = {
         }
         Relationships: []
       }
+      enrollment_attempts: {
+        Row: {
+          attempted_at: string | null
+          course_id: string
+          id: string
+          ip_address: unknown | null
+          success: boolean | null
+          user_id: string
+        }
+        Insert: {
+          attempted_at?: string | null
+          course_id: string
+          id?: string
+          ip_address?: unknown | null
+          success?: boolean | null
+          user_id: string
+        }
+        Update: {
+          attempted_at?: string | null
+          course_id?: string
+          id?: string
+          ip_address?: unknown | null
+          success?: boolean | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       enrollments: {
         Row: {
           completed_at: string | null
@@ -542,6 +569,36 @@ export type Database = {
         }
         Relationships: []
       }
+      role_audit_log: {
+        Row: {
+          changed_at: string | null
+          changed_by: string | null
+          id: string
+          new_role: Database["public"]["Enums"]["user_role"]
+          old_role: Database["public"]["Enums"]["user_role"] | null
+          reason: string | null
+          user_id: string
+        }
+        Insert: {
+          changed_at?: string | null
+          changed_by?: string | null
+          id?: string
+          new_role: Database["public"]["Enums"]["user_role"]
+          old_role?: Database["public"]["Enums"]["user_role"] | null
+          reason?: string | null
+          user_id: string
+        }
+        Update: {
+          changed_at?: string | null
+          changed_by?: string | null
+          id?: string
+          new_role?: Database["public"]["Enums"]["user_role"]
+          old_role?: Database["public"]["Enums"]["user_role"] | null
+          reason?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       subscriptions: {
         Row: {
           created_at: string
@@ -627,6 +684,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_enrollment_rate_limit: {
+        Args: { p_course_id: string; p_user_id: string }
+        Returns: boolean
+      }
       generate_certificate_code: {
         Args: Record<PropertyKey, never>
         Returns: string
