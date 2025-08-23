@@ -258,7 +258,7 @@ export default function CourseDetail() {
         <div className="container mx-auto px-4 py-4">
           <Button 
             variant="ghost" 
-            onClick={() => navigate('/courses')}
+            onClick={() => navigate('/cursos')}
             className="mb-4"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />

@@ -110,11 +110,11 @@ export function Header() {
                       <User className="mr-2 h-4 w-4" />
                       <span>Mi Dashboard</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate("/mis-cursos")}>
+                    <DropdownMenuItem onClick={() => navigate("/dashboard")}>
                       <BookOpen className="mr-2 h-4 w-4" />
                       <span>Mis Cursos</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate("/certificados")}>
+                    <DropdownMenuItem onClick={() => navigate("/dashboard")}>
                       <Award className="mr-2 h-4 w-4" />
                       <span>Certificados</span>
                     </DropdownMenuItem>

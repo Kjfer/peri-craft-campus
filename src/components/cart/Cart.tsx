@@ -123,7 +123,7 @@ export default function Cart() {
                   <Button 
                     onClick={() => {
                       setIsCartOpen(false);
-                      navigate('/courses');
+                      navigate('/cursos');
                     }}
                     className="w-full"
                   >
@@ -225,7 +225,7 @@ export default function Cart() {
                     variant="outline" 
                     onClick={() => {
                       setIsCartOpen(false);
-                      navigate('/courses');
+                      navigate('/cursos');
                     }}
                     className="w-full"
                   >

@@ -51,7 +51,7 @@ export default function CheckoutPending() {
                 </p>
                 <Button 
                   size="sm" 
-                  onClick={() => navigate('/historial')}
+                  onClick={() => navigate('/ordenes')}
                   className="w-full"
                 >
                   Ver Historial de Órdenes

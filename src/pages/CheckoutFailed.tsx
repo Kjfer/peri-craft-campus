@@ -37,11 +37,11 @@ export default function CheckoutFailed() {
                 </p>
                 <Button 
                   size="sm" 
-                  onClick={() => navigate('/carrito')}
+                  onClick={() => navigate('/dashboard')}
                   className="w-full"
                 >
                   <ArrowLeft className="w-4 h-4 mr-2" />
-                  Volver al Carrito
+                  Volver al Dashboard
                 </Button>
               </div>
 
