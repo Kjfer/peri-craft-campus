@@ -88,10 +88,6 @@ serve(async (req) => {
       },
       auto_return: 'approved',
       payment_methods: {
-        excluded_payment_methods: [
-          { id: 'yape' },
-          { id: 'plin' },
-        ],
         excluded_payment_types: [
           { id: 'ticket' },
           { id: 'atm' },
