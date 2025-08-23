@@ -38,6 +38,7 @@ import UserManagement from "./pages/admin/UserManagement";
 import CertificateManagement from "./pages/admin/CertificateManagement";
 import Settings from "./pages/admin/Settings";
 import PlanManagement from "./pages/admin/PlanManagement";
+import SecurityDashboard from "./components/admin/SecurityDashboard";
 import ConfirmEmail from "./pages/ConfirmEmail";
 
 const queryClient = new QueryClient();
@@ -88,6 +89,7 @@ const App = () => (
                   <Route path="/admin/usuarios" element={<UserManagement />} />
                   <Route path="/admin/certificados" element={<CertificateManagement />} />
                   <Route path="/admin/planes" element={<PlanManagement />} />
+                  <Route path="/admin/seguridad" element={<SecurityDashboard />} />
                   <Route path="/admin/configuracion" element={<Settings />} />
                   
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
