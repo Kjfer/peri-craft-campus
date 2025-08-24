@@ -46,16 +46,7 @@ interface Lesson {
   content?: string;
 }
 
-interface Course {
-  id: string;
-  title: string;
-  description: string;
-  instructor_name: string;
-  thumbnail_url?: string;
-  duration_hours: number;
-  category: string;
-  level: string;
-}
+import type { Course } from "@/types/course";
 
 interface CourseProgress {
   id: string;

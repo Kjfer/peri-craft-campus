@@ -16,18 +16,7 @@ import { Plus, Search, Edit, Trash2, Eye } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-
-interface Course {
-  id: string;
-  title: string;
-  category: string;
-  level: string;
-  price: number;
-  duration_hours: number;
-  instructor_name: string;
-  is_active: boolean;
-  created_at: string;
-}
+import type { Course } from "@/types/course";
 
 export default function CourseManagement() {
   const [courses, setCourses] = useState<Course[]>([]);
@@ -124,7 +113,7 @@ export default function CourseManagement() {
 
   const filteredCourses = courses.filter(course =>
     course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    course.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    course.category.some(cat => cat.toLowerCase().includes(searchTerm.toLowerCase())) ||
     course.instructor_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -205,7 +194,20 @@ export default function CourseManagement() {
                     <TableCell className="font-medium">
                       {course.title}
                     </TableCell>
-                    <TableCell>{course.category}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {course.category.slice(0, 2).map((cat) => (
+                          <Badge key={cat} variant="outline" className="text-xs">
+                            {cat}
+                          </Badge>
+                        ))}
+                        {course.category.length > 2 && (
+                          <span className="text-xs text-muted-foreground">
+                            +{course.category.length - 2} más
+                          </span>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell>{course.instructor_name}</TableCell>
                     <TableCell>
                       <Badge variant="outline">

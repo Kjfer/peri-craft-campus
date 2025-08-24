@@ -38,22 +38,7 @@ interface UserProfile {
   created_at: string;
 }
 
-interface Enrollment {
-  id: string;
-  progress_percentage: number;
-  enrolled_at: string;
-  completed_at?: string;
-  course: {
-    id: string;
-    title: string;
-    description: string;
-    thumbnail_url?: string;
-    instructor_name: string;
-    duration_hours: number;
-    category: string;
-    level: string;
-  };
-}
+import type { Enrollment } from "@/types/enrollment";
 
 interface Order {
   id: string;

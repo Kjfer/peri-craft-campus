@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, Save, Plus, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -32,6 +33,10 @@ interface Module {
 interface CourseFormData {
   title: string;
   description: string;
+  categories: string[];
+  level: string;
+  instructor_name: string;
+  duration_hours: number;
   price: number;
   discounted_price?: number;
   thumbnail_url?: string;
@@ -51,6 +56,10 @@ function EditCourse() {
   const [formData, setFormData] = useState<CourseFormData>({
     title: "",
     description: "",
+    categories: [],
+    level: "Principiante",
+    instructor_name: "",
+    duration_hours: 0,
     price: 0,
     discounted_price: undefined,
     thumbnail_url: "",
@@ -119,6 +128,10 @@ function EditCourse() {
         setFormData({
           title: course.title || "",
           description: course.description || "",
+          categories: Array.isArray(course.category) ? course.category : course.category ? [course.category] : [],
+          level: course.level || "Principiante",
+          instructor_name: course.instructor_name || "",
+          duration_hours: course.duration_hours || 0,
           price: course.price || 0,
           discounted_price: course.discounted_price || undefined,
           thumbnail_url: course.thumbnail_url || "",
@@ -175,6 +188,10 @@ function EditCourse() {
         .update({
           title: formData.title.trim(),
           description: formData.description.trim(),
+          category: formData.categories,
+          level: formData.level,
+          instructor_name: formData.instructor_name.trim(),
+          duration_hours: formData.duration_hours,
           price: formData.price,
           discounted_price: formData.discounted_price || null,
           thumbnail_url: formData.thumbnail_url?.trim() || null,
@@ -379,6 +396,80 @@ function EditCourse() {
                   required
                 />
               </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="level">Nivel *</Label>
+                  <Select 
+                    value={formData.level}
+                    onValueChange={(value) => handleInputChange('level', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona el nivel" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Principiante">Principiante</SelectItem>
+                      <SelectItem value="Intermedio">Intermedio</SelectItem>
+                      <SelectItem value="Avanzado">Avanzado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="instructor_name">Instructor *</Label>
+                  <Input
+                    id="instructor_name"
+                    type="text"
+                    value={formData.instructor_name}
+                    onChange={(e) => handleInputChange('instructor_name', e.target.value)}
+                    placeholder="Nombre del instructor"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="duration_hours">Duración (horas) *</Label>
+                  <Input
+                    id="duration_hours"
+                    type="number"
+                    min="0"
+                    value={formData.duration_hours || ''}
+                    onChange={(e) => handleInputChange('duration_hours', parseInt(e.target.value) || 0)}
+                    placeholder="0"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="categories">Categorías *</Label>
+                <div className="border rounded-md p-3 space-y-2">
+                  {["Patronaje", "Diseño de Moda", "Confección", "Textiles", "Bordado", "Costura", "Sastrería"].map((category) => (
+                    <div key={category} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`category-${category}`}
+                        checked={formData.categories.includes(category)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            handleInputChange('categories', [...formData.categories, category]);
+                          } else {
+                            handleInputChange('categories', formData.categories.filter(c => c !== category));
+                          }
+                        }}
+                      />
+                      <Label htmlFor={`category-${category}`} className="text-sm">
+                        {category}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+                {formData.categories.length === 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    Selecciona al menos una categoría
+                  </p>
+                )}
+              </div>
+
 
               <div className="space-y-2">
                 <Label htmlFor="thumbnail_url">URL de Imagen</Label>

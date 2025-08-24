@@ -16,7 +16,7 @@ interface CourseFormData {
   title: string;
   description: string;
   short_description: string;
-  category: string;
+  categories: string[];
   level: string;
   instructor_name: string;
   duration_hours: number;
@@ -58,7 +58,7 @@ export default function CreateCourse() {
     title: "",
     description: "",
     short_description: "",
-    category: "",
+    categories: [],
     level: "Principiante",
     instructor_name: "",
     duration_hours: 0,
@@ -209,7 +209,7 @@ export default function CreateCourse() {
           title: formData.title,
           description: formData.description,
           short_description: formData.short_description,
-          category: formData.category,
+          category: formData.categories,
           level: formData.level,
           instructor_name: formData.instructor_name,
           duration_hours: formData.duration_hours,
@@ -372,19 +372,32 @@ export default function CreateCourse() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="category">Categoría *</Label>
-                  <Select onValueChange={(value) => handleInputChange('category', value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecciona una categoría" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((category) => (
-                        <SelectItem key={category} value={category}>
+                  <Label htmlFor="categories">Categorías *</Label>
+                  <div className="border rounded-md p-3 space-y-2">
+                    {categories.map((category) => (
+                      <div key={category} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`category-${category}`}
+                          checked={formData.categories.includes(category)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              handleInputChange('categories', [...formData.categories, category]);
+                            } else {
+                              handleInputChange('categories', formData.categories.filter(c => c !== category));
+                            }
+                          }}
+                        />
+                        <Label htmlFor={`category-${category}`} className="text-sm">
                           {category}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                  {formData.categories.length === 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      Selecciona al menos una categoría
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-2">

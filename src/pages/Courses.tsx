@@ -11,20 +11,7 @@ import AddToCartButton from "@/components/ui/AddToCartButton";
 import { useNavigate } from "react-router-dom";
 import { useEnrollments } from "@/hooks/useEnrollments";
 import { useAuth } from "@/contexts/AuthContext";
-
-interface Course {
-  id: string;
-  title: string;
-  description: string;
-  short_description?: string;
-  instructor_name: string;
-  thumbnail_url?: string;
-  category: string;
-  level: string;
-  duration_hours: number;
-  price: number;
-  featured: boolean;
-}
+import type { Course } from "@/types/course";
 
 export default function Courses() {
   const navigate = useNavigate();
@@ -70,12 +57,12 @@ export default function Courses() {
       filtered = filtered.filter(course =>
         course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         course.instructor_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        course.category.toLowerCase().includes(searchTerm.toLowerCase())
+        course.category.some(cat => cat.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
 
     if (selectedCategory !== "all") {
-      filtered = filtered.filter(course => course.category === selectedCategory);
+      filtered = filtered.filter(course => course.category.includes(selectedCategory));
     }
 
     if (selectedLevel !== "all") {
@@ -85,7 +72,7 @@ export default function Courses() {
     setFilteredCourses(filtered);
   };
 
-  const categories = [...new Set(courses.map(course => course.category))];
+  const categories = [...new Set(courses.flatMap(course => course.category))];
   const levels = [...new Set(courses.map(course => course.level))];
 
   if (loading || authLoading) {
@@ -191,7 +178,18 @@ export default function Courses() {
                   <CardContent className="p-4">
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <Badge variant="secondary">{course.category}</Badge>
+                        <div className="flex flex-wrap gap-1">
+                          {course.category.slice(0, 2).map((cat) => (
+                            <Badge key={cat} variant="secondary" className="text-xs">
+                              {cat}
+                            </Badge>
+                          ))}
+                          {course.category.length > 2 && (
+                            <Badge variant="outline" className="text-xs">
+                              +{course.category.length - 2}
+                            </Badge>
+                          )}
+                        </div>
                         <Badge variant="outline">{course.level}</Badge>
                       </div>
                       <CardTitle className="text-lg line-clamp-2">{course.title}</CardTitle>

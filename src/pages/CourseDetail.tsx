@@ -30,28 +30,7 @@ import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/hooks/use-toast";
 import useCourseAccess from "@/hooks/useCourseAccess";
 import CheckoutModal from "@/components/checkout/CheckoutModal";
-
-interface Course {
-  id: string;
-  title: string;
-  description: string;
-  short_description?: string;
-  instructor_name: string;
-  thumbnail_url?: string;
-  category: string;
-  level: string;
-  duration_hours: number;
-  price: number;
-  discounted_price?: number;
-  is_active: boolean;
-  featured: boolean;
-  requirements?: string[];
-  what_you_learn?: string[];
-  modules?: Module[];
-  created_at: string;
-  updated_at: string;
-  status?: string;
-}
+import type { Course } from "@/types/course";
 
 interface Module {
   id: string;

@@ -5,20 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Play, Users, Award, Star, ArrowRight, BookOpen, Clock, TrendingUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-
-interface Course {
-  id: string;
-  title: string;
-  description: string;
-  instructor_name: string;
-  thumbnail_url?: string;
-  category: string;
-  level: string;
-  duration_hours: number;
-  price: number;
-  discounted_price?: number;
-  featured: boolean;
-}
+import type { Course } from "@/types/course";
 
 export default function Home() {
   const navigate = useNavigate();

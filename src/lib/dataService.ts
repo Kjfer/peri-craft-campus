@@ -1,20 +1,5 @@
 import { courseAPI, enrollmentAPI, certificateAPI } from '@/lib/api';
-
-interface Course {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  price: number;
-  thumbnail_url?: string;
-  instructor_id: string;
-  instructor_name: string;
-  created_at: string;
-  updated_at: string;
-  duration?: number;
-  level: 'beginner' | 'intermediate' | 'advanced';
-  is_published: boolean;
-}
+import type { Course } from '@/types/course';
 
 interface Enrollment {
   id: string;
