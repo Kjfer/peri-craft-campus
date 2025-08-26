@@ -7,12 +7,20 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Mail, Lock, User } from "lucide-react";
+import { Loader2, Mail, Lock, User, Phone, Globe, Calendar } from "lucide-react";
 
 export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
   const [signInData, setSignInData] = useState({ email: "", password: "" });
-  const [signUpData, setSignUpData] = useState({ email: "", password: "", fullName: "", confirmPassword: "" });
+  const [signUpData, setSignUpData] = useState({ 
+    email: "", 
+    password: "", 
+    fullName: "", 
+    confirmPassword: "",
+    phone: "",
+    country: "",
+    dateOfBirth: ""
+  });
   
   const { signIn, signUp, refreshAuth } = useAuth();
   const { toast } = useToast();
@@ -80,7 +88,7 @@ export default function Auth() {
     setIsLoading(true);
 
     try {
-      const { error } = await signUp(signUpData.email, signUpData.password, signUpData.fullName);
+      const { error } = await signUp(signUpData.email, signUpData.password, signUpData.fullName, signUpData.phone, signUpData.country, signUpData.dateOfBirth);
       
       if (error) {
         if (error.message.includes("already registered")) {
@@ -267,6 +275,53 @@ export default function Auth() {
                         className="pl-10"
                         value={signUpData.confirmPassword}
                         onChange={(e) => setSignUpData({ ...signUpData, confirmPassword: e.target.value })}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-phone">Teléfono</Label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="signup-phone"
+                        type="tel"
+                        placeholder="+51 999 888 777"
+                        className="pl-10"
+                        value={signUpData.phone}
+                        onChange={(e) => setSignUpData({ ...signUpData, phone: e.target.value })}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-country">País</Label>
+                    <div className="relative">
+                      <Globe className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="signup-country"
+                        type="text"
+                        placeholder="Perú"
+                        className="pl-10"
+                        value={signUpData.country}
+                        onChange={(e) => setSignUpData({ ...signUpData, country: e.target.value })}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-dob">Fecha de Nacimiento</Label>
+                    <div className="relative">
+                      <Calendar className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="signup-dob"
+                        type="date"
+                        className="pl-10"
+                        value={signUpData.dateOfBirth}
+                        onChange={(e) => setSignUpData({ ...signUpData, dateOfBirth: e.target.value })}
                         required
                       />
                     </div>

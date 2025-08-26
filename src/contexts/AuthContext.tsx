@@ -6,7 +6,7 @@ interface AuthContextType {
   session: any;
   profile: any;
   loading: boolean;
-  signUp: (email: string, password: string, fullName: string) => Promise<any>;
+  signUp: (email: string, password: string, fullName: string, phone?: string, country?: string, dateOfBirth?: string) => Promise<any>;
   signIn: (email: string, password: string) => Promise<any>;
   signOut: () => Promise<any>;
   refreshAuth: () => Promise<void>;
