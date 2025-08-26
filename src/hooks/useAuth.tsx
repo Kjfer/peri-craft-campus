@@ -109,7 +109,7 @@ export function useAuth() {
     };
   }, []);
 
-  const signUp = async (email: string, password: string, fullName: string) => {
+  const signUp = async (email: string, password: string, fullName: string, phone?: string, country?: string, dateOfBirth?: string) => {
     try {
       console.log('📝 Signing up user:', email);
       const { data, error } = await supabase.auth.signUp({
@@ -117,7 +117,10 @@ export function useAuth() {
         password,
         options: {
           data: {
-            full_name: fullName
+            full_name: fullName,
+            phone: phone || null,
+            country: country || null,
+            date_of_birth: dateOfBirth || null
           },
           emailRedirectTo: `${window.location.origin}/`
         }

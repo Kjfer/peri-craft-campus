@@ -118,6 +118,10 @@ export function Header() {
                       <Award className="mr-2 h-4 w-4" />
                       <span>Certificados</span>
                     </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate("/configuracion")}>
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Configuración</span>
+                    </DropdownMenuItem>
                     {profile?.role === 'admin' && (
                       <>
                         <DropdownMenuSeparator />

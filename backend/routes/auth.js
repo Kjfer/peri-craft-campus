@@ -11,7 +11,14 @@ const router = express.Router();
 // @access  Public
 router.post('/register', async (req, res, next) => {
   try {
-    const { email, password, fullName, phone, country } = req.body;
+    const { 
+        email,
+        password,
+        fullName,
+        phone,
+        country,
+        dateOfBirth
+    } = req.body;
 
     // Validate required fields
     if (!email || !password || !fullName) {
@@ -94,7 +101,8 @@ router.post('/register', async (req, res, next) => {
                   full_name: fullName,
                   role: 'student',
                   phone: phone || null,
-                  country: country || null
+                  country: country || null,
+                  date_of_birth: dateOfBirth || null
                 }])
                 .select()
                 .single();

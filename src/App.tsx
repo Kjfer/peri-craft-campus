@@ -30,6 +30,7 @@ import OrderHistory from "./pages/OrderHistory";
 import CheckoutFailed from "./pages/CheckoutFailed";
 import CheckoutPending from "./pages/CheckoutPending";
 import NotFound from "./pages/NotFound";
+import AccountSettings from "./pages/AccountSettings";
 import AdminDashboard from "./pages/admin/Dashboard";
 import CourseManagement from "./pages/admin/CourseManagement";
 import CreateCourse from "./pages/admin/CreateCourse";
@@ -72,6 +73,7 @@ const App = () => (
                   <Route path="/checkout/carrito" element={<CartCheckout />} />
                   <Route path="/checkout/curso/:courseId" element={<CourseCheckout />} />
                   <Route path="/ordenes" element={<OrderHistory />} />
+                  <Route path="/configuracion" element={<AccountSettings />} />
                   <Route path="/checkout/success/:orderId" element={<CheckoutSuccess />} />
                   <Route path="/checkout/failed" element={<CheckoutFailed />} />
                   <Route path="/checkout/pending" element={<CheckoutPending />} />
