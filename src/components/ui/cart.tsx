@@ -31,7 +31,7 @@ export function Cart({ children }: CartProps) {
   const navigate = useNavigate();
 
   const handleCheckout = () => {
-    navigate('/checkout');
+    navigate('/checkout/carrito');
   };
 
   const handleRemoveItem = async (courseId: string) => {
