@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ShoppingCart, X, Minus, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,11 +15,14 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import { useCart } from '@/contexts/CartContext';
-import { useCheckout } from '@/hooks/useCheckout';
 
 export default function CartPreview() {
   const { state: cartState, removeFromCart } = useCart();
-  const { openCheckout } = useCheckout();
+  const navigate = useNavigate();
+
+  const handleCheckout = () => {
+    navigate('/checkout/carrito');
+  };
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('es-PE', {
@@ -118,7 +122,7 @@ export default function CartPreview() {
                 </div>
                 
                 <Button 
-                  onClick={openCheckout}
+                  onClick={handleCheckout}
                   className="w-full"
                   disabled={cartState.loading || cartState.items.length === 0}
                 >
