@@ -572,6 +572,33 @@ export type Database = {
         }
         Relationships: []
       }
+      rate_limits: {
+        Row: {
+          attempt_count: number
+          created_at: string
+          id: string
+          operation_type: string
+          user_id: string
+          window_start: string
+        }
+        Insert: {
+          attempt_count?: number
+          created_at?: string
+          id?: string
+          operation_type: string
+          user_id: string
+          window_start?: string
+        }
+        Update: {
+          attempt_count?: number
+          created_at?: string
+          id?: string
+          operation_type?: string
+          user_id?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
       role_audit_log: {
         Row: {
           changed_at: string | null
@@ -599,6 +626,39 @@ export type Database = {
           old_role?: Database["public"]["Enums"]["user_role"] | null
           reason?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      security_events: {
+        Row: {
+          created_at: string
+          event_data: Json | null
+          event_type: string
+          id: string
+          ip_address: unknown | null
+          target_user_id: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_data?: Json | null
+          event_type: string
+          id?: string
+          ip_address?: unknown | null
+          target_user_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_data?: Json | null
+          event_type?: string
+          id?: string
+          ip_address?: unknown | null
+          target_user_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -691,6 +751,14 @@ export type Database = {
         Args: { p_course_id: string; p_user_id: string }
         Returns: boolean
       }
+      check_rate_limit: {
+        Args: {
+          p_max_attempts?: number
+          p_operation_type: string
+          p_window_minutes?: number
+        }
+        Returns: boolean
+      }
       generate_certificate_code: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -711,6 +779,16 @@ export type Database = {
           status: string
           subscription_id: string
         }[]
+      }
+      log_security_event: {
+        Args: {
+          p_event_data?: Json
+          p_event_type: string
+          p_ip_address?: unknown
+          p_target_user_id?: string
+          p_user_agent?: string
+        }
+        Returns: string
       }
       user_has_course_access: {
         Args: { course_uuid: string; user_uuid: string }

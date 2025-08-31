@@ -7,6 +7,7 @@ import { Shield, AlertTriangle, Activity, Users, Eye, Lock } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import { SecurityMonitor } from "@/components/security/SecurityMonitor";
 
 interface RoleAuditLog {
   id: string;
@@ -206,6 +207,9 @@ export default function SecurityDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Security Monitor */}
+      <SecurityMonitor />
 
       {/* Security Details */}
       <Tabs defaultValue="audit" className="space-y-4">
