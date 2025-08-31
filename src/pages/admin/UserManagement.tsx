@@ -6,9 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, UserPlus, Edit, Trash2 } from "lucide-react";
+import { Search, UserPlus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { RoleChangeDialog } from "@/components/admin/RoleChangeDialog";
 
 interface User {
   id: string;
@@ -27,6 +28,11 @@ export default function UserManagement() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
+  const [roleChangeDialog, setRoleChangeDialog] = useState<{
+    open: boolean;
+    user?: User;
+    newRole?: 'student' | 'admin' | 'instructor';
+  }>({ open: false });
   const { toast } = useToast();
 
   const fetchUsers = async () => {
@@ -65,12 +71,24 @@ export default function UserManagement() {
     }
   };
 
-  const updateUserRole = async (userId: string, newRole: 'student' | 'admin' | 'instructor') => {
+  const handleRoleChangeRequest = (user: User, newRole: 'student' | 'admin' | 'instructor') => {
+    if (user.role === newRole) return; // No change needed
+    
+    setRoleChangeDialog({
+      open: true,
+      user,
+      newRole
+    });
+  };
+
+  const confirmRoleChange = async (reason?: string) => {
+    if (!roleChangeDialog.user || !roleChangeDialog.newRole) return;
+
     try {
       const { error } = await supabase
         .from('profiles')
-        .update({ role: newRole })
-        .eq('user_id', userId);
+        .update({ role: roleChangeDialog.newRole })
+        .eq('user_id', roleChangeDialog.user.user_id);
       
       if (error) {
         throw error;
@@ -78,8 +96,9 @@ export default function UserManagement() {
       
       toast({
         title: "Éxito",
-        description: "Rol actualizado correctamente"
+        description: `Rol actualizado a ${roleChangeDialog.newRole} correctamente`
       });
+      
       fetchUsers();
     } catch (error) {
       console.error('Error updating user role:', error);
@@ -208,21 +227,13 @@ export default function UserManagement() {
                       {new Date(user.created_at).toLocaleDateString('es-ES')}
                     </TableCell>
                     <TableCell>
-                      <div className="flex space-x-2">
-                        <Select
-                          value={user.role}
-                          onValueChange={(newRole: 'student' | 'admin' | 'instructor') => updateUserRole(user.user_id, newRole)}
-                        >
-                          <SelectTrigger className="w-32">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="student">Estudiante</SelectItem>
-                            <SelectItem value="instructor">Instructor</SelectItem>
-                            <SelectItem value="admin">Admin</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleRoleChangeRequest(user, user.role === 'admin' ? 'student' : 'admin')}
+                      >
+                        {user.role === 'admin' ? 'Remover Admin' : 'Hacer Admin'}
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -238,6 +249,15 @@ export default function UserManagement() {
           </CardContent>
         </Card>
       </div>
+
+      <RoleChangeDialog
+        open={roleChangeDialog.open}
+        onOpenChange={(open) => setRoleChangeDialog({ ...roleChangeDialog, open })}
+        userName={roleChangeDialog.user?.full_name || roleChangeDialog.user?.email || ''}
+        currentRole={roleChangeDialog.user?.role || ''}
+        newRole={roleChangeDialog.newRole || ''}
+        onConfirm={confirmRoleChange}
+      />
     </AdminLayout>
   );
 }

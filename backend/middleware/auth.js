@@ -1,5 +1,10 @@
-const jwt = require('jsonwebtoken');
 const { supabase, supabaseAdmin } = require('../config/database');
+
+// Validate required environment variables on startup
+if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
+  console.error('CRITICAL: Missing required Supabase environment variables');
+  process.exit(1);
+}
 
 const authenticateToken = async (req, res, next) => {
   try {
