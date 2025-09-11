@@ -31,6 +31,7 @@ import { useToast } from "@/hooks/use-toast";
 import useCourseAccess from "@/hooks/useCourseAccess";
 import CheckoutModal from "@/components/checkout/CheckoutModal";
 import type { Course } from "@/types/course";
+import { generateSyllabusPDF } from "@/utils/pdfGenerator";
 
 interface Module {
   id: string;
@@ -197,6 +198,16 @@ export default function CourseDetail() {
     }
   };
 
+  const handleDownloadSyllabus = () => {
+    if (course && modules.length > 0) {
+      generateSyllabusPDF(course, modules);
+      toast({
+        title: "Descarga iniciada",
+        description: "El syllabus se está descargando como PDF",
+      });
+    }
+  };
+
   if (loading || accessLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -316,7 +327,18 @@ export default function CourseDetail() {
               </TabsContent>
 
               <TabsContent value="curriculum" className="p-6">
-                <h3 className="text-xl font-semibold mb-6">Contenido del curso</h3>
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-xl font-semibold">Contenido del curso</h3>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={handleDownloadSyllabus}
+                    className="flex items-center gap-2"
+                  >
+                    <Download className="w-4 h-4" />
+                    Descargar Syllabus (PDF)
+                  </Button>
+                </div>
                 <div className="space-y-4">
                   {modules.map((module) => (
                     <Card key={module.id}>
