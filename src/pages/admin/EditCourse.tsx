@@ -33,6 +33,7 @@ interface Module {
 interface CourseFormData {
   title: string;
   description: string;
+  short_description: string;
   categories: string[];
   level: string;
   instructor_name: string;
@@ -40,6 +41,7 @@ interface CourseFormData {
   price: number;
   discounted_price?: number;
   thumbnail_url?: string;
+  syllabus_pdf_url?: string;
   featured: boolean;
   status: 'active' | 'inactive' | 'draft';
   modules: Module[];
@@ -56,6 +58,7 @@ function EditCourse() {
   const [formData, setFormData] = useState<CourseFormData>({
     title: "",
     description: "",
+    short_description: "",
     categories: [],
     level: "Principiante",
     instructor_name: "",
@@ -63,6 +66,7 @@ function EditCourse() {
     price: 0,
     discounted_price: undefined,
     thumbnail_url: "",
+    syllabus_pdf_url: "",
     featured: false,
     status: "active",
     modules: []
@@ -128,6 +132,7 @@ function EditCourse() {
         setFormData({
           title: course.title || "",
           description: course.description || "",
+          short_description: course.short_description || "",
           categories: Array.isArray(course.category) ? course.category : course.category ? [course.category] : [],
           level: course.level || "Principiante",
           instructor_name: course.instructor_name || "",
@@ -135,6 +140,7 @@ function EditCourse() {
           price: course.price || 0,
           discounted_price: course.discounted_price || undefined,
           thumbnail_url: course.thumbnail_url || "",
+          syllabus_pdf_url: course.syllabus_pdf_url || "",
           featured: course.featured || false,
           status: course.status || "active",
           modules: modulesWithLessons
@@ -188,6 +194,7 @@ function EditCourse() {
         .update({
           title: formData.title.trim(),
           description: formData.description.trim(),
+          short_description: formData.short_description?.trim() || null,
           category: formData.categories,
           level: formData.level,
           instructor_name: formData.instructor_name.trim(),
@@ -195,6 +202,7 @@ function EditCourse() {
           price: formData.price,
           discounted_price: formData.discounted_price || null,
           thumbnail_url: formData.thumbnail_url?.trim() || null,
+          syllabus_pdf_url: formData.syllabus_pdf_url?.trim() || null,
           featured: formData.featured,
           status: formData.status
         })
@@ -386,6 +394,17 @@ function EditCourse() {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="short_description">Descripción Corta</Label>
+                <Textarea
+                  id="short_description"
+                  value={formData.short_description}
+                  onChange={(e) => handleInputChange('short_description', e.target.value)}
+                  placeholder="Breve descripción del curso"
+                  rows={2}
+                />
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="description">Descripción *</Label>
                 <Textarea
                   id="description"
@@ -480,6 +499,20 @@ function EditCourse() {
                   onChange={(e) => handleInputChange('thumbnail_url', e.target.value)}
                   placeholder="https://ejemplo.com/imagen.jpg"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="syllabus_pdf_url">URL del PDF del Syllabus</Label>
+                <Input
+                  id="syllabus_pdf_url"
+                  type="url"
+                  value={formData.syllabus_pdf_url}
+                  onChange={(e) => handleInputChange('syllabus_pdf_url', e.target.value)}
+                  placeholder="https://ejemplo.com/syllabus.pdf"
+                />
+                <p className="text-sm text-muted-foreground">
+                  Si no se proporciona, se generará automáticamente un PDF con el contenido del curso
+                </p>
               </div>
             </CardContent>
           </Card>

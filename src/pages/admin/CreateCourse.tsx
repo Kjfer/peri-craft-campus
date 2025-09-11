@@ -23,6 +23,7 @@ interface CourseFormData {
   price: number;
   discounted_price?: number | null;
   thumbnail_url: string;
+  syllabus_pdf_url: string;
   what_you_learn: string[];
   requirements: string[];
   featured: boolean;
@@ -65,6 +66,7 @@ export default function CreateCourse() {
     price: 0,
     discounted_price: null,
     thumbnail_url: "",
+    syllabus_pdf_url: "",
     what_you_learn: [],
     requirements: [],
     featured: false,
@@ -216,6 +218,7 @@ export default function CreateCourse() {
           price: formData.price,
           discounted_price: formData.discounted_price,
           thumbnail_url: formData.thumbnail_url,
+          syllabus_pdf_url: formData.syllabus_pdf_url,
           what_you_learn: formData.what_you_learn,
           requirements: formData.requirements,
           featured: formData.featured,
@@ -467,6 +470,20 @@ export default function CreateCourse() {
                     onChange={(e) => handleInputChange('thumbnail_url', e.target.value)}
                   />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="syllabus_pdf">URL del PDF del Syllabus</Label>
+                <Input
+                  id="syllabus_pdf"
+                  type="url"
+                  value={formData.syllabus_pdf_url}
+                  onChange={(e) => handleInputChange('syllabus_pdf_url', e.target.value)}
+                  placeholder="https://ejemplo.com/syllabus.pdf"
+                />
+                <p className="text-sm text-muted-foreground">
+                  Si no se proporciona, se generará automáticamente un PDF con el contenido del curso
+                </p>
               </div>
 
               <div className="flex items-center space-x-2">

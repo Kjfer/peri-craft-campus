@@ -19,6 +19,14 @@ interface Lesson {
 }
 
 export function generateSyllabusPDF(course: Course, modules: Module[]) {
+  // If the course has a custom syllabus PDF, use that instead
+  if (course.syllabus_pdf_url) {
+    // Open the existing PDF in a new tab
+    window.open(course.syllabus_pdf_url, '_blank');
+    return;
+  }
+
+  // Generate PDF automatically if no custom PDF is provided
   const doc = new jsPDF();
   let yPosition = 20;
 

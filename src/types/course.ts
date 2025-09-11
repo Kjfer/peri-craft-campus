@@ -10,6 +10,7 @@ export interface Course {
   price?: number;
   discounted_price?: number | null;
   thumbnail_url?: string;
+  syllabus_pdf_url?: string;
   what_you_learn?: string[];
   requirements?: string[];
   featured?: boolean;
