@@ -171,17 +171,18 @@ export default function CourseDetail() {
   };
 
   const handleLessonClick = (lesson: Lesson) => {
-    // Solo permitir acceso si el usuario tiene acceso al curso o la lección es gratis
-    if (access?.hasAccess || lesson.is_free) {
-      if (lesson.video_url) {
-        window.open(lesson.video_url, '_blank');
-      } else {
-        navigate(`/courses/${id}/lessons/${lesson.id}`);
-      }
+    // Verificar si puede acceder al video
+    const canAccessVideo = access?.hasAccess || lesson.is_free;
+    
+    if (canAccessVideo && lesson.video_url) {
+      window.open(lesson.video_url, '_blank');
+    } else if (canAccessVideo) {
+      navigate(`/courses/${id}/lessons/${lesson.id}`);
     } else {
+      // Mostrar información pero no permitir acceso al video
       toast({
         title: "Acceso restringido",
-        description: "Necesitas comprar el curso para acceder a esta lección",
+        description: "Necesitas comprar el curso para acceder al video de esta lección",
         variant: "destructive",
       });
     }

@@ -341,10 +341,19 @@ export default function LessonPlayer() {
                       title={currentLesson.title}
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-white">
-                      <div className="text-center">
-                        <Play className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                        <p>Video no disponible</p>
+                    <div className="w-full h-full flex items-center justify-center bg-gray-900 text-white">
+                      <div className="text-center p-8">
+                        <div className="text-6xl mb-4">🔒</div>
+                        <h3 className="text-xl font-semibold mb-2">Contenido Bloqueado</h3>
+                        <p className="text-gray-300 mb-4">
+                          Compra el curso para acceder a este video
+                        </p>
+                        <button
+                          onClick={() => navigate(`/checkout/curso/${courseId}`)}
+                          className="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors"
+                        >
+                          Comprar Curso
+                        </button>
                       </div>
                     </div>
                   )}
