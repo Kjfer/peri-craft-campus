@@ -15,6 +15,7 @@ import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/hooks/use-toast';
 import { checkoutService, CheckoutItem } from '@/lib/checkoutService';
 import { supabase } from '@/integrations/supabase/client';
+import yapeQRImage from '@/assets/yape-qr-placeholder.png';
 
 interface CheckoutProps {
   mode?: 'cart' | 'single';
@@ -89,7 +90,7 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
     const items = getCheckoutItems();
     const usdTotal = items.reduce((sum, item) => sum + (item.course?.price || 0), 0);
     
-    if (selectedPaymentMethod === 'mercadopago') {
+    if (selectedPaymentMethod === 'mercadopago' || selectedPaymentMethod === 'yape_qr') {
       return {
         amount: checkoutService.convertToPEN(usdTotal),
         currency: 'PEN'
@@ -357,10 +358,10 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
                    <div className="text-right">
                      <p className="font-medium">
                        {checkoutService.formatPrice(
-                         selectedPaymentMethod === 'mercadopago'
+                         (selectedPaymentMethod === 'mercadopago' || selectedPaymentMethod === 'yape_qr')
                            ? checkoutService.convertToPEN(item.course?.price || 0)
                            : item.course?.price || 0,
-                         selectedPaymentMethod === 'mercadopago' ? 'PEN' : 'USD'
+                         (selectedPaymentMethod === 'mercadopago' || selectedPaymentMethod === 'yape_qr') ? 'PEN' : 'USD'
                        )}
                      </p>
                    </div>
@@ -428,7 +429,7 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
                      <div className="mt-3 p-3 border rounded bg-yellow-50">
                        <p className="text-sm">¿Quieres pagar con MercadoPago (Yape, tarjetas)? Este método está disponible solo para usuarios en Perú.</p>
                        <div className="mt-2 flex gap-2">
-                         <Button variant="outline" size="sm" onClick={() => navigate('/profile')}>Editar perfil</Button>
+                         <Button variant="outline" size="sm" onClick={() => navigate('/account-settings')}>Editar perfil</Button>
                          <Button size="sm" onClick={() => navigate('/auth')}>Ir a mi cuenta</Button>
                        </div>
                      </div>
@@ -510,6 +511,99 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
                 </PayPalScriptProvider>
                 <div className="mt-4 flex gap-2">
                   <Button variant="outline" onClick={() => setStep('select_payment')} className="flex-1">Volver</Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {step === 'yape_qr' && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Pago con Yape QR</CardTitle>
+                <CardDescription>
+                  Escanea el código QR y sube tu comprobante
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {error && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
+
+                {/* QR Code Display */}
+                <div className="text-center">
+                  <div className="inline-block p-4 bg-white rounded-lg border-2">
+                    <img 
+                      src={yapeQRImage} 
+                      alt="Código QR Yape" 
+                      className="w-48 h-48 object-contain"
+                    />
+                  </div>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Escanea este código con tu app de Yape
+                  </p>
+                </div>
+
+                {/* Instructions */}
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <h4 className="font-medium mb-2">Instrucciones para pagar:</h4>
+                  <ol className="text-sm space-y-1 list-decimal list-inside">
+                    <li>Escanea el QR con tu aplicación de Yape</li>
+                    <li>Ingresa el monto exacto: <strong>{checkoutService.formatPrice(total.amount, total.currency)}</strong></li>
+                    <li>Realiza el pago y copia el código de operación</li>
+                    <li>Toma una foto del comprobante y súbela aquí</li>
+                    <li>Escribe el código de operación en el formulario</li>
+                  </ol>
+                </div>
+
+                {/* Upload Form */}
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="receipt">Comprobante de pago (JPG o PNG)</Label>
+                    <Input
+                      id="receipt"
+                      type="file"
+                      accept="image/jpeg,image/png,image/jpg"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setReceiptFile(file);
+                        }
+                      }}
+                      className="mt-1"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="transaction-id">Código de operación de Yape</Label>
+                    <Input
+                      id="transaction-id"
+                      type="text"
+                      placeholder="Ej: 123456789"
+                      value={transactionId}
+                      onChange={(e) => setTransactionId(e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setStep('select_payment')}
+                      className="flex-1"
+                    >
+                      Volver
+                    </Button>
+                    <Button 
+                      onClick={handleConfirmYapePayment}
+                      disabled={!receiptFile || !transactionId.trim() || loading}
+                      className="flex-1"
+                    >
+                      {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                      Confirmar pago
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>

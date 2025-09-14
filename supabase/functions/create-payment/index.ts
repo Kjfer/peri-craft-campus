@@ -96,12 +96,15 @@ serve(async (req) => {
     );
 
     // Create order
+    const currency = (paymentMethod === 'mercadopago' || paymentMethod === 'yape_qr') ? 'PEN' : 'USD';
+    const finalAmount = (paymentMethod === 'mercadopago' || paymentMethod === 'yape_qr') ? totalAmount * 3.75 : totalAmount;
+
     const { data: order, error: orderError } = await supabaseService
       .from('orders')
       .insert({
         user_id: user.id,
-        total_amount: totalAmount,
-        currency: 'USD',
+        total_amount: finalAmount,
+        currency: currency,
         payment_method: paymentMethod,
         payment_status: 'pending'
       })
@@ -116,7 +119,7 @@ serve(async (req) => {
     const orderItems = cartItems.map(item => ({
       order_id: order.id,
       course_id: item.id,
-      price: item.price
+      price: (paymentMethod === 'mercadopago' || paymentMethod === 'yape_qr') ? item.price * 3.75 : item.price
     }));
 
     const { error: itemsError } = await supabaseService
@@ -133,10 +136,10 @@ serve(async (req) => {
       .insert({
         user_id: user.id,
         order_id: order.id,
-        amount: totalAmount,
-        currency: 'USD',
+        amount: finalAmount,
+        currency: currency,
         payment_method: paymentMethod,
-        payment_provider: paymentMethod === 'mercadopago' ? 'mercadopago' : paymentMethod
+        payment_provider: paymentMethod === 'mercadopago' ? 'mercadopago' : paymentMethod === 'yape_qr' ? 'yape' : paymentMethod
       })
       .select()
       .single();
@@ -155,6 +158,9 @@ serve(async (req) => {
       case 'mercadopago':
         paymentResult = await processMercadoPagoPayment(cartItems, totalAmount, order.id, paymentData, authHeader, payment?.id);
         break;
+      case 'yape_qr':
+        paymentResult = await processYapeQRPayment(order.id, totalAmount, payment?.id);
+        break;
       case 'paypal':
         paymentResult = await processPayPalPayment(cartItems, totalAmount, order.id, paymentData, payment?.id);
         break;
@@ -170,6 +176,9 @@ serve(async (req) => {
     if (paymentMethod === 'paypal' || paymentMethod === 'googlepay') {
       // These are processed immediately
       finalStatus = paymentResult.success ? 'completed' : 'failed';
+    } else if (paymentMethod === 'yape_qr') {
+      // Yape QR stays pending until manual confirmation
+      finalStatus = 'pending';
     } else if (!paymentResult.success) {
       finalStatus = 'failed';
     }
@@ -222,6 +231,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: paymentResult.success,
+        order: order,
         orderId: order.id,
         orderNumber: order.order_number,
         paymentUrl: paymentResult.paymentUrl,
@@ -334,6 +344,17 @@ async function processGooglePayPayment(paymentData: any, orderId: string, amount
     success: true,
     message: "Google Pay payment processed",
     paymentId: `gp_${Date.now()}`,
+    paymentUrl: null
+  };
+}
+
+async function processYapeQRPayment(orderId: string, amount: number, paymentId?: string) {
+  // For Yape QR, we just create the order and return success
+  // The actual payment validation will be done when user uploads receipt
+  return {
+    success: true,
+    message: "Order created. Please complete payment with Yape QR and upload receipt.",
+    paymentId: `yape_${Date.now()}`,
     paymentUrl: null
   };
 }

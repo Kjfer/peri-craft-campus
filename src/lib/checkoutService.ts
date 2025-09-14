@@ -102,14 +102,12 @@ class CheckoutService {
   // Confirmar pago manual (Yape QR)
   async confirmManualPayment(orderId: string, transactionId: string, receiptFile: File) {
     try {
-      const formData = new FormData();
-      formData.append('orderId', orderId);
-      formData.append('transactionId', transactionId);
-      formData.append('receipt', receiptFile);
+      // Upload receipt to storage with user folder structure
+      const user = await supabase.auth.getUser();
+      if (!user.data.user) throw new Error('User not authenticated');
 
-      // Upload receipt to storage
       const fileExt = receiptFile.name.split('.').pop();
-      const fileName = `${orderId}_${Date.now()}.${fileExt}`;
+      const fileName = `${user.data.user.id}/${orderId}_${Date.now()}.${fileExt}`;
       
       const { error: uploadError } = await supabase.storage
         .from('receipts')
@@ -125,7 +123,7 @@ class CheckoutService {
           payment_method: 'yape_qr',
           payment_provider_id: transactionId,
           receipt_url: fileName,
-          user_id: (await supabase.auth.getUser()).data.user?.id,
+          user_id: user.data.user.id,
           amount: 0, // Will be updated by n8n workflow
           currency: 'PEN'
         })

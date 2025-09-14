@@ -402,6 +402,7 @@ export type Database = {
           payment_provider: string | null
           payment_provider_id: string | null
           plan_id: string | null
+          receipt_url: string | null
           subscription_id: string | null
           updated_at: string
           user_id: string
@@ -416,6 +417,7 @@ export type Database = {
           payment_provider?: string | null
           payment_provider_id?: string | null
           plan_id?: string | null
+          receipt_url?: string | null
           subscription_id?: string | null
           updated_at?: string
           user_id: string
@@ -430,6 +432,7 @@ export type Database = {
           payment_provider?: string | null
           payment_provider_id?: string | null
           plan_id?: string | null
+          receipt_url?: string | null
           subscription_id?: string | null
           updated_at?: string
           user_id?: string
