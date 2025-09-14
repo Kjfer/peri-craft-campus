@@ -59,7 +59,7 @@ export default function Home() {
               {" "}Moda
             </span>
           </h1>
-          <p className="text-xl lg:text-2xl mb-8 max-w-3xl mx-auto opacity-90 text-secondary-foreground">
+          <p className="text-xl lg:text-2xl mb-8 max-w-3xl mx-auto opacity-90 text-secondary">
             Aprende diseño, confección y patronaje con los mejores profesionales. 
             Cursos prácticos que te llevarán del concepto a la realidad.
           </p>
