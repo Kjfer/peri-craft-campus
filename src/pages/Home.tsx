@@ -112,7 +112,7 @@ export default function Home() {
               // Skeleton loading
               Array.from({ length: 3 }).map((_, index) => (
                 <Card key={index} className="animate-pulse">
-                  <div className="w-full h-48 bg-gray-300 rounded-t-lg"></div>
+                  <div className="w-full" style={{ height: 225, backgroundColor: '#d1d5db', borderTopLeftRadius: '0.5rem', borderTopRightRadius: '0.5rem' }}></div>
                   <CardHeader>
                     <div className="h-4 bg-gray-300 rounded w-3/4 mb-2"></div>
                     <div className="h-6 bg-gray-300 rounded w-full mb-2"></div>
@@ -130,7 +130,7 @@ export default function Home() {
                     <img 
                       src={course.thumbnail_url || "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=225&fit=crop"} 
                       alt={course.title}
-                      className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+                      style={{ width: '100%', height: 225, objectFit: 'cover', transition: 'transform 0.3s' }}
                     />
                     <Badge className="absolute top-4 left-4 bg-primary text-primary-foreground">
                       {course.level}
