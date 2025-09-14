@@ -99,14 +99,45 @@ class CheckoutService {
     return this.startCheckoutFromCart([checkoutItem], paymentMethod);
   }
 
-  // Confirmar pago manual (Yape/Plin) - Esta funcionalidad se maneja via webhook
-  async confirmManualPayment(orderId: string, transactionId: string, paymentMethod: 'yape' | 'plin') {
+  // Confirmar pago manual (Yape QR)
+  async confirmManualPayment(orderId: string, transactionId: string, receiptFile: File) {
     try {
-      // En el flujo con MercadoPago y webhooks, no necesitamos confirmación manual
-      // El webhook se encarga de actualizar el estado automáticamente
+      const formData = new FormData();
+      formData.append('orderId', orderId);
+      formData.append('transactionId', transactionId);
+      formData.append('receipt', receiptFile);
+
+      // Upload receipt to storage
+      const fileExt = receiptFile.name.split('.').pop();
+      const fileName = `${orderId}_${Date.now()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('receipts')
+        .upload(fileName, receiptFile);
+
+      if (uploadError) throw uploadError;
+
+      // Create payment record
+      const { data, error } = await supabase
+        .from('payments')
+        .insert({
+          order_id: orderId,
+          payment_method: 'yape_qr',
+          payment_provider_id: transactionId,
+          receipt_url: fileName,
+          user_id: (await supabase.auth.getUser()).data.user?.id,
+          amount: 0, // Will be updated by n8n workflow
+          currency: 'PEN'
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
       return {
         success: true,
-        message: 'El pago se procesará automáticamente via MercadoPago'
+        payment: data,
+        message: 'Comprobante subido. El pago será validado en breve.'
       };
     } catch (error) {
       console.error('Error in confirmManualPayment:', error);
@@ -241,11 +272,18 @@ class CheckoutService {
     if (canUsePeruvian) {
       baseMethods.push(
         {
+          id: 'yape_qr',
+          name: 'Yape QR',
+          icon: '📱',
+          type: 'manual_payment',
+          description: 'Escanea el QR y sube tu comprobante'
+        },
+        {
           id: 'mercadopago',
           name: 'MercadoPago',
           icon: '🏦',
           type: 'digital_wallet',
-          description: 'Yape y tarjetas de crédito o débito'
+          description: 'Tarjetas de crédito y débito via MercadoPago'
         }
       );
     }

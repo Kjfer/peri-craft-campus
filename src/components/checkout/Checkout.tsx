@@ -31,9 +31,10 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('');
   const [availablePaymentMethods, setAvailablePaymentMethods] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState<'select_payment' | 'processing' | 'manual_confirmation' | 'completed' | 'paypal'>('select_payment');
+  const [step, setStep] = useState<'select_payment' | 'processing' | 'manual_confirmation' | 'completed' | 'paypal' | 'yape_qr'>('select_payment');
   const [currentOrder, setCurrentOrder] = useState<any>(null);
   const [transactionId, setTransactionId] = useState('');
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [error, setError] = useState<string>('');
   const [paypalDbOrderId, setPaypalDbOrderId] = useState<string | null>(null);
 
@@ -127,6 +128,12 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
     return;
   }
 
+  // For Yape QR, show QR code and form
+  if (selectedPaymentMethod === 'yape_qr') {
+    setStep('yape_qr');
+    return;
+  }
+
       const result = await checkoutService.startCheckoutFromCart(items, backendMethod);
       
       if (result.success && result.paymentUrl) {
@@ -169,6 +176,64 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
   console.log('handleOtherPaymentMethods fallback', checkoutResult);
   };
 
+  const handleConfirmYapePayment = async () => {
+    if (!transactionId.trim()) {
+      setError('Por favor ingresa el código de operación');
+      return;
+    }
+
+    if (!receiptFile) {
+      setError('Por favor sube el comprobante de pago');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      // Create the order first
+      const items = getCheckoutItems();
+      const result = await checkoutService.startCheckoutFromCart(items, 'yape_qr');
+      
+      if (!result.success || !result.order) {
+        throw new Error('Error al crear la orden');
+      }
+
+      const order = result.order;
+
+      // Then confirm the payment with receipt
+      await checkoutService.confirmManualPayment(
+        order.id,
+        transactionId,
+        receiptFile
+      );
+
+      setCurrentOrder(order);
+      
+      if (mode === 'cart') {
+        await clearCart();
+      }
+
+      toast({
+        title: "¡Comprobante enviado!",
+        description: "Tu pago será validado en las próximas horas. Te notificaremos cuando esté confirmado.",
+        variant: "default"
+      });
+
+      setStep('completed');
+
+    } catch (error: any) {
+      setError(error.message || 'Error al confirmar el pago');
+      toast({
+        title: "Error",
+        description: error.message || 'Error al confirmar el pago',
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleConfirmManualPayment = async () => {
     if (!transactionId.trim()) {
       setError('Por favor ingresa el ID de transacción');
@@ -182,7 +247,7 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
       const result = await checkoutService.confirmManualPayment(
         currentOrder.id,
         transactionId,
-        selectedPaymentMethod as 'yape' | 'plin'
+        receiptFile!
       );
 
       if (mode === 'cart') {
@@ -217,6 +282,8 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
         return <Smartphone className="w-5 h-5" />;
       case 'paypal':
         return <CreditCard className="w-5 h-5" />;
+      case 'yape_qr':
+        return <Smartphone className="w-5 h-5" />;
       default:
         return <DollarSign className="w-5 h-5" />;
     }
