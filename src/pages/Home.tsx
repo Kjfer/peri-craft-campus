@@ -52,14 +52,14 @@ export default function Home() {
         <div className="absolute inset-0 gradient-secondary opacity-90"></div>
         <div className="absolute inset-0 bg-[url('https://idjmabhvzupcdygguqzm.supabase.co/storage/v1/object/sign/images/BANNER%20WEB%20PERI%20INSTITUTE-01.jpg?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV82MGYzZmU5YS1lMWI0LTQ1YzktOTJiYy1jZjU1OTljYWQ0YjIiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJpbWFnZXMvQkFOTkVSIFdFQiBQRVJJIElOU1RJVFVURS0wMS5qcGciLCJpYXQiOjE3NTc4MTUxODMsImV4cCI6MTc4OTM1MTE4M30.baUkudrnfhuw8O242KJ2Mpx1o_UxQ_CpSLs3Cu0FG6s')] bg-cover bg-center"></div>
         
-        <div className="relative container mx-auto px-4 text-center text-white">
-          <h1 className="text-5xl lg:text-7xl font-bold mb-6">
+  <div className="relative container mx-auto px-4 text-center text-white">
+          <h1 className="text-5xl lg:text-7xl font-bold mb-6 drop-shadow-lg text-primary">
             Domina la 
             <span className="bg-gradient-to-r from-yellow-300 to-yellow-500 bg-clip-text text-transparent">
               {" "}Moda
             </span>
           </h1>
-          <p className="text-xl lg:text-2xl mb-8 max-w-3xl mx-auto opacity-90">
+          <p className="text-xl lg:text-2xl mb-8 max-w-3xl mx-auto opacity-90 text-secondary-foreground">
             Aprende diseño, confección y patronaje con los mejores profesionales. 
             Cursos prácticos que te llevarán del concepto a la realidad.
           </p>
@@ -87,10 +87,10 @@ export default function Home() {
           {/* Stats */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 max-w-4xl mx-auto">
             {stats.map((stat, index) => (
-              <div key={index} className="glass-effect rounded-lg p-6">
+              <div key={index} className="rounded-lg p-6 bg-secondary/90 shadow-lg border border-primary">
                 <stat.icon className="h-8 w-8 text-primary mx-auto mb-2" />
-                <div className="text-2xl font-bold text-white">{stat.value}</div>
-                <div className="text-sm text-white/80">{stat.label}</div>
+                <div className="text-2xl font-bold text-primary-foreground">{stat.value}</div>
+                <div className="text-sm text-yellow-300 font-semibold">{stat.label}</div>
               </div>
             ))}
           </div>
