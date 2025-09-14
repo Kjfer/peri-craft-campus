@@ -50,7 +50,7 @@ export default function Home() {
       {/* Hero Section */}
       <section className="relative py-20 lg:py-32 overflow-hidden">
         <div className="absolute inset-0 gradient-secondary opacity-90"></div>
-        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1920&h=1080&fit=crop')] bg-cover bg-center"></div>
+        <div className="absolute inset-0 bg-[url('https://drive.google.com/drive/folders/1Ms0ZpH4WHVE4xg72VWOizF06ZNSITlBu')] bg-cover bg-center"></div>
         
         <div className="relative container mx-auto px-4 text-center text-white">
           <h1 className="text-5xl lg:text-7xl font-bold mb-6">
