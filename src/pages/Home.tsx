@@ -50,7 +50,7 @@ export default function Home() {
       {/* Hero Section */}
       <section className="relative py-20 lg:py-32 overflow-hidden">
         <div className="absolute inset-0 gradient-secondary opacity-90"></div>
-        <div className="absolute inset-0 bg-[url('https://drive.google.com/drive/folders/1Ms0ZpH4WHVE4xg72VWOizF06ZNSITlBu')] bg-cover bg-center"></div>
+        <div className="absolute inset-0 bg-[url('https://idjmabhvzupcdygguqzm.supabase.co/storage/v1/object/sign/images/CURSO%20WEB%20PERI%20INSTITUTE-03.jpg?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV82MGYzZmU5YS1lMWI0LTQ1YzktOTJiYy1jZjU1OTljYWQ0YjIiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJpbWFnZXMvQ1VSU08gV0VCIFBFUkkgSU5TVElUVVRFLTAzLmpwZyIsImlhdCI6MTc1NzgxNDkxMiwiZXhwIjoxNzg5MzUwOTEyfQ.IOSM-AwmM5SyNgY6i9evHYE1PG9RTL1yslO80C9LCE4')] bg-cover bg-center"></div>
         
         <div className="relative container mx-auto px-4 text-center text-white">
           <h1 className="text-5xl lg:text-7xl font-bold mb-6">
