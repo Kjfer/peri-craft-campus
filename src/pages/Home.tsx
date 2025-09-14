@@ -53,13 +53,13 @@ export default function Home() {
         <div className="absolute inset-0 bg-[url('https://idjmabhvzupcdygguqzm.supabase.co/storage/v1/object/sign/images/BANNER%20WEB%20PERI%20INSTITUTE-01.jpg?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV82MGYzZmU5YS1lMWI0LTQ1YzktOTJiYy1jZjU1OTljYWQ0YjIiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJpbWFnZXMvQkFOTkVSIFdFQiBQRVJJIElOU1RJVFVURS0wMS5qcGciLCJpYXQiOjE3NTc4MTUxODMsImV4cCI6MTc4OTM1MTE4M30.baUkudrnfhuw8O242KJ2Mpx1o_UxQ_CpSLs3Cu0FG6s')] bg-cover bg-center"></div>
         
   <div className="relative container mx-auto px-4 text-center text-white">
-          <h1 className="text-5xl lg:text-7xl font-bold mb-6 drop-shadow-lg text-secondary-foreground">
+          <h1 className="text-5xl lg:text-7xl font-bold mb-6 drop-shadow-lg text-secondary">
             Domina la 
             <span className="bg-gradient-to-r from-yellow-300 to-yellow-500 bg-clip-text text-transparent">
               {" "}Moda
             </span>
           </h1>
-          <p className="text-xl lg:text-2xl mb-8 max-w-3xl mx-auto opacity-90 text-primary">
+          <p className="text-xl lg:text-2xl mb-8 max-w-3xl mx-auto opacity-90 text-secondary-foreground">
             Aprende diseño, confección y patronaje con los mejores profesionales. 
             Cursos prácticos que te llevarán del concepto a la realidad.
           </p>
