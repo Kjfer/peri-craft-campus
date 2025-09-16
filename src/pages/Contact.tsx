@@ -78,6 +78,14 @@ export default function Contact() {
   const supportEmail = "soporte@periinstitute.com";
   const supportHours = "Lun a Vie: 9:00 - 18:00";
 
+  // Ejemplo de personal comercial
+  const commercialStaff = {
+    name: "María López",
+    role: "Asesora Comercial",
+    photo: "https://randomuser.me/api/portraits/women/44.jpg",
+    description: "Te ayudará a resolver tus dudas y a encontrar el curso en vivo ideal para ti."
+  };
+
   const faqItems = [
     {
       question: "¿Cómo puedo inscribirme a un curso?",
@@ -127,9 +135,14 @@ export default function Contact() {
       <section className="py-16">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto mb-16">
-            {/* WhatsApp Card */}
+            {/* WhatsApp Card con personal */}
             <Card className="text-center border-0 bg-gradient-to-br from-background to-muted/50 hover:shadow-elegant transition-all duration-300">
               <CardContent className="pt-6">
+                <div className="flex flex-col items-center justify-center mb-2">
+                  <img src={commercialStaff.photo} alt={commercialStaff.name} className="w-16 h-16 rounded-full object-cover border-2 border-green-400 mb-2" />
+                  <div className="font-semibold text-lg">{commercialStaff.name}</div>
+                  <div className="text-xs text-green-700 mb-1">{commercialStaff.role}</div>
+                </div>
                 <div className="w-12 h-12 mx-auto rounded-full bg-green-100 flex items-center justify-center text-green-600 mb-4">
                   <MessageCircle className="w-6 h-6" />
                 </div>
@@ -137,6 +150,7 @@ export default function Contact() {
                 <p className="text-sm text-muted-foreground mb-1">Atención inmediata</p>
                 <div className="font-medium text-lg mb-1">{whatsappNumber}</div>
                 <div className="text-xs text-muted-foreground mb-3">{whatsappHours}</div>
+                <p className="text-xs text-muted-foreground mb-3">{commercialStaff.description}</p>
                 <Button className="bg-green-500 text-white w-full" asChild>
                   <a href={whatsappLink} target="_blank" rel="noopener">
                     Chatear ahora
@@ -164,6 +178,17 @@ export default function Contact() {
       <section className="py-16 bg-muted/30">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 max-w-6xl mx-auto">
+            {/* ¿No encuentras lo que buscas? */}
+            <div className="mb-6 lg:col-span-2">
+              <Card className="bg-primary/5 border-primary/20">
+                <CardContent className="pt-6">
+                  <h3 className="font-semibold mb-2 text-lg">¿No encuentras lo que buscas?</h3>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Si no encuentras respuesta en las preguntas frecuentes, puedes enviarnos tu consulta usando el formulario y te responderemos lo antes posible.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
             {/* Contact Form */}
             <Card>
               <CardHeader>
