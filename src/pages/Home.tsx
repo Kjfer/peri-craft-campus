@@ -18,60 +18,61 @@ export default function Home() {
         setLoading(true);
         const { data: courses, error } = await supabase
           .from('courses')
-          .select('*')
-          .eq('is_active', true)
-          .eq('featured', true)
-          .order('created_at', { ascending: false });
-        
-        if (error) {
-          console.error('Error fetching featured courses:', error);
-        } else {
-          setFeaturedCourses(courses || []);
-        }
-      } catch (error) {
-        console.error('Error fetching featured courses:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
 
-    fetchFeaturedCourses();
-  }, []);
-
-  const stats = [
-    { icon: Users, label: "Estudiantes", value: "10,000+" },
-    { icon: BookOpen, label: "Cursos", value: "150+" },
-    { icon: Award, label: "Certificados", value: "8,500+" },
-    { icon: TrendingUp, label: "Satisfacción", value: "98%" }
-  ];
-
-  return (
-    <div className="min-h-screen">
-      {/* Hero Section */}
-      <section className="relative py-20 lg:py-32 overflow-hidden">
-        <div className="absolute inset-0 gradient-secondary opacity-90"></div>
-        <div className="absolute inset-0 bg-[url('https://idjmabhvzupcdygguqzm.supabase.co/storage/v1/object/sign/images/BANNER%20WEB%20PERI%20INSTITUTE-01.jpg?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV82MGYzZmU5YS1lMWI0LTQ1YzktOTJiYy1jZjU1OTljYWQ0YjIiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJpbWFnZXMvQkFOTkVSIFdFQiBQRVJJIElOU1RJVFVURS0wMS5qcGciLCJpYXQiOjE3NTc4MTUxODMsImV4cCI6MTc4OTM1MTE4M30.baUkudrnfhuw8O242KJ2Mpx1o_UxQ_CpSLs3Cu0FG6s')] bg-cover bg-center"></div>
-        
-  <div className="relative container mx-auto px-4 text-center text-white">
-          <h1 className="text-5xl lg:text-7xl font-bold mb-6 drop-shadow-lg text-secondary">
-            Domina la 
-            <span className="bg-gradient-to-r from-yellow-300 to-yellow-500 bg-clip-text text-transparent">
-              {" "}Moda
-            </span>
-          </h1>
-          <p className="text-xl lg:text-2xl mb-8 max-w-3xl mx-auto opacity-90 text-secondary">
-            Aprende diseño, confección y patronaje con los mejores profesionales. 
-            Cursos prácticos que te llevarán del concepto a la realidad.
-          </p>
-          
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
+      {/* Clases en Vivo */}
+      <section className="py-20 bg-background">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl lg:text-4xl font-bold mb-4">Clases en Vivo</h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Aprende en tiempo real, interactúa con instructores y resuelve tus dudas al instante. ¡Vive la experiencia de una clase en vivo y lleva tu aprendizaje al siguiente nivel!
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+            {/* Cards conectadas al calendario real en el futuro */}
+            <Card className="border-0 shadow-elegant bg-card/50 backdrop-blur-sm">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <Play className="h-5 w-5 text-primary" />
+                  <span className="font-semibold">Taller Patronaje de Vestidos Básicos</span>
+                  <Badge variant="default" className="ml-2">En vivo</Badge>
+                </div>
+                <div className="text-muted-foreground mb-2 text-sm">18 de septiembre, 19:00</div>
+                <div className="text-muted-foreground text-xs mb-2">Instructor: Pether Peri</div>
+                <p className="text-sm mb-2">Introducción al patronaje básico y toma de medidas.</p>
+                <Button size="sm" className="bg-primary text-primary-foreground w-full mt-2" onClick={() => navigate('/clases-en-vivo')}>
+                  Ver más clases en vivo
+                </Button>
+              </CardContent>
+            </Card>
+            <Card className="border-0 shadow-elegant bg-card/50 backdrop-blur-sm">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <Play className="h-5 w-5 text-primary" />
+                  <span className="font-semibold">Masterclass: Técnicas de Alta Costura</span>
+                  <Badge variant="default" className="ml-2">En vivo</Badge>
+                </div>
+                <div className="text-muted-foreground mb-2 text-sm">28 de septiembre, 18:00</div>
+                <div className="text-muted-foreground text-xs mb-2">Instructor: Pether Peri</div>
+                <p className="text-sm mb-2">Aprende técnicas exclusivas de la alta costura francesa.</p>
+                <Button size="sm" className="bg-primary text-primary-foreground w-full mt-2" onClick={() => navigate('/clases-en-vivo')}>
+                  Ver más clases en vivo
+                </Button>
+              </CardContent>
+            </Card>
+            {/* Puedes agregar más cards o hacerlas dinámicas */}
+          </div>
+          <div className="text-center">
             <Button 
-              size="lg" 
-              className="bg-primary text-primary-foreground hover:bg-primary/90 px-8 py-6 text-lg"
-              onClick={() => navigate("/cursos")}
+              size="lg"
+              className="bg-primary text-primary-foreground px-10 py-6 text-lg font-semibold shadow-lg hover:bg-primary/90 transition-all"
+              onClick={() => navigate('/clases-en-vivo')}
             >
-              <Play className="mr-2 h-5 w-5" />
-              Explorar Cursos
+              Descubre todas las clases en vivo
+            </Button>
+          </div>
+        </div>
+      </section>
             </Button>
             <Button 
               size="lg" 
