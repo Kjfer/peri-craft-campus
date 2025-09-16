@@ -13,8 +13,7 @@ import {
   Clock,
   Send,
   MessageCircle,
-  HeadphonesIcon,
-  Whatsapp
+  HeadphonesIcon
 } from "lucide-react";
 
 export default function Contact() {
@@ -113,7 +112,7 @@ export default function Contact() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
               <Button className="bg-green-500 text-white text-lg px-8 py-6" asChild>
                 <a href={whatsappLink} target="_blank" rel="noopener">
-                  <Whatsapp className="mr-2" /> Hablar por WhatsApp
+                  <MessageCircle className="mr-2" /> Hablar por WhatsApp
                 </a>
               </Button>
             </div>
@@ -132,7 +131,7 @@ export default function Contact() {
             <Card className="text-center border-0 bg-gradient-to-br from-background to-muted/50 hover:shadow-elegant transition-all duration-300">
               <CardContent className="pt-6">
                 <div className="w-12 h-12 mx-auto rounded-full bg-green-100 flex items-center justify-center text-green-600 mb-4">
-                  <Whatsapp className="w-6 h-6" />
+                  <MessageCircle className="w-6 h-6" />
                 </div>
                 <h3 className="font-semibold mb-2">WhatsApp</h3>
                 <p className="text-sm text-muted-foreground mb-1">Atención inmediata</p>
