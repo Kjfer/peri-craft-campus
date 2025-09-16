@@ -15,7 +15,7 @@ import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/hooks/use-toast';
 import { checkoutService, CheckoutItem, confirmManualPayment } from '@/lib/checkoutService';
 import { supabase } from '@/integrations/supabase/client';
-import yapeQRImage from '@/assets/yape-qr-placeholder.png';
+import yapeQRImage from '@/assets/yape-qr-placeholder.jpeg';
 
 interface CheckoutProps {
   mode?: 'cart' | 'single';
