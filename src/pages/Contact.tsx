@@ -243,16 +243,7 @@ export default function Contact() {
                     </Select>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="subject">Asunto</Label>
-                    <Input
-                      id="subject"
-                      value={formData.subject}
-                      onChange={(e) => handleInputChange("subject", e.target.value)}
-                      required
-                      placeholder="Asunto de tu mensaje"
-                    />
-                  </div>
+
 
                   <div className="space-y-2">
                     <Label htmlFor="message">Mensaje</Label>
@@ -305,18 +296,7 @@ export default function Contact() {
                 ))}
               </div>
 
-              <Card className="bg-primary/5 border-primary/20">
-                <CardContent className="pt-6">
-                  <h3 className="font-semibold mb-2">¿No encuentras lo que buscas?</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Nuestro equipo de soporte está disponible para ayudarte con cualquier consulta específica.
-                  </p>
-                  <Button variant="outline" size="sm">
-                    <Mail className="w-4 h-4 mr-2" />
-                    Escribir a soporte
-                  </Button>
-                </CardContent>
-              </Card>
+
             </div>
           </div>
         </div>
