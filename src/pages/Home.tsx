@@ -96,6 +96,61 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Clases en Vivo */}
+      <section className="py-20 bg-background">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl lg:text-4xl font-bold mb-4">Clases en Vivo</h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Aprende en tiempo real, interactúa con instructores y resuelve tus dudas al instante. ¡Vive la experiencia de una clase en vivo y lleva tu aprendizaje al siguiente nivel!
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+            {/* Ejemplo de clases en vivo, puedes reemplazar por datos reales */}
+            <Card className="border-0 shadow-elegant bg-card/50 backdrop-blur-sm">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <Play className="h-5 w-5 text-green-500" />
+                  <span className="font-semibold">Taller Patronaje de Vestidos Básicos</span>
+                  <Badge className="bg-green-500 text-white ml-2">En vivo</Badge>
+                </div>
+                <div className="text-muted-foreground mb-2 text-sm">18 de septiembre, 19:00</div>
+                <div className="text-muted-foreground text-xs mb-2">Instructor: Pether Peri</div>
+                <p className="text-sm mb-2">Introducción al patronaje básico y toma de medidas.</p>
+                <Button size="sm" className="bg-green-500 text-white w-full mt-2" onClick={() => navigate('/clases-en-vivo')}>
+                  Ver más clases en vivo
+                </Button>
+              </CardContent>
+            </Card>
+            <Card className="border-0 shadow-elegant bg-card/50 backdrop-blur-sm">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <Play className="h-5 w-5 text-green-500" />
+                  <span className="font-semibold">Masterclass: Técnicas de Alta Costura</span>
+                  <Badge className="bg-green-500 text-white ml-2">En vivo</Badge>
+                </div>
+                <div className="text-muted-foreground mb-2 text-sm">28 de septiembre, 18:00</div>
+                <div className="text-muted-foreground text-xs mb-2">Instructor: Pether Peri</div>
+                <p className="text-sm mb-2">Aprende técnicas exclusivas de la alta costura francesa.</p>
+                <Button size="sm" className="bg-green-500 text-white w-full mt-2" onClick={() => navigate('/clases-en-vivo')}>
+                  Ver más clases en vivo
+                </Button>
+              </CardContent>
+            </Card>
+            {/* Puedes agregar más cards o hacerlas dinámicas */}
+          </div>
+          <div className="text-center">
+            <Button 
+              size="lg"
+              className="bg-green-500 text-white px-10 py-6 text-lg font-semibold shadow-lg hover:bg-green-600 transition-all"
+              onClick={() => navigate('/clases-en-vivo')}
+            >
+              Descubre todas las clases en vivo
+            </Button>
+          </div>
+        </div>
+      </section>
+
       {/* Featured Courses */}
       <section className="py-20 bg-background">
         <div className="container mx-auto px-4">

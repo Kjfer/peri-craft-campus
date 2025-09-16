@@ -252,18 +252,18 @@ export default function ClasesEnVivo() {
                     <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
                       <span className="text-primary font-bold text-xl">1</span>
                     </div>
-                    <h4 className="font-semibold mb-2">Inscríbete al curso</h4>
+                    <h4 className="font-semibold mb-2">Consulta en línea</h4>
                     <p className="text-sm text-muted-foreground">
-                      Matricúlate en cualquiera de nuestros cursos disponibles
+                      Escríbenos a cualquiera de nuestros canales de atención.
                     </p>
                   </div>
                   <div className="text-center">
                     <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
                       <span className="text-primary font-bold text-xl">2</span>
                     </div>
-                    <h4 className="font-semibold mb-2">Recibe el enlace</h4>
+                    <h4 className="font-semibold mb-2">Consulta ofertas</h4>
                     <p className="text-sm text-muted-foreground">
-                      Te enviaremos el enlace de la clase 30 minutos antes
+                      Recibe las mejores ofertas que tenemos para ti.
                     </p>
                   </div>
                   <div className="text-center">
@@ -272,7 +272,7 @@ export default function ClasesEnVivo() {
                     </div>
                     <h4 className="font-semibold mb-2">Únete en vivo</h4>
                     <p className="text-sm text-muted-foreground">
-                      Participa activamente y haz preguntas en tiempo real
+                      Participa activamente en los cursos en vivo con profesionales del sector.
                     </p>
                   </div>
                 </div>
@@ -289,7 +289,7 @@ export default function ClasesEnVivo() {
                   </a>
                 </div>
                 <div className="mt-4 text-sm text-muted-foreground">
-                  ¿Tienes dudas sobre el proceso? Nuestro equipo comercial te puede guiar y ayudarte a unirte a la próxima clase en vivo.
+                  ¿Tienes dudas sobre el proceso? Nuestro equipo comercial te puede guiar y ayudarte a unirte a nuestro próximo curso en vivo.
                 </div>
               </div>
             </CardContent>
