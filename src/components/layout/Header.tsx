@@ -36,6 +36,7 @@ export function Header() {
   const navigation = [
     { name: "Inicio", href: "/" },
     { name: "Cursos", href: "/cursos" },
+    { name: "Clases en Vivo", href: "/clases-en-vivo" },
     { name: "Planes", href: "/planes" },
     { name: "Nosotros", href: "/nosotros" },
     { name: "Contacto", href: "/contacto" },

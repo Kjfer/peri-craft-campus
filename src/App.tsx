@@ -16,6 +16,7 @@ import CourseDetail from "./pages/CourseDetail";
 import Plans from "./pages/Plans";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
+import ClasesEnVivo from "./pages/ClasesEnVivo";
 import LessonPlayer from "./pages/LessonPlayer";
 import LearningPlatform from "./pages/LearningPlatform";
 import VerifyCertificate from "./pages/VerifyCertificate";
@@ -69,6 +70,7 @@ const App = () => (
                   <Route path="/planes" element={<Plans />} />
                   <Route path="/nosotros" element={<About />} />
                   <Route path="/contacto" element={<Contact />} />
+                  <Route path="/clases-en-vivo" element={<ClasesEnVivo />} />
                   <Route path="/verificar-certificado" element={<VerifyCertificate />} />
                   <Route path="/checkout" element={<Checkout />} />
                   <Route path="/checkout/carrito" element={<CartCheckout />} />
