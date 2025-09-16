@@ -276,6 +276,21 @@ export default function ClasesEnVivo() {
                     </p>
                   </div>
                 </div>
+                <div className="mt-8 flex flex-col sm:flex-row justify-center gap-4">
+                  <a href="/contacto" className="inline-block">
+                    <button className="bg-primary text-primary-foreground font-semibold px-6 py-3 rounded-lg shadow hover:bg-primary/90 transition-all w-full sm:w-auto">
+                      Contactar área comercial
+                    </button>
+                  </a>
+                  <a href="#LINK_COMUNIDAD_WHATSAPP" target="_blank" rel="noopener" className="inline-block">
+                    <button className="bg-green-500 text-white font-semibold px-6 py-3 rounded-lg shadow hover:bg-green-600 transition-all w-full sm:w-auto">
+                      Unirse a la comunidad WhatsApp
+                    </button>
+                  </a>
+                </div>
+                <div className="mt-4 text-sm text-muted-foreground">
+                  ¿Tienes dudas sobre el proceso? Nuestro equipo comercial te puede guiar y ayudarte a unirte a la próxima clase en vivo.
+                </div>
               </div>
             </CardContent>
           </Card>

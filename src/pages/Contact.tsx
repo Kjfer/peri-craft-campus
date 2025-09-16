@@ -134,8 +134,8 @@ export default function Contact() {
       {/* Contact Information */}
       <section className="py-16">
         <div className="container mx-auto px-4">
-          <div className="text-center text-muted-foreground text-base mb-8">
-            Estos son nuestros canales de consulta. Si quieres más información sobre algún curso en específico, puedes contactarnos por WhatsApp o correo.
+          <div className="text-center text-muted-foreground text-xl font-semibold mb-8">
+            ¿Quieres más información sobre algún curso o evento en vivo en específico? Contáctanos por nuestros canales de atención para cualquier duda o consulta.
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto mb-16">
             {/* WhatsApp Card con personal */}
