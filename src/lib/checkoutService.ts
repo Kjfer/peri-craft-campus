@@ -321,4 +321,52 @@ class CheckoutService {
   }
 }
 
+// Export the manual payment confirmation function
+export const confirmManualPayment = async (
+  cartItems: any[],
+  totalAmount: number,
+  receiptFile: File | null,
+  operationCode: string
+) => {
+  if (!receiptFile) {
+    throw new Error('Receipt file is required');
+  }
+
+  // Upload receipt to storage
+  const fileExt = receiptFile.name.split('.').pop();
+  const fileName = `receipt_${Date.now()}.${fileExt}`;
+  
+  const { data: uploadData, error: uploadError } = await supabase.storage
+    .from('receipts')
+    .upload(fileName, receiptFile);
+
+  if (uploadError) {
+    throw new Error('Failed to upload receipt');
+  }
+
+  // Get public URL for the receipt
+  const { data: urlData } = supabase.storage
+    .from('receipts')
+    .getPublicUrl(fileName);
+
+  // Create payment with receipt data
+  const { data, error } = await supabase.functions.invoke('create-payment', {
+    body: {
+      cartItems,
+      totalAmount,
+      paymentMethod: 'yape_qr',
+      paymentData: {
+        receiptUrl: urlData.publicUrl,
+        operationCode
+      }
+    }
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+};
+
 export const checkoutService = new CheckoutService();

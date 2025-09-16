@@ -21,6 +21,7 @@ import LearningPlatform from "./pages/LearningPlatform";
 import VerifyCertificate from "./pages/VerifyCertificate";
 import PaymentResult from "./pages/PaymentResult";
 import PaymentSuccess from "./pages/PaymentSuccess";
+import PaymentError from "./pages/PaymentError";
 import PaymentRedirect from "./pages/PaymentRedirect";
 import Checkout from "./pages/Checkout";
 import CheckoutSuccess from "./pages/CheckoutSuccess";
@@ -80,6 +81,8 @@ const App = () => (
                   <Route path="/payment/redirect/:orderId" element={<PaymentRedirect />} />
                   <Route path="/payment/success/:orderId" element={<PaymentSuccess />} />
                   <Route path="/payment/success" element={<PaymentResult />} />
+                  <Route path="/payment-success" element={<PaymentSuccess />} />
+                  <Route path="/payment-error" element={<PaymentError />} />
                   <Route path="/payment/failure" element={<PaymentResult />} />
                   <Route path="/payment/pending" element={<PaymentResult />} />
                   

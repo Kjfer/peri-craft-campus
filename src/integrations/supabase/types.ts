@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_settings: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          setting_key: string
+          setting_value: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          setting_key: string
+          setting_value: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          setting_key?: string
+          setting_value?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       certificates: {
         Row: {
           certificate_code: string
@@ -388,6 +415,36 @@ export type Database = {
           total_amount?: number
           updated_at?: string
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      payment_logs: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          order_id: string | null
+          payment_method: string | null
+          user_id: string
+          webhook_response: Json | null
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          order_id?: string | null
+          payment_method?: string | null
+          user_id: string
+          webhook_response?: Json | null
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          order_id?: string | null
+          payment_method?: string | null
+          user_id?: string
+          webhook_response?: Json | null
         }
         Relationships: []
       }

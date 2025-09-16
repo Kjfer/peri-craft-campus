@@ -7,8 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Save, Settings as SettingsIcon, Mail, CreditCard, Shield } from "lucide-react";
+import { Save, Settings as SettingsIcon, Mail, CreditCard, Shield, Webhook } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import WebhookSettings from './WebhookSettings';
 
 interface PlatformSettings {
   site_name: string;
@@ -99,7 +100,7 @@ function Settings() {
         </div>
 
         <Tabs defaultValue="general" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="general">
               <SettingsIcon className="h-4 w-4 mr-2" />
               General
@@ -111,6 +112,10 @@ function Settings() {
             <TabsTrigger value="payments">
               <CreditCard className="h-4 w-4 mr-2" />
               Pagos
+            </TabsTrigger>
+            <TabsTrigger value="webhooks">
+              <Webhook className="h-4 w-4 mr-2" />
+              Webhooks
             </TabsTrigger>
             <TabsTrigger value="security">
               <Shield className="h-4 w-4 mr-2" />
@@ -264,6 +269,10 @@ function Settings() {
                 </Button>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="webhooks" className="space-y-4">
+            <WebhookSettings />
           </TabsContent>
 
           <TabsContent value="security" className="space-y-4">

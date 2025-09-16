@@ -13,7 +13,7 @@ import { Loader2, CreditCard, Smartphone, DollarSign, CheckCircle } from 'lucide
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/hooks/use-toast';
-import { checkoutService, CheckoutItem } from '@/lib/checkoutService';
+import { checkoutService, CheckoutItem, confirmManualPayment } from '@/lib/checkoutService';
 import { supabase } from '@/integrations/supabase/client';
 import yapeQRImage from '@/assets/yape-qr-placeholder.png';
 
@@ -192,36 +192,48 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
     setError('');
 
     try {
-      // Create the order first
       const items = getCheckoutItems();
-      const result = await checkoutService.startCheckoutFromCart(items, 'yape_qr');
+      const result = await confirmManualPayment(
+        items,
+        total.amount,
+        receiptFile,
+        transactionId
+      );
       
-      if (!result.success || !result.order) {
-        throw new Error('Error al crear la orden');
+      if (result.success) {
+        // Redirect based on webhook response
+        if (result.redirectUrl) {
+          const redirectUrl = new URL(result.redirectUrl, window.location.origin);
+          if (result.courses) {
+            redirectUrl.searchParams.set('courses', encodeURIComponent(JSON.stringify(result.courses)));
+          }
+          if (result.message) {
+            redirectUrl.searchParams.set('message', encodeURIComponent(result.message));
+          }
+          window.location.href = redirectUrl.toString();
+        } else {
+          toast({
+            title: "Comprobante enviado",
+            description: result.message || "Tu pago se procesó correctamente.",
+          });
+          setStep('completed');
+        }
+      } else {
+        // Handle error case
+        if (result.redirectUrl) {
+          const redirectUrl = new URL(result.redirectUrl, window.location.origin);
+          if (result.message) {
+            redirectUrl.searchParams.set('message', encodeURIComponent(result.message));
+          }
+          window.location.href = redirectUrl.toString();
+        } else {
+          throw new Error(result.message || "Payment processing failed");
+        }
       }
 
-      const order = result.order;
-
-      // Then confirm the payment with receipt
-      await checkoutService.confirmManualPayment(
-        order.id,
-        transactionId,
-        receiptFile
-      );
-
-      setCurrentOrder(order);
-      
       if (mode === 'cart') {
         await clearCart();
       }
-
-      toast({
-        title: "¡Comprobante enviado!",
-        description: "Tu pago será validado en las próximas horas. Te notificaremos cuando esté confirmado.",
-        variant: "default"
-      });
-
-      setStep('completed');
 
     } catch (error: any) {
       setError(error.message || 'Error al confirmar el pago');
