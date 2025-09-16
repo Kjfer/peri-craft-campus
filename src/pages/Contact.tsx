@@ -119,13 +119,13 @@ export default function Contact() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
               <Button className="bg-green-500 text-white text-lg px-8 py-6" asChild>
-                <a href={whatsappLink} target="_blank" rel="noopener">
-                  <MessageCircle className="mr-2" /> Hablar por WhatsApp
+                <a href="#LINK_COMUNIDAD_WHATSAPP" target="_blank" rel="noopener">
+                  <MessageCircle className="mr-2" /> Unirse a la comunidad WhatsApp
                 </a>
               </Button>
             </div>
             <div className="text-muted-foreground text-base mb-2">
-              ¿Te gustaría recibir información personalizada sobre nuestros cursos y experiencias en vivo? ¡Estamos para ayudarte!
+              ¿Te gustaría recibir información constante sobre nuestros cursos y eventos en vivo? Únete a nuestra comunidad exclusiva de WhatsApp y mantente al día.
             </div>
           </div>
         </div>
@@ -134,6 +134,9 @@ export default function Contact() {
       {/* Contact Information */}
       <section className="py-16">
         <div className="container mx-auto px-4">
+          <div className="text-center text-muted-foreground text-base mb-8">
+            Estos son nuestros canales de consulta. Si quieres más información sobre algún curso en específico, puedes contactarnos por WhatsApp o correo.
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto mb-16">
             {/* WhatsApp Card con personal */}
             <Card className="text-center border-0 bg-gradient-to-br from-background to-muted/50 hover:shadow-elegant transition-all duration-300">
