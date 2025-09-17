@@ -32,19 +32,19 @@ export default function PaymentError() {
     <div className="min-h-screen bg-gradient-to-br from-background to-muted/50 flex items-center justify-center p-4">
       <Card className="w-full max-w-2xl">
         <CardHeader className="text-center">
-          <div className="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
-            <XCircle className="w-8 h-8 text-red-600" />
+          <div className="mx-auto w-16 h-16 bg-destructive/10 rounded-full flex items-center justify-center mb-4">
+            <XCircle className="w-8 h-8 text-destructive" />
           </div>
-          <CardTitle className="text-2xl text-red-600">Error en el Pago</CardTitle>
+          <CardTitle className="text-2xl text-destructive">Error en el Pago</CardTitle>
           <p className="text-muted-foreground mt-2">
             {message || 'Hubo un problema al procesar tu pago'}
           </p>
         </CardHeader>
 
         <CardContent className="space-y-6">
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <h3 className="font-semibold text-yellow-800 mb-2">Instrucciones para continuar:</h3>
-            <ul className="text-sm text-yellow-700 space-y-1">
+          <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
+            <h3 className="font-semibold text-primary mb-2">Instrucciones para continuar:</h3>
+            <ul className="text-sm text-primary/80 space-y-1">
               <li>• Verifica que el comprobante sea claro y legible</li>
               <li>• Asegúrate de que el código de operación sea correcto</li>
               <li>• El monto debe coincidir exactamente con tu compra</li>
@@ -71,7 +71,7 @@ export default function PaymentError() {
           </div>
 
           <div className="text-center text-sm text-muted-foreground">
-            <p>¿Necesitas ayuda? <a href="/contact" className="text-primary hover:underline">Contáctanos</a></p>
+            <p>¿Necesitas ayuda? <a href="/contacto" className="text-primary hover:underline">Contáctanos</a></p>
           </div>
         </CardContent>
       </Card>

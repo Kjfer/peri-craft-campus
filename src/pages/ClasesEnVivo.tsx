@@ -84,7 +84,7 @@ export default function ClasesEnVivo() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "iniciado":
-        return <Badge variant="default" className="bg-green-500 text-white">En vivo</Badge>;
+        return <Badge variant="success">En vivo</Badge>;
       case "proximo":
         return <Badge variant="outline" className="border-primary text-primary">Próximamente</Badge>;
       default:
@@ -159,7 +159,7 @@ export default function ClasesEnVivo() {
                     <span className="text-sm text-muted-foreground">Días con clases</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge variant="default" className="bg-green-500 text-white text-xs">En vivo</Badge>
+                    <Badge variant="success" className="text-xs">En vivo</Badge>
                     <span className="text-sm text-muted-foreground">Clase en curso</span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -283,7 +283,7 @@ export default function ClasesEnVivo() {
                     </button>
                   </a>
                   <a href="#LINK_COMUNIDAD_WHATSAPP" target="_blank" rel="noopener" className="inline-block">
-                    <button className="bg-green-500 text-white font-semibold px-6 py-3 rounded-lg shadow hover:bg-green-600 transition-all w-full sm:w-auto">
+                    <button className="bg-success text-success-foreground font-semibold px-6 py-3 rounded-lg shadow hover:bg-success/90 transition-all w-full sm:w-auto">
                       Unirse a la comunidad WhatsApp
                     </button>
                   </a>

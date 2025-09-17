@@ -53,10 +53,10 @@ export default function PaymentSuccess() {
     <div className="min-h-screen bg-gradient-to-br from-background to-muted/50 flex items-center justify-center p-4">
       <Card className="w-full max-w-2xl">
         <CardHeader className="text-center">
-          <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-            <CheckCircle className="w-8 h-8 text-green-600" />
+          <div className="mx-auto w-16 h-16 bg-success/10 rounded-full flex items-center justify-center mb-4">
+            <CheckCircle className="w-8 h-8 text-success" />
           </div>
-          <CardTitle className="text-2xl text-green-600">¡Pago Exitoso!</CardTitle>
+          <CardTitle className="text-2xl text-success">¡Pago Exitoso!</CardTitle>
           <p className="text-muted-foreground mt-2">
             {message || 'Tu pago se ha procesado correctamente'}
           </p>
@@ -70,7 +70,7 @@ export default function PaymentSuccess() {
                 {courses.map((course, index) => (
                   <div key={index} className="flex items-center justify-between p-3 bg-muted rounded-lg">
                     <span className="font-medium">{course.course_name}</span>
-                    <CheckCircle className="w-5 h-5 text-green-600" />
+                    <CheckCircle className="w-5 h-5 text-success" />
                   </div>
                 ))}
               </div>
