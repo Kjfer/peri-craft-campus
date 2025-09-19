@@ -201,34 +201,13 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
       );
       
       if (result.success) {
-        // Redirect based on webhook response
-        if (result.redirectUrl) {
-          const redirectUrl = new URL(result.redirectUrl, window.location.origin);
-          if (result.courses) {
-            redirectUrl.searchParams.set('courses', encodeURIComponent(JSON.stringify(result.courses)));
-          }
-          if (result.message) {
-            redirectUrl.searchParams.set('message', encodeURIComponent(result.message));
-          }
-          window.location.href = redirectUrl.toString();
-        } else {
-          toast({
-            title: "Comprobante enviado",
-            description: result.message || "Tu pago se procesó correctamente.",
-          });
-          setStep('completed');
-        }
+        toast({
+          title: "Comprobante enviado",
+          description: result.message || "Tu pago se procesó correctamente.",
+        });
+        setStep('completed');
       } else {
-        // Handle error case
-        if (result.redirectUrl) {
-          const redirectUrl = new URL(result.redirectUrl, window.location.origin);
-          if (result.message) {
-            redirectUrl.searchParams.set('message', encodeURIComponent(result.message));
-          }
-          window.location.href = redirectUrl.toString();
-        } else {
-          throw new Error(result.message || "Payment processing failed");
-        }
+        throw new Error(result.message || "Payment processing failed");
       }
 
       if (mode === 'cart') {
