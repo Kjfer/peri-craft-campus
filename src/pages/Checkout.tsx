@@ -159,8 +159,12 @@ export default function Checkout() {
         description: `Tu orden ${result.order.order_number} ha sido procesada exitosamente.`,
       });
 
-      // Redirect to success page
-      navigate(`/checkout/success/${result.order.id}`);
+      // Si es pago manual, redirigir a CheckoutPending con orderId
+      if (paymentMethod === 'card') {
+        navigate(`/checkout/success/${result.order.id}`);
+      } else {
+        navigate(`/checkout/pending?orderId=${result.order.id}`);
+      }
 
     } catch (error) {
       console.error('Payment error:', error);

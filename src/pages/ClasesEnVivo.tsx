@@ -111,11 +111,11 @@ export default function ClasesEnVivo() {
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent mb-4">
-            Clases en Vivo
+            Cursos en Vivo
           </h1>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            Únete a nuestras sesiones interactivas en tiempo real con Pether Peri. 
-            Selecciona una fecha en el calendario para ver las clases programadas.
+            Únete a nuestras sesiones interactivas en tiempo real con profesionales de la moda. 
+            Selecciona una fecha en el calendario para ver inicios de cursos programados.
           </p>
         </div>
 
@@ -124,9 +124,9 @@ export default function ClasesEnVivo() {
           <div className="lg:col-span-1">
             <Card className="border-0 shadow-elegant bg-card/50 backdrop-blur-sm">
               <CardHeader className="text-center">
-                <CardTitle className="text-2xl">Calendario de Clases</CardTitle>
+                <CardTitle className="text-2xl">Calendario de Cursos</CardTitle>
                 <CardDescription>
-                  Selecciona una fecha para ver las clases programadas
+                  Selecciona una fecha para ver los cursos programados
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex justify-center">
@@ -160,11 +160,11 @@ export default function ClasesEnVivo() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant="success" className="text-xs">En vivo</Badge>
-                    <span className="text-sm text-muted-foreground">Clase en curso</span>
+                    <span className="text-sm text-muted-foreground">Curso en iniciado</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant="outline" className="border-primary text-primary text-xs">Próximamente</Badge>
-                    <span className="text-sm text-muted-foreground">Clase programada</span>
+                    <span className="text-sm text-muted-foreground">Curso programado</span>
                   </div>
                 </div>
               </CardContent>
@@ -176,7 +176,7 @@ export default function ClasesEnVivo() {
             {selectedDate ? (
               <div>
                 <h2 className="text-2xl font-bold mb-6">
-                  Clases para {format(selectedDate, "EEEE, d 'de' MMMM", { locale: es })}
+                  Inicios para {format(selectedDate, "EEEE, d 'de' MMMM", { locale: es })}
                 </h2>
                 
                 {clasesDelDia.length > 0 ? (

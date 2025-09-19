@@ -326,47 +326,70 @@ export const confirmManualPayment = async (
   cartItems: any[],
   totalAmount: number,
   receiptFile: File | null,
-  operationCode: string
+  operationCode: string,
+  orderId?: string // opcional, si ya tienes el id de la orden
 ) => {
   if (!receiptFile) {
     throw new Error('Receipt file is required');
   }
 
-  // Upload receipt to storage
+  // 1. Subir recibo a storage
   const fileExt = receiptFile.name.split('.').pop();
   const fileName = `receipt_${Date.now()}.${fileExt}`;
-  
   const { data: uploadData, error: uploadError } = await supabase.storage
     .from('receipts')
     .upload(fileName, receiptFile);
-
   if (uploadError) {
     throw new Error('Failed to upload receipt');
   }
-
-  // Get public URL for the receipt
+  // Obtener URL pública del recibo
   const { data: urlData } = supabase.storage
     .from('receipts')
     .getPublicUrl(fileName);
+  const receiptUrl = urlData.publicUrl;
 
-  // Create payment with receipt data
-  const { data, error } = await supabase.functions.invoke('create-payment', {
-    body: {
-      cartItems,
-      totalAmount,
-      paymentMethod: 'yape_qr',
-      paymentData: {
-        receiptUrl: urlData.publicUrl,
-        operationCode
-      }
-    }
+  // 2. Obtener datos del usuario
+  const { data: userData } = await supabase.auth.getUser();
+  const user = userData?.user;
+  if (!user) throw new Error('User not authenticated');
+
+  // 3. Obtener info de cursos
+  // cartItems: [{ course_id, course: { id, title, ... } }, ...]
+  const courses = cartItems.map(item => ({
+    course_id: item.course_id,
+    course_name: item.course?.title || ''
+  }));
+
+  // 4. Preparar payload para n8n
+  const n8nWebhookUrl = 'https://n8n.example.com/webhook/validar-pago-yape'; // <--- reemplazar luego
+  const payload = {
+    user_id: user.id,
+    user_name: user.user_metadata?.full_name || '',
+    user_email: user.email,
+    receipt_url: receiptUrl,
+    operation_code: operationCode,
+    order_id: orderId || '',
+    amount: totalAmount,
+    currency: 'PEN',
+    courses
+  };
+
+  // 5. Enviar POST al webhook de n8n
+  const response = await fetch(n8nWebhookUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
   });
 
-  if (error) {
-    throw error;
+  if (!response.ok) {
+    throw new Error('No se pudo enviar la validación a n8n');
   }
 
-  return data;
+  // 6. Retornar resultado
+  return {
+    success: true,
+    message: 'Comprobante enviado para validación. Recibirás confirmación por email o WhatsApp.'
+  };
 };
 
 export const checkoutService = new CheckoutService();
