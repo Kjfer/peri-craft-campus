@@ -209,7 +209,7 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
         console.log('✅ File upload test passed');
       }
 
-      // Use checkoutService.confirmManualPayment method instead
+      // SOLO usar checkoutService.confirmManualPayment - sin función wrapper
       const result = await checkoutService.confirmManualPayment(
         currentOrder.id,
         transactionId,
