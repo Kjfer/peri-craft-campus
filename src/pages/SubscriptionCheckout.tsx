@@ -95,7 +95,7 @@ export default function SubscriptionCheckout() {
         case 'paypal':
           result = await checkoutService.processPayPalSubscriptionPayment(plan.id, plan);
           if (result.success && result.redirectUrl) {
-            window.location.href = result.redirectUrl;
+            window.location.href = result.redirectUrl; // External payment provider redirect
             return;
           }
           break;

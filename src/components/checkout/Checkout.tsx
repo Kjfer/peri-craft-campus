@@ -155,7 +155,7 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
       const result = await checkoutService.startCheckoutFromCart(items, backendMethod);
       
       if (result.success && result.paymentUrl) {
-        // Redirect to payment URL for MercadoPago methods
+        // Redirect to payment URL for MercadoPago methods (external redirect required)
         window.location.href = result.paymentUrl;
         return;
       }
@@ -238,13 +238,17 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
       if (result.success) {
         toast({
           title: "Comprobante enviado",
-          description: result.message || "Tu pago se procesó correctamente.",
+          description: result.message || "Estamos procesando tu pago.",
         });
-        setStep('completed');
         
+        // Clear cart first before redirecting
         if (mode === 'cart') {
           await clearCart();
         }
+        
+        // Redirect to CheckoutPending instead of completed
+        // The order status listener will handle the redirect to success page
+        navigate(`/checkout/pending?orderId=${currentOrder.id}`);
       } else {
         throw new Error(result.message || "Error al procesar el pago");
       }

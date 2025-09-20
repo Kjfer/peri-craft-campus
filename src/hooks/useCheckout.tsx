@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/hooks/use-toast';
@@ -12,6 +13,7 @@ export function useCheckout(options: CheckoutOptions = {}) {
   const [isOpen, setIsOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { state: cartState, clearCart } = useCart();
   const { toast } = useToast();
@@ -27,7 +29,7 @@ export function useCheckout(options: CheckoutOptions = {}) {
         variant: "destructive",
       });
       // Redirect to auth page
-      window.location.href = '/auth';
+      navigate('/auth');
       return;
     }
 
@@ -43,7 +45,7 @@ export function useCheckout(options: CheckoutOptions = {}) {
 
     console.log('✅ Navigating to cart checkout');
     // Navigate to cart checkout page
-    window.location.href = '/checkout/carrito';
+    navigate('/checkout/carrito');
   };
 
   const closeCheckout = () => {

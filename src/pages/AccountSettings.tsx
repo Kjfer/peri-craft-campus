@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import { User, Shield, AlertTriangle, Loader2 } from "lucide-react";
 import { SecurePasswordForm } from "@/components/security/SecurePasswordForm";
 
 export default function AccountSettings() {
+  const navigate = useNavigate();
   const { profile, user } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
@@ -51,7 +53,7 @@ export default function AccountSettings() {
         });
         // Redirect to login after a delay
         setTimeout(() => {
-          window.location.href = '/auth';
+          navigate('/auth');
         }, 2000);
       } else {
         toast({

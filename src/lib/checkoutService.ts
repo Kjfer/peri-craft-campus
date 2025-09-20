@@ -251,6 +251,14 @@ class CheckoutService {
 
       console.log('File uploaded successfully:', uploadData);
 
+      // Get the public URL of the uploaded receipt
+      const { data: publicUrlData } = supabase.storage
+        .from('receipts')
+        .getPublicUrl(fileName);
+
+      const receiptPublicUrl = publicUrlData.publicUrl;
+      console.log('Receipt public URL:', receiptPublicUrl);
+
       // Get order details to determine if it's course or subscription
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
@@ -277,19 +285,16 @@ class CheckoutService {
 
       console.log('Creating payment record for order:', orderId, 'type:', paymentType);
 
-      // Create payment record
+      // Create payment record with the full URL
       const paymentData = {
         order_id: orderId,
         payment_method: 'yape_qr',
         payment_provider_id: transactionId,
-        receipt_url: fileName,
+        receipt_url: receiptPublicUrl, // Use full URL instead of just filename
         user_id: user.data.user.id,
         amount: orderData.total_amount || 0,
         currency: 'PEN'
       };
-
-      // Note: subscription_id is not available in order_items schema
-      // Subscriptions are handled through plan_id in user_subscriptions table
 
       const { data, error } = await supabase
         .from('payments')
@@ -314,7 +319,7 @@ class CheckoutService {
           payment_id: data.id,
           order_id: orderId,
           transaction_id: transactionId,
-          receipt_url: fileName,
+          receipt_url: receiptPublicUrl, // Send the full URL to N8n
           amount: orderData.total_amount || 0,
           currency: 'PEN',
           payment_type: paymentType,
@@ -323,24 +328,14 @@ class CheckoutService {
 
         console.log('Sending payment notification to n8n:', n8nPayload);
 
-        // Convertir payload a query parameters para GET request
-        const queryParams = new URLSearchParams({
-          user_id: n8nPayload.user_id,
-          user_name: n8nPayload.user_name,
-          user_email: n8nPayload.user_email,
-          payment_id: n8nPayload.payment_id,
-          order_id: n8nPayload.order_id,
-          transaction_id: n8nPayload.transaction_id,
-          receipt_url: n8nPayload.receipt_url,
-          amount: n8nPayload.amount.toString(),
-          currency: n8nPayload.currency,
-          payment_type: n8nPayload.payment_type,
-          payment_method: n8nPayload.payment_method
-        });
-
-        const n8nResponse = await fetch(`${n8nWebhookUrl}?${queryParams.toString()}`, {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' }
+        // Use POST method with JSON payload for N8n
+        const n8nResponse = await fetch(n8nWebhookUrl, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify(n8nPayload)
         });
 
         if (n8nResponse.ok) {
@@ -357,7 +352,7 @@ class CheckoutService {
         success: true,
         payment: data,
         paymentType,
-        message: 'Comprobante subido exitosamente. El pago será validado en breve.'
+        message: 'Comprobante subido exitosamente. Estamos procesando tu pago.'
       };
     } catch (error: any) {
       console.error('Error in confirmManualPayment:', error);
