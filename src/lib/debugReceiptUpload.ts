@@ -100,41 +100,34 @@ export const debugReceiptUpload = async () => {
   }
 };
 
-// Keep the old function name for compatibility but return error
+// Test n8n webhook connection  
 export const testN8nWebhook = async () => {
-  return {
-    success: false,
-    error: 'N8n webhook functionality has been removed. Use configurable webhooks instead.'
-  };
-};
-
-// Test webhook connection
-export const testWebhook = async (webhookUrl: string) => {
   try {
-    console.log('=== TESTING WEBHOOK ===');
+    console.log('=== TESTING N8N WEBHOOK ===');
     
-    const result = await checkoutService.testWebhook(webhookUrl);
+    const result = await checkoutService.testN8nWebhook();
+
     
     if (result.success) {
-      console.log('✅ Webhook request sent');
+      console.log('✅ N8n webhook is responding');
       return {
         success: true,
-        message: 'Webhook request sent successfully',
+        message: 'N8n webhook connection successful',
         details: result
       };
     } else {
-      console.error('❌ Webhook test failed:', result);
+      console.error('❌ N8n webhook test failed:', result);
       return {
         success: false,
-        error: result.error || 'Webhook test failed'
+        error: result.error || 'N8n webhook test failed'
       };
     }
     
   } catch (error) {
-    console.error('❌ Webhook test error:', error);
+    console.error('❌ N8n webhook test error:', error);
     return {
       success: false,
-      error: `Webhook test error: ${error instanceof Error ? error.message : 'Unknown error'}`
+      error: `N8n test error: ${error instanceof Error ? error.message : 'Unknown error'}`
     };
   }
 };

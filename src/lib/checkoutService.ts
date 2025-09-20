@@ -306,8 +306,7 @@ class CheckoutService {
 
       // Send notification to n8n webhook for validation
       try {
-        // Note: n8n webhook disabled for now as it's pointing to localhost
-        // const n8nWebhookUrl = 'http://localhost:5678/webhook-test/cd9a61b2-d84c-4517-9e0a-13f898148204';
+        const n8nWebhookUrl = 'http://localhost:5678/webhook-test/cd9a61b2-d84c-4517-9e0a-13f898148204';
         const n8nPayload = {
           user_id: user.data.user.id,
           user_name: user.data.user.user_metadata?.full_name || '',
@@ -322,8 +321,33 @@ class CheckoutService {
           payment_method: 'yape_qr'
         };
 
-        console.log('Payment notification prepared:', n8nPayload);
-        console.log('Webhook notification disabled - would send to n8n in production');
+        console.log('Sending payment notification to n8n:', n8nPayload);
+
+        // Convertir payload a query parameters para GET request
+        const queryParams = new URLSearchParams({
+          user_id: n8nPayload.user_id,
+          user_name: n8nPayload.user_name,
+          user_email: n8nPayload.user_email,
+          payment_id: n8nPayload.payment_id,
+          order_id: n8nPayload.order_id,
+          transaction_id: n8nPayload.transaction_id,
+          receipt_url: n8nPayload.receipt_url,
+          amount: n8nPayload.amount.toString(),
+          currency: n8nPayload.currency,
+          payment_type: n8nPayload.payment_type,
+          payment_method: n8nPayload.payment_method
+        });
+
+        const n8nResponse = await fetch(`${n8nWebhookUrl}?${queryParams.toString()}`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (n8nResponse.ok) {
+          console.log('Payment notification sent to n8n successfully');
+        } else {
+          console.warn('Failed to send notification to n8n:', n8nResponse.status);
+        }
       } catch (n8nError) {
         console.warn('Error sending notification to n8n:', n8nError);
         // Don't throw error here as the payment was already recorded
@@ -561,42 +585,49 @@ class CheckoutService {
     };
   }
 
-  // Test webhook connection
-  async testWebhook(webhookUrl: string) {
+  // Test n8n webhook connection
+  async testN8nWebhook() {
     try {
-      if (!webhookUrl) {
-        throw new Error('Webhook URL is required');
-      }
+      const n8nWebhookUrl = 'http://localhost:5678/webhook-test/cd9a61b2-d84c-4517-9e0a-13f898148204';
       
-      const testPayload = {
-        test: true,
+      const testParams = new URLSearchParams({
+        test: 'true',
         timestamp: new Date().toISOString(),
         message: 'Test connection from Peri Craft Campus'
-      };
-
-      console.log('Testing webhook connection...');
-      
-      const response = await fetch(webhookUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        mode: 'no-cors',
-        body: JSON.stringify(testPayload)
       });
 
-      // Since we're using no-cors, we won't get a proper response status
-      console.log('Webhook test request sent');
-      return {
-        success: true,
-        message: 'Request sent to webhook. Check your automation platform for confirmation.',
-        url: webhookUrl
+      console.log('Testing n8n webhook connection...');
+      
+      const response = await fetch(`${n8nWebhookUrl}?${testParams.toString()}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      const result: any = {
+        success: response.ok,
+        status: response.status,
+        statusText: response.statusText,
+        url: n8nWebhookUrl
       };
+
+      if (response.ok) {
+        try {
+          const responseData = await response.json();
+          result.data = responseData;
+        } catch (e) {
+          result.data = await response.text();
+        }
+      }
+
+      console.log('N8n webhook test result:', result);
+      return result;
       
     } catch (error: any) {
-      console.error('Webhook test failed:', error);
+      console.error('N8n webhook test failed:', error);
       return {
         success: false,
         error: error.message,
-        url: webhookUrl
+        url: 'http://localhost:5678/webhook-test/cd9a61b2-d84c-4517-9e0a-13f898148204'
       };
     }
   }

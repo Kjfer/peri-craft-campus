@@ -14,7 +14,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/hooks/use-toast';
 import { checkoutService, CheckoutItem } from '@/lib/checkoutService';
-import { debugReceiptUpload, testFileUpload } from '@/lib/debugReceiptUpload';
+import { debugReceiptUpload, testFileUpload, testN8nWebhook } from '@/lib/debugReceiptUpload';
 import { supabase } from '@/integrations/supabase/client';
 import yapeQRImage from '@/assets/yape-qr-placeholder.jpeg';
 
@@ -288,12 +288,36 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
     }
   };
 
-  // Remove webhook test functionality - not needed
+  // Test n8n webhook connection
   const handleWebhookTest = async () => {
-    toast({
-      title: "Info",
-      description: "Webhook testing removed. Use admin settings to configure webhooks.",
-    });
+    setLoading(true);
+    try {
+      console.log('🧪 Testing n8n webhook connection...');
+      const result = await testN8nWebhook();
+      setDebugResults(result);
+      
+      if (result.success) {
+        toast({
+          title: "Webhook Test Passed",
+          description: "N8n webhook is responding correctly",
+        });
+      } else {
+        toast({
+          title: "Webhook Test Failed", 
+          description: result.error,
+          variant: "destructive"
+        });
+      }
+    } catch (error: any) {
+      setDebugResults({ success: false, error: error.message });
+      toast({
+        title: "Webhook Test Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleConfirmManualPayment = async () => {
@@ -691,7 +715,7 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
                           onClick={handleWebhookTest}
                           disabled={loading}
                         >
-                          Test Debug
+                          Probar N8n
                         </Button>
                         <Button 
                           size="sm" 
