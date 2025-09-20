@@ -191,6 +191,11 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
       return;
     }
 
+    if (!currentOrder?.id) {
+      setError('Error: No se encontró la orden. Por favor intenta de nuevo.');
+      return;
+    }
+
     setLoading(true);
     setError('');
 
@@ -330,6 +335,10 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
     setError('');
 
     try {
+      if (!currentOrder?.id) {
+        throw new Error('No se encontró la orden. Por favor intenta de nuevo.');
+      }
+      
       const result = await checkoutService.confirmManualPayment(
         currentOrder.id,
         transactionId,
