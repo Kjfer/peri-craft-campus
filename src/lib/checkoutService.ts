@@ -222,16 +222,34 @@ class CheckoutService {
     try {
       // Upload receipt to storage with user folder structure
       const user = await supabase.auth.getUser();
-      if (!user.data.user) throw new Error('User not authenticated');
+      if (!user.data.user) {
+        console.error('Authentication error: User not found');
+        throw new Error('Usuario no autenticado');
+      }
 
-      const fileExt = receiptFile.name.split('.').pop();
+      console.log('Starting receipt upload for user:', user.data.user.id);
+
+      const fileExt = receiptFile.name.split('.').pop()?.toLowerCase();
+      if (!fileExt || !['jpg', 'jpeg', 'png', 'pdf'].includes(fileExt)) {
+        throw new Error('Formato de archivo no válido. Solo se permiten JPG, PNG o PDF');
+      }
+
       const fileName = `${user.data.user.id}/${orderId}_${Date.now()}.${fileExt}`;
+      console.log('Uploading file with name:', fileName);
       
-      const { error: uploadError } = await supabase.storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
         .from('receipts')
-        .upload(fileName, receiptFile);
+        .upload(fileName, receiptFile, {
+          contentType: receiptFile.type,
+          upsert: false
+        });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Storage upload error:', uploadError);
+        throw new Error(`Error al subir archivo: ${uploadError.message}`);
+      }
+
+      console.log('File uploaded successfully:', uploadData);
 
       // Get order details to determine if it's course or subscription
       const { data: orderData, error: orderError } = await supabase
@@ -246,40 +264,69 @@ class CheckoutService {
         .eq('id', orderId)
         .single();
 
-      if (orderError) throw orderError;
+      if (orderError) {
+        console.error('Order fetch error:', orderError);
+        throw new Error(`Error al obtener la orden: ${orderError.message}`);
+      }
 
       // Determine payment type based on order items
       const hasSubscription = orderData.order_items.some((item: any) => item.subscription_id);
       const paymentType = hasSubscription ? 'subscription' : 'course';
 
+      console.log('Creating payment record for order:', orderId, 'type:', paymentType);
+
       // Create payment record
+      const paymentData = {
+        order_id: orderId,
+        payment_method: 'yape_qr',
+        payment_provider_id: transactionId,
+        receipt_url: fileName,
+        user_id: user.data.user.id,
+        amount: orderData.total_amount || 0,
+        currency: 'PEN'
+      };
+
+      // Add subscription_id if it's a subscription payment
+      if (hasSubscription && orderData.order_items[0]?.subscription_id) {
+        (paymentData as any).subscription_id = orderData.order_items[0].subscription_id;
+      }
+
       const { data, error } = await supabase
         .from('payments')
-        .insert({
-          order_id: orderId,
-          payment_method: 'yape_qr',
-          payment_provider_id: transactionId,
-          receipt_url: fileName,
-          user_id: user.data.user.id,
-          amount: orderData.total_amount || 0,
-          currency: 'PEN',
-          // Add subscription_id if it's a subscription payment
-          ...(hasSubscription && { subscription_id: orderData.order_items[0].subscription_id })
-        })
+        .insert(paymentData)
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Payment insert error:', error);
+        throw new Error(`Error al crear el registro de pago: ${error.message}`);
+      }
+
+      console.log('Payment record created successfully:', data);
 
       return {
         success: true,
         payment: data,
         paymentType,
-        message: 'Comprobante subido. El pago será validado en breve.'
+        message: 'Comprobante subido exitosamente. El pago será validado en breve.'
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error in confirmManualPayment:', error);
-      throw error;
+      
+      // Provide more specific error messages
+      let errorMessage = error.message || 'Error desconocido';
+      
+      if (error.message?.includes('auth')) {
+        errorMessage = 'Error de autenticación. Por favor inicia sesión nuevamente.';
+      } else if (error.message?.includes('storage')) {
+        errorMessage = 'Error al subir el archivo. Verifica que el archivo sea válido.';
+      } else if (error.message?.includes('order')) {
+        errorMessage = 'Error al procesar la orden. Contacta con soporte.';
+      } else if (error.message?.includes('payment')) {
+        errorMessage = 'Error al registrar el pago. Contacta con soporte.';
+      }
+      
+      throw new Error(errorMessage);
     }
   }
 
@@ -499,7 +546,8 @@ class CheckoutService {
   }
 }
 
-// Export the manual payment confirmation function - soporta cursos y suscripciones
+// Export the manual payment confirmation function - soporta cursos y suscripciones  
+// This is a simplified wrapper around checkoutService.confirmManualPayment
 export const confirmManualPayment = async (
   cartItems: any[],
   totalAmount: number,
@@ -508,74 +556,99 @@ export const confirmManualPayment = async (
   orderId?: string // opcional, si ya tienes el id de la orden
 ) => {
   if (!receiptFile) {
-    throw new Error('Receipt file is required');
+    throw new Error('El archivo de comprobante es requerido');
   }
 
-  // 1. Subir recibo a storage
-  const fileExt = receiptFile.name.split('.').pop();
-  const fileName = `receipt_${Date.now()}.${fileExt}`;
-  const { data: uploadData, error: uploadError } = await supabase.storage
-    .from('receipts')
-    .upload(fileName, receiptFile);
-  if (uploadError) {
-    throw new Error('Failed to upload receipt');
-  }
-  // Obtener URL pública del recibo
-  const { data: urlData } = supabase.storage
-    .from('receipts')
-    .getPublicUrl(fileName);
-  const receiptUrl = urlData.publicUrl;
-
-  // 2. Obtener datos del usuario
-  const { data: userData } = await supabase.auth.getUser();
-  const user = userData?.user;
-  if (!user) throw new Error('User not authenticated');
-
-  // 3. Determinar tipo de items y obtener info
-  const courses = cartItems.filter(item => item.course_id).map(item => ({
-    course_id: item.course_id,
-    course_name: item.course?.title || ''
-  }));
-
-  const subscriptions = cartItems.filter(item => item.subscription_id).map(item => ({
-    subscription_id: item.subscription_id,
-    subscription_name: item.subscription?.name || '',
-    duration_months: item.subscription?.duration_months || 1
-  }));
-
-  // 4. Preparar payload para n8n
-  const n8nWebhookUrl = 'https://n8n.example.com/webhook/validar-pago-yape'; // <--- reemplazar luego
-  const payload = {
-    user_id: user.id,
-    user_name: user.user_metadata?.full_name || '',
-    user_email: user.email,
-    receipt_url: receiptUrl,
-    operation_code: operationCode,
-    order_id: orderId || '',
-    amount: totalAmount,
-    currency: 'PEN',
-    courses,
-    subscriptions, // Nuevo campo para suscripciones
-    item_type: subscriptions.length > 0 ? 'mixed' : 'courses' // Indicar tipo de compra
-  };
-
-  // 5. Enviar POST al webhook de n8n
-  const response = await fetch(n8nWebhookUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  });
-
-  if (!response.ok) {
-    throw new Error('No se pudo enviar la validación a n8n');
+  if (!operationCode.trim()) {
+    throw new Error('El código de operación es requerido');
   }
 
-  // 6. Retornar resultado
-  return {
-    success: true,
-    message: 'Comprobante enviado para validación.',
-    itemType: payload.item_type
-  };
+  try {
+    // If we have an orderId, use the service method directly
+    if (orderId) {
+      return await checkoutService.confirmManualPayment(orderId, operationCode, receiptFile);
+    }
+
+    // If no orderId, we need to create the order first
+    // This is for the cart-based flow
+    
+    // 1. Subir recibo a storage
+    const { data: userData } = await supabase.auth.getUser();
+    const user = userData?.user;
+    if (!user) throw new Error('Usuario no autenticado');
+
+    const fileExt = receiptFile.name.split('.').pop()?.toLowerCase();
+    if (!fileExt || !['jpg', 'jpeg', 'png', 'pdf'].includes(fileExt)) {
+      throw new Error('Formato de archivo no válido. Solo se permiten JPG, PNG o PDF');
+    }
+
+    const fileName = `${user.id}/temp_${Date.now()}.${fileExt}`;
+    
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('receipts')
+      .upload(fileName, receiptFile, {
+        contentType: receiptFile.type,
+        upsert: false
+      });
+
+    if (uploadError) {
+      console.error('Receipt upload error:', uploadError);
+      throw new Error(`Error al subir comprobante: ${uploadError.message}`);
+    }
+
+    // Obtener URL pública del recibo
+    const { data: urlData } = supabase.storage
+      .from('receipts')
+      .getPublicUrl(fileName);
+    const receiptUrl = urlData.publicUrl;
+
+    // 2. Determinar tipo de items y obtener info
+    const courses = cartItems.filter(item => item.course_id).map(item => ({
+      course_id: item.course_id,
+      course_name: item.course?.title || ''
+    }));
+
+    const subscriptions = cartItems.filter(item => item.subscription_id).map(item => ({
+      subscription_id: item.subscription_id,
+      subscription_name: item.subscription?.name || '',
+      duration_months: item.subscription?.duration_months || 1
+    }));
+
+    // 3. Create a temporary payment record for validation process
+    const paymentData = {
+      payment_method: 'yape_qr',
+      payment_provider_id: operationCode,
+      receipt_url: fileName,
+      user_id: user.id,
+      amount: totalAmount,
+      currency: 'PEN',
+      status: 'pending_validation'
+    };
+
+    const { data: paymentRecord, error: paymentError } = await supabase
+      .from('payments')
+      .insert(paymentData)
+      .select()
+      .single();
+
+    if (paymentError) {
+      console.error('Payment record error:', paymentError);
+      throw new Error(`Error al crear registro de pago: ${paymentError.message}`);
+    }
+
+    // 4. Retornar resultado exitoso
+    return {
+      success: true,
+      message: 'Comprobante enviado para validación.',
+      itemType: subscriptions.length > 0 ? 'mixed' : 'courses',
+      payment: paymentRecord,
+      receiptUrl
+    };
+
+  } catch (error: any) {
+    console.error('Error in confirmManualPayment wrapper:', error);
+    throw error;
+  }
 };
 
 export const checkoutService = new CheckoutService();

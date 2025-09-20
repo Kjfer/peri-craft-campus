@@ -9,11 +9,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, CreditCard, Smartphone, DollarSign, CheckCircle } from 'lucide-react';
+import { Loader2, CreditCard, Smartphone, DollarSign, CheckCircle, AlertTriangle, Bug } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/hooks/use-toast';
 import { checkoutService, CheckoutItem, confirmManualPayment } from '@/lib/checkoutService';
+import { debugReceiptUpload, testFileUpload } from '@/lib/debugReceiptUpload';
 import { supabase } from '@/integrations/supabase/client';
 import yapeQRImage from '@/assets/yape-qr-placeholder.jpeg';
 
@@ -38,6 +39,8 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [error, setError] = useState<string>('');
   const [paypalDbOrderId, setPaypalDbOrderId] = useState<string | null>(null);
+  const [debugMode, setDebugMode] = useState(false);
+  const [debugResults, setDebugResults] = useState<any>(null);
 
   // PayPal configuration
   const paypalOptions = {
@@ -192,6 +195,20 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
     setError('');
 
     try {
+      console.log('🔍 Starting Yape payment confirmation process...');
+      console.log('File details:', {
+        name: receiptFile.name,
+        type: receiptFile.type,
+        size: receiptFile.size
+      });
+
+      // Test the file first if in debug mode
+      if (debugMode) {
+        console.log('🧪 Testing file upload in debug mode...');
+        await testFileUpload(receiptFile);
+        console.log('✅ File upload test passed');
+      }
+
       const items = getCheckoutItems();
       const result = await confirmManualPayment(
         items,
@@ -206,19 +223,65 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
           description: result.message || "Tu pago se procesó correctamente.",
         });
         setStep('completed');
+        
+        if (mode === 'cart') {
+          await clearCart();
+        }
       } else {
-        throw new Error(result.message || "Payment processing failed");
-      }
-
-      if (mode === 'cart') {
-        await clearCart();
+        throw new Error(result.message || "Error al procesar el pago");
       }
 
     } catch (error: any) {
-      setError(error.message || 'Error al confirmar el pago');
+      console.error('❌ Yape payment confirmation failed:', error);
+      
+      let errorMessage = 'Error al confirmar el pago';
+      
+      if (error.message?.includes('formato') || error.message?.includes('file')) {
+        errorMessage = error.message;
+      } else if (error.message?.includes('autenticado')) {
+        errorMessage = 'Por favor inicia sesión nuevamente';
+      } else if (error.message?.includes('upload')) {
+        errorMessage = 'Error al subir el archivo. Verifica tu conexión e inténtalo nuevamente.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      setError(errorMessage);
       toast({
         title: "Error",
-        description: error.message || 'Error al confirmar el pago',
+        description: errorMessage,
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Debug function to test receipt upload system
+  const handleDebugTest = async () => {
+    try {
+      setLoading(true);
+      console.log('🧪 Running receipt upload debug test...');
+      const result = await debugReceiptUpload();
+      setDebugResults(result);
+      
+      if (result.success) {
+        toast({
+          title: "Debug Test Passed",
+          description: "Receipt upload system is working correctly",
+        });
+      } else {
+        toast({
+          title: "Debug Test Failed",
+          description: result.error,
+          variant: "destructive"
+        });
+      }
+    } catch (error: any) {
+      setDebugResults({ success: false, error: error.message });
+      toast({
+        title: "Debug Test Error",
+        description: error.message,
         variant: "destructive"
       });
     } finally {
@@ -551,19 +614,40 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
                 {/* Upload Form */}
                 <div className="space-y-4">
                   <div>
-                    <Label htmlFor="receipt">Comprobante de pago (JPG o PNG)</Label>
+                    <Label htmlFor="receipt">Comprobante de pago (JPG, PNG o PDF - Max 5MB)</Label>
                     <Input
                       id="receipt"
                       type="file"
-                      accept="image/jpeg,image/png,image/jpg"
+                      accept="image/jpeg,image/png,image/jpg,application/pdf"
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) {
+                          // Validate file size (5MB limit)
+                          if (file.size > 5 * 1024 * 1024) {
+                            setError('El archivo es muy grande. Máximo 5MB permitido.');
+                            return;
+                          }
+                          
+                          // Validate file type
+                          const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
+                          if (!validTypes.includes(file.type)) {
+                            setError('Tipo de archivo no válido. Solo JPG, PNG o PDF.');
+                            return;
+                          }
+                          
                           setReceiptFile(file);
+                          setError(''); // Clear any previous errors
                         }
                       }}
                       className="mt-1"
                     />
+                    {receiptFile && (
+                      <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm">
+                        <p className="text-green-800">
+                          ✅ Archivo seleccionado: {receiptFile.name} ({(receiptFile.size / 1024).toFixed(1)} KB)
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   <div>
@@ -577,6 +661,40 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
                       className="mt-1"
                     />
                   </div>
+
+                  {/* Debug Controls */}
+                  {user?.email?.includes('admin') && (
+                    <div className="p-3 border rounded-lg bg-yellow-50">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Bug className="w-4 h-4" />
+                        <span className="text-sm font-medium">Herramientas de Debug</span>
+                      </div>
+                      <div className="flex gap-2 mb-2">
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={handleDebugTest}
+                          disabled={loading}
+                        >
+                          Probar Sistema de Upload
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={() => setDebugMode(!debugMode)}
+                        >
+                          Debug: {debugMode ? 'ON' : 'OFF'}
+                        </Button>
+                      </div>
+                      {debugResults && (
+                        <div className="mt-2 text-xs">
+                          <pre className="bg-gray-100 p-2 rounded overflow-auto max-h-32">
+                            {JSON.stringify(debugResults, null, 2)}
+                          </pre>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   <div className="flex gap-2">
                     <Button 
