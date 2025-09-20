@@ -309,42 +309,36 @@ class CheckoutService {
 
       console.log('Payment record created successfully:', data);
 
-      // Send notification to n8n webhook for validation
+      // Send notification to Supabase edge function for N8n webhook processing
       try {
-        const n8nWebhookUrl = 'http://localhost:5678/webhook-test/cd9a61b2-d84c-4517-9e0a-13f898148204';
-        const n8nPayload = {
+        const webhookPayload = {
           user_id: user.data.user.id,
           user_name: user.data.user.user_metadata?.full_name || '',
           user_email: user.data.user.email || '',
           payment_id: data.id,
           order_id: orderId,
           transaction_id: transactionId,
-          receipt_url: receiptPublicUrl, // Send the full URL to N8n
+          receipt_url: receiptPublicUrl,
           amount: orderData.total_amount || 0,
           currency: 'PEN',
           payment_type: paymentType,
           payment_method: 'yape_qr'
         };
 
-        console.log('Sending payment notification to n8n:', n8nPayload);
+        console.log('Sending payment notification for N8n processing:', webhookPayload);
 
-        // Use POST method with JSON payload for N8n
-        const n8nResponse = await fetch(n8nWebhookUrl, {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify(n8nPayload)
+        // Send to edge function that will handle N8n webhook
+        const { data: webhookData, error: webhookError } = await supabase.functions.invoke('process-payment-validation', {
+          body: webhookPayload
         });
 
-        if (n8nResponse.ok) {
-          console.log('Payment notification sent to n8n successfully');
+        if (webhookError) {
+          console.warn('Failed to trigger payment validation:', webhookError);
         } else {
-          console.warn('Failed to send notification to n8n:', n8nResponse.status);
+          console.log('Payment validation triggered successfully:', webhookData);
         }
       } catch (n8nError) {
-        console.warn('Error sending notification to n8n:', n8nError);
+        console.warn('Error triggering payment validation:', n8nError);
         // Don't throw error here as the payment was already recorded
       }
 

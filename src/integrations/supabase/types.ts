@@ -347,6 +347,7 @@ export type Database = {
           id: string
           order_id: string | null
           price: number
+          subscription_id: string | null
         }
         Insert: {
           course_id?: string | null
@@ -354,6 +355,7 @@ export type Database = {
           id?: string
           order_id?: string | null
           price: number
+          subscription_id?: string | null
         }
         Update: {
           course_id?: string | null
@@ -361,6 +363,7 @@ export type Database = {
           id?: string
           order_id?: string | null
           price?: number
+          subscription_id?: string | null
         }
         Relationships: [
           {
@@ -377,6 +380,13 @@ export type Database = {
             referencedRelation: "orders"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "order_items_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
         ]
       }
       orders: {
@@ -388,6 +398,7 @@ export type Database = {
           payment_id: string | null
           payment_method: string | null
           payment_status: string
+          rejection_reason: string | null
           total_amount: number
           updated_at: string
           user_id: string | null
@@ -400,6 +411,7 @@ export type Database = {
           payment_id?: string | null
           payment_method?: string | null
           payment_status?: string
+          rejection_reason?: string | null
           total_amount: number
           updated_at?: string
           user_id?: string | null
@@ -412,6 +424,7 @@ export type Database = {
           payment_id?: string | null
           payment_method?: string | null
           payment_status?: string
+          rejection_reason?: string | null
           total_amount?: number
           updated_at?: string
           user_id?: string | null

@@ -43,3 +43,6 @@ verify_jwt = true
 
 [functions.mp-preference]
 verify_jwt = true
+
+[functions.process-payment-validation]
+verify_jwt = false
