@@ -313,33 +313,31 @@ class CheckoutService {
       // Send notification to n8n webhook for validation (from frontend)
       try {
         const n8nWebhookUrl = 'http://localhost:5678/webhook-test/cd9a61b2-d84c-4517-9e0a-13f898148204';
-        const n8nPayload = {
+        
+        // Crear parámetros para GET request
+        const n8nParams = new URLSearchParams({
           user_id: user.data.user.id,
           user_name: user.data.user.user_metadata?.full_name || '',
           user_email: user.data.user.email || '',
           payment_id: data.id,
           order_id: orderId,
           transaction_id: transactionId,
-          receipt_url: receiptPublicUrl, // Send the full URL to N8n
-          amount: orderData.total_amount || 0,
+          receipt_url: receiptPublicUrl,
+          amount: (orderData.total_amount || 0).toString(),
           currency: 'PEN',
           payment_type: paymentType,
           payment_method: 'yape_qr'
-        };
+        });
 
-        console.log('🚀 Enviando notificación a N8n webhook:', n8nPayload);
-        console.log('🔗 URL del webhook:', n8nWebhookUrl);
+        const fullUrl = `${n8nWebhookUrl}?${n8nParams.toString()}`;
 
-        // Use POST method with JSON payload for N8n (from frontend/browser)
-        // Agregar mode: 'no-cors' para evitar problemas de CORS con localhost
-        const n8nResponse = await fetch(n8nWebhookUrl, {
-          method: 'POST',
-          mode: 'no-cors', // Importante para localhost
-          headers: { 
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify(n8nPayload)
+        console.log('🚀 Enviando notificación a N8n webhook (GET):', n8nParams.toString());
+        console.log('🔗 URL completa del webhook:', fullUrl);
+
+        // Usar GET method con parámetros de consulta para N8n
+        const n8nResponse = await fetch(fullUrl, {
+          method: 'GET',
+          mode: 'no-cors'
         });
 
         console.log('📊 Respuesta de N8n - Status:', n8nResponse.status);
