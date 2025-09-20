@@ -307,7 +307,8 @@ class CheckoutService {
         throw new Error(`Error al crear el registro de pago: ${error.message}`);
       }
 
-      console.log('Payment record created successfully:', data);
+      console.log('💾 Payment record created successfully:', data);
+      console.log('🎯 Iniciando envío de webhook a N8n...');
 
       // Send notification to n8n webhook for validation (from frontend)
       try {
@@ -326,11 +327,14 @@ class CheckoutService {
           payment_method: 'yape_qr'
         };
 
-        console.log('Sending payment notification to n8n:', n8nPayload);
+        console.log('🚀 Enviando notificación a N8n webhook:', n8nPayload);
+        console.log('🔗 URL del webhook:', n8nWebhookUrl);
 
         // Use POST method with JSON payload for N8n (from frontend/browser)
+        // Agregar mode: 'no-cors' para evitar problemas de CORS con localhost
         const n8nResponse = await fetch(n8nWebhookUrl, {
           method: 'POST',
+          mode: 'no-cors', // Importante para localhost
           headers: { 
             'Content-Type': 'application/json',
             'Accept': 'application/json'
@@ -338,13 +342,28 @@ class CheckoutService {
           body: JSON.stringify(n8nPayload)
         });
 
-        if (n8nResponse.ok) {
-          console.log('Payment notification sent to n8n successfully');
+        console.log('📊 Respuesta de N8n - Status:', n8nResponse.status);
+        console.log('📊 Respuesta de N8n - StatusText:', n8nResponse.statusText);
+        console.log('📊 Respuesta de N8n - Type:', n8nResponse.type);
+
+        // Con no-cors, no podemos leer la respuesta pero el request se envía
+        if (n8nResponse.type === 'opaque') {
+          console.log('✅ Webhook enviado a N8n (modo no-cors, respuesta opaca)');
+          console.log('📡 Si N8n está corriendo, debería haber recibido el payload');
+        } else if (n8nResponse.ok) {
+          console.log('✅ Payment notification sent to n8n successfully');
+          try {
+            const responseText = await n8nResponse.text();
+            console.log('📝 N8n response body:', responseText);
+          } catch (e) {
+            console.log('⚠️ Could not read N8n response body');
+          }
         } else {
-          console.warn('Failed to send notification to n8n:', n8nResponse.status);
+          console.warn('❌ Failed to send notification to n8n:', n8nResponse.status, n8nResponse.statusText);
         }
       } catch (n8nError) {
-        console.warn('Error triggering payment validation:', n8nError);
+        console.error('💥 Error enviando webhook a N8n:', n8nError);
+        console.error('💥 Error stack:', n8nError.stack);
         // Don't throw error here as the payment was already recorded
       }
 
