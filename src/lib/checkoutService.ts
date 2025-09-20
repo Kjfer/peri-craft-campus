@@ -304,6 +304,41 @@ class CheckoutService {
 
       console.log('Payment record created successfully:', data);
 
+      // Send notification to n8n webhook for validation
+      try {
+        const n8nWebhookUrl = 'http://localhost:5678/webhook-test/cd9a61b2-d84c-4517-9e0a-13f898148204';
+        const n8nPayload = {
+          user_id: user.data.user.id,
+          user_name: user.data.user.user_metadata?.full_name || '',
+          user_email: user.data.user.email || '',
+          payment_id: data.id,
+          order_id: orderId,
+          transaction_id: transactionId,
+          receipt_url: fileName,
+          amount: orderData.total_amount || 0,
+          currency: 'PEN',
+          payment_type: paymentType,
+          payment_method: 'yape_qr'
+        };
+
+        console.log('Sending payment notification to n8n:', n8nPayload);
+
+        const n8nResponse = await fetch(n8nWebhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(n8nPayload)
+        });
+
+        if (n8nResponse.ok) {
+          console.log('Payment notification sent to n8n successfully');
+        } else {
+          console.warn('Failed to send notification to n8n:', n8nResponse.status);
+        }
+      } catch (n8nError) {
+        console.warn('Error sending notification to n8n:', n8nError);
+        // Don't throw error here as the payment was already recorded
+      }
+
       return {
         success: true,
         payment: data,
@@ -524,6 +559,54 @@ class CheckoutService {
     };
   }
 
+  // Test n8n webhook connection
+  async testN8nWebhook() {
+    try {
+      const n8nWebhookUrl = 'http://localhost:5678/webhook-test/cd9a61b2-d84c-4517-9e0a-13f898148204';
+      
+      const testPayload = {
+        test: true,
+        timestamp: new Date().toISOString(),
+        message: 'Test connection from Peri Craft Campus'
+      };
+
+      console.log('Testing n8n webhook connection...');
+      
+      const response = await fetch(n8nWebhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(testPayload)
+      });
+
+      const result = {
+        success: response.ok,
+        status: response.status,
+        statusText: response.statusText,
+        url: n8nWebhookUrl
+      };
+
+      if (response.ok) {
+        try {
+          const responseData = await response.json();
+          result.data = responseData;
+        } catch (e) {
+          result.data = await response.text();
+        }
+      }
+
+      console.log('N8n webhook test result:', result);
+      return result;
+      
+    } catch (error: any) {
+      console.error('N8n webhook test failed:', error);
+      return {
+        success: false,
+        error: error.message,
+        url: 'http://localhost:5678/webhook-test/cd9a61b2-d84c-4517-9e0a-13f898148204'
+      };
+    }
+  }
+
   // Obtener suscripciones disponibles
   async getAvailableSubscriptions() {
     try {
@@ -614,7 +697,44 @@ export const confirmManualPayment = async (
       duration_months: item.subscription?.duration_months || 1
     }));
 
-    // 3. Create a temporary payment record for validation process
+    // 3. Determinar tipo de items y preparar payload para n8n
+    const itemType = subscriptions.length > 0 ? 'mixed' : 'courses';
+    
+    // 4. Preparar payload para n8n webhook
+    const n8nWebhookUrl = 'http://localhost:5678/webhook-test/cd9a61b2-d84c-4517-9e0a-13f898148204';
+    const payload = {
+      user_id: user.id,
+      user_name: user.user_metadata?.full_name || '',
+      user_email: user.email,
+      receipt_url: receiptUrl,
+      operation_code: operationCode,
+      order_id: orderId || '',
+      amount: totalAmount,
+      currency: 'PEN',
+      courses,
+      subscriptions,
+      item_type: itemType
+    };
+
+    console.log('Sending payload to n8n webhook:', payload);
+
+    // 5. Enviar POST al webhook de n8n
+    const response = await fetch(n8nWebhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Sin respuesta del servidor');
+      console.error('N8n webhook error:', response.status, errorText);
+      throw new Error(`No se pudo enviar la validación: ${response.status} - ${errorText}`);
+    }
+
+    const n8nResponse = await response.json().catch(() => ({}));
+    console.log('N8n webhook response:', n8nResponse);
+
+    // 6. Create a temporary payment record for tracking
     const paymentData = {
       payment_method: 'yape_qr',
       payment_provider_id: operationCode,
@@ -633,16 +753,17 @@ export const confirmManualPayment = async (
 
     if (paymentError) {
       console.error('Payment record error:', paymentError);
-      throw new Error(`Error al crear registro de pago: ${paymentError.message}`);
+      console.warn('Payment sent to n8n but could not create local record');
     }
 
-    // 4. Retornar resultado exitoso
+    // 7. Retornar resultado exitoso
     return {
       success: true,
       message: 'Comprobante enviado para validación.',
-      itemType: subscriptions.length > 0 ? 'mixed' : 'courses',
+      itemType,
       payment: paymentRecord,
-      receiptUrl
+      receiptUrl,
+      n8nResponse
     };
 
   } catch (error: any) {

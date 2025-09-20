@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { checkoutService } from './checkoutService';
 
 // Debug utility to test receipt upload functionality
 export const debugReceiptUpload = async () => {
@@ -95,6 +96,38 @@ export const debugReceiptUpload = async () => {
     return { 
       success: false, 
       error: `Unexpected error: ${error instanceof Error ? error.message : 'Unknown error'}`
+    };
+  }
+};
+
+// Test n8n webhook connection
+export const testN8nWebhook = async () => {
+  try {
+    console.log('=== TESTING N8N WEBHOOK ===');
+    
+    const result = await checkoutService.testN8nWebhook();
+    
+    if (result.success) {
+      console.log('✅ N8n webhook is responding');
+      return {
+        success: true,
+        message: 'N8n webhook connection successful',
+        details: result
+      };
+    } else {
+      console.error('❌ N8n webhook test failed:', result);
+      return {
+        success: false,
+        error: `Webhook test failed: ${(result as any).error || 'Connection failed'}`,
+        details: result
+      };
+    }
+    
+  } catch (error) {
+    console.error('❌ N8n webhook test error:', error);
+    return {
+      success: false,
+      error: `N8n test error: ${error instanceof Error ? error.message : 'Unknown error'}`
     };
   }
 };

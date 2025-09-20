@@ -14,7 +14,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/hooks/use-toast';
 import { checkoutService, CheckoutItem, confirmManualPayment } from '@/lib/checkoutService';
-import { debugReceiptUpload, testFileUpload } from '@/lib/debugReceiptUpload';
+import { debugReceiptUpload, testFileUpload, testN8nWebhook } from '@/lib/debugReceiptUpload';
 import { supabase } from '@/integrations/supabase/client';
 import yapeQRImage from '@/assets/yape-qr-placeholder.jpeg';
 
@@ -281,6 +281,38 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
       setDebugResults({ success: false, error: error.message });
       toast({
         title: "Debug Test Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Test n8n webhook connection
+  const handleWebhookTest = async () => {
+    try {
+      setLoading(true);
+      console.log('🧪 Testing n8n webhook connection...');
+      const result = await testN8nWebhook();
+      setDebugResults(result);
+      
+      if (result.success) {
+        toast({
+          title: "Webhook Test Passed",
+          description: "N8n webhook is responding correctly",
+        });
+      } else {
+        toast({
+          title: "Webhook Test Failed",
+          description: result.error,
+          variant: "destructive"
+        });
+      }
+    } catch (error: any) {
+      setDebugResults({ success: false, error: error.message });
+      toast({
+        title: "Webhook Test Error",
         description: error.message,
         variant: "destructive"
       });
@@ -676,7 +708,15 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
                           onClick={handleDebugTest}
                           disabled={loading}
                         >
-                          Probar Sistema de Upload
+                          Probar Upload
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={handleWebhookTest}
+                          disabled={loading}
+                        >
+                          Probar N8n
                         </Button>
                         <Button 
                           size="sm" 
