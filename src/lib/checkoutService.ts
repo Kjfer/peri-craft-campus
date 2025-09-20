@@ -285,27 +285,71 @@ class CheckoutService {
 
       console.log('Creating payment record for order:', orderId, 'type:', paymentType);
 
-      // Create payment record with the full URL
-      const paymentData = {
-        order_id: orderId,
-        payment_method: 'yape_qr',
-        payment_provider_id: transactionId,
-        receipt_url: receiptPublicUrl, // Use full URL instead of just filename
-        user_id: user.data.user.id,
-        amount: orderData.total_amount || 0,
-        currency: 'PEN'
-      };
-
-      const { data, error } = await supabase
+      // Update existing payment record instead of creating a new one
+      console.log('🔍 Looking for existing payment for order:', orderId);
+      
+      // Find existing payment record
+      const { data: existingPayment, error: findError } = await supabase
         .from('payments')
-        .insert(paymentData)
-        .select()
+        .select('*')
+        .eq('order_id', orderId)
+        .order('created_at', { ascending: false })
+        .limit(1)
         .single();
 
-      if (error) {
-        console.error('Payment insert error:', error);
-        throw new Error(`Error al crear el registro de pago: ${error.message}`);
+      if (findError && findError.code !== 'PGRST116') {
+        console.error('Error finding payment:', findError);
+        throw new Error(`Error al buscar el registro de pago: ${findError.message}`);
       }
+
+      let data;
+      if (existingPayment) {
+        // Update existing payment
+        console.log('📝 Updating existing payment:', existingPayment.id);
+        const { data: updatedPayment, error } = await supabase
+          .from('payments')
+          .update({
+            payment_provider_id: transactionId,
+            receipt_url: receiptPublicUrl,
+            payment_provider: 'yape',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingPayment.id)
+          .select()
+          .single();
+
+        if (error) {
+          console.error('Payment update error:', error);
+          throw new Error(`Error al actualizar el registro de pago: ${error.message}`);
+        }
+        data = updatedPayment;
+      } else {
+        // Create new payment if none exists (fallback)
+        console.log('➕ Creating new payment record');
+        const paymentData = {
+          order_id: orderId,
+          payment_method: 'yape_qr',
+          payment_provider: 'yape',
+          payment_provider_id: transactionId,
+          receipt_url: receiptPublicUrl,
+          user_id: user.data.user.id,
+          amount: orderData.total_amount || 0,
+          currency: 'PEN'
+        };
+
+        const { data: newPayment, error } = await supabase
+          .from('payments')
+          .insert(paymentData)
+          .select()
+          .single();
+
+        if (error) {
+          console.error('Payment insert error:', error);
+          throw new Error(`Error al crear el registro de pago: ${error.message}`);
+        }
+        data = newPayment;
+      }
+
 
       console.log('💾 Payment record created successfully:', data);
       console.log('🎯 Iniciando envío de webhook a N8n...');
