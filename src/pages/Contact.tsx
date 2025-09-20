@@ -31,18 +31,19 @@ export default function Contact() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  // URL del webhook de n8n (configurar aquí cuando esté disponible)
-  const N8N_WEBHOOK_URL = "";
+  // Configurable webhook URL (can be set via admin settings)
+  const WEBHOOK_URL = "";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      // Si tienes el webhook, colócalo en N8N_WEBHOOK_URL
-      if (N8N_WEBHOOK_URL) {
-        await fetch(N8N_WEBHOOK_URL, {
+      // If webhook is configured, send the data
+      if (WEBHOOK_URL) {
+        await fetch(WEBHOOK_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          mode: "no-cors",
           body: JSON.stringify(formData),
         });
       } else {

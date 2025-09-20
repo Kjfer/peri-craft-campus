@@ -561,10 +561,12 @@ class CheckoutService {
     };
   }
 
-  // Test n8n webhook connection
-  async testN8nWebhook() {
+  // Test webhook connection
+  async testWebhook(webhookUrl: string) {
     try {
-      const n8nWebhookUrl = 'http://localhost:5678/webhook-test/cd9a61b2-d84c-4517-9e0a-13f898148204';
+      if (!webhookUrl) {
+        throw new Error('Webhook URL is required');
+      }
       
       const testPayload = {
         test: true,
@@ -572,39 +574,29 @@ class CheckoutService {
         message: 'Test connection from Peri Craft Campus'
       };
 
-      console.log('Testing n8n webhook connection...');
+      console.log('Testing webhook connection...');
       
-      const response = await fetch(n8nWebhookUrl, {
+      const response = await fetch(webhookUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        mode: 'no-cors',
         body: JSON.stringify(testPayload)
       });
 
-      const result: any = {
-        success: response.ok,
-        status: response.status,
-        statusText: response.statusText,
-        url: n8nWebhookUrl
+      // Since we're using no-cors, we won't get a proper response status
+      console.log('Webhook test request sent');
+      return {
+        success: true,
+        message: 'Request sent to webhook. Check your automation platform for confirmation.',
+        url: webhookUrl
       };
-
-      if (response.ok) {
-        try {
-          const responseData = await response.json();
-          result.data = responseData;
-        } catch (e) {
-          result.data = await response.text();
-        }
-      }
-
-      console.log('N8n webhook test result:', result);
-      return result;
       
     } catch (error: any) {
-      console.error('N8n webhook test failed:', error);
+      console.error('Webhook test failed:', error);
       return {
         success: false,
         error: error.message,
-        url: 'http://localhost:5678/webhook-test/cd9a61b2-d84c-4517-9e0a-13f898148204'
+        url: webhookUrl
       };
     }
   }
