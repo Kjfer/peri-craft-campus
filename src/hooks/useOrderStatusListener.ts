@@ -11,9 +11,15 @@ export function useOrderStatusListener(orderId: string, onError?: (msg: string) 
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!orderId) return;
+    if (!orderId) {
+      console.log('⚠️ useOrderStatusListener: No orderId provided');
+      return;
+    }
+    
+    console.log('🔄 Setting up realtime listener for order:', orderId);
+    
     const channel = supabase
-      .channel('order-status')
+      .channel(`order-status-${orderId}`)
       .on(
         'postgres_changes',
         {
@@ -24,18 +30,25 @@ export function useOrderStatusListener(orderId: string, onError?: (msg: string) 
         },
         (payload) => {
           const newStatus = payload.new.payment_status;
-          console.log('🔄 Payment status changed:', { orderId, newStatus, payload: payload.new });
+          const rejectionReason = payload.new.rejection_reason;
+          
+          console.log('🔄 Payment status changed:', { 
+            orderId, 
+            newStatus, 
+            rejectionReason,
+            oldStatus: payload.old?.payment_status,
+            fullPayload: payload.new 
+          });
           
           if (newStatus === successStatus) {
             console.log('✅ Payment successful, redirecting to success page');
             navigate(`/checkout/success/${orderId}`);
           } else if (newStatus === 'rejected' || newStatus === 'failed' || newStatus === 'error') {
-            console.log('❌ Payment rejected/failed:', newStatus);
+            console.log('❌ Payment rejected/failed:', { newStatus, rejectionReason });
             if (onError) {
-              const rejectionReason = payload.new.rejection_reason;
               let errorMessage = 'No pudimos validar tu pago. Por favor revisa tu comprobante o contacta a soporte.';
               
-              if (rejectionReason === 'comprobante_incorrecto') {
+              if (rejectionReason === 'comprobante_incorrecto' || rejectionReason === 'comprobante_invalido') {
                 errorMessage = 'El comprobante no coincide con los datos de tu orden (monto, código de operación o número Yape). Por favor verifica la información y sube un comprobante correcto.';
               } else if (rejectionReason === 'error_validacion') {
                 errorMessage = 'Hubo un problema técnico al validar tu pago. Por favor contacta a nuestro equipo de soporte para resolver este inconveniente.';
@@ -47,12 +60,21 @@ export function useOrderStatusListener(orderId: string, onError?: (msg: string) 
               
               console.log('📝 Calling onError with message:', errorMessage);
               onError(errorMessage);
+            } else {
+              console.log('⚠️ No onError callback provided');
             }
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('📡 Realtime subscription status:', { orderId, status });
+      });
+      
+    // Log initial connection
+    console.log('🎯 Realtime channel created for order:', orderId);
+    
     return () => {
+      console.log('🔌 Removing realtime channel for order:', orderId);
       supabase.removeChannel(channel);
     };
   }, [orderId, navigate, onError, successStatus]);
