@@ -132,10 +132,24 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
     return;
   }
 
-  // For Yape QR, show QR code and form
+  // For Yape QR, create order first and then show QR code
   if (selectedPaymentMethod === 'yape_qr') {
-    setStep('yape_qr');
-    return;
+    console.log('🔍 Creating order for Yape QR payment...');
+    try {
+      const result = await checkoutService.startCheckoutFromCart(items, 'yape_qr');
+      
+      if (result.success && result.order) {
+        setCurrentOrder(result.order);
+        setStep('yape_qr');
+        console.log('✅ Order created for Yape QR:', result.order);
+      } else {
+        throw new Error('Error creating order for Yape QR');
+      }
+      return;
+    } catch (error) {
+      console.error('Error creating Yape QR order:', error);
+      throw error;
+    }
   }
 
       const result = await checkoutService.startCheckoutFromCart(items, backendMethod);
