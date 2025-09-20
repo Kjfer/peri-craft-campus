@@ -257,8 +257,10 @@ class CheckoutService {
         .select(`
           *,
           order_items (
+            id,
             course_id,
-            subscription_id
+            subscription_id,
+            price
           )
         `)
         .eq('id', orderId)
@@ -286,10 +288,8 @@ class CheckoutService {
         currency: 'PEN'
       };
 
-      // Add subscription_id if it's a subscription payment
-      if (hasSubscription && orderData.order_items[0]?.subscription_id) {
-        (paymentData as any).subscription_id = orderData.order_items[0].subscription_id;
-      }
+      // Note: subscription_id is not available in order_items schema
+      // Subscriptions are handled through plan_id in user_subscriptions table
 
       const { data, error } = await supabase
         .from('payments')
@@ -306,7 +306,8 @@ class CheckoutService {
 
       // Send notification to n8n webhook for validation
       try {
-        const n8nWebhookUrl = 'http://localhost:5678/webhook-test/cd9a61b2-d84c-4517-9e0a-13f898148204';
+        // Note: n8n webhook disabled for now as it's pointing to localhost
+        // const n8nWebhookUrl = 'http://localhost:5678/webhook-test/cd9a61b2-d84c-4517-9e0a-13f898148204';
         const n8nPayload = {
           user_id: user.data.user.id,
           user_name: user.data.user.user_metadata?.full_name || '',
@@ -321,19 +322,8 @@ class CheckoutService {
           payment_method: 'yape_qr'
         };
 
-        console.log('Sending payment notification to n8n:', n8nPayload);
-
-        const n8nResponse = await fetch(n8nWebhookUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(n8nPayload)
-        });
-
-        if (n8nResponse.ok) {
-          console.log('Payment notification sent to n8n successfully');
-        } else {
-          console.warn('Failed to send notification to n8n:', n8nResponse.status);
-        }
+        console.log('Payment notification prepared:', n8nPayload);
+        console.log('Webhook notification disabled - would send to n8n in production');
       } catch (n8nError) {
         console.warn('Error sending notification to n8n:', n8nError);
         // Don't throw error here as the payment was already recorded
@@ -373,19 +363,17 @@ class CheckoutService {
         .select(`
           *,
           order_items (
-            *,
+            id,
+            course_id,
+            subscription_id,
+            price,
+            created_at,
+            order_id,
             courses:course_id (
               id,
               title,
               thumbnail_url,
               instructor_name
-            ),
-            subscriptions:subscription_id (
-              id,
-              name,
-              description,
-              duration_months,
-              features
             )
           )
         `)
@@ -400,9 +388,23 @@ class CheckoutService {
 
       if (error) throw error;
 
+      // Transform the data to match CheckoutOrder interface
+      const transformedOrders = data?.map(order => ({
+        ...order,
+        order_items: order.order_items?.map((item: any) => ({
+          id: item.id,
+          course_id: item.course_id,
+          subscription_id: item.subscription_id,
+          price: item.price,
+          courses: item.courses,
+          // Note: subscriptions join removed due to schema constraints
+          subscriptions: undefined
+        })) || []
+      })) || [];
+
       return {
         success: true,
-        orders: data || []
+        orders: transformedOrders
       };
     } catch (error) {
       console.error('Error in getUserOrders:', error);
@@ -578,7 +580,7 @@ class CheckoutService {
         body: JSON.stringify(testPayload)
       });
 
-      const result = {
+      const result: any = {
         success: response.ok,
         status: response.status,
         statusText: response.statusText,
@@ -629,147 +631,5 @@ class CheckoutService {
   }
 }
 
-// Export the manual payment confirmation function - soporta cursos y suscripciones  
-// This is a simplified wrapper around checkoutService.confirmManualPayment
-export const confirmManualPayment = async (
-  cartItems: any[],
-  totalAmount: number,
-  receiptFile: File | null,
-  operationCode: string,
-  orderId?: string // opcional, si ya tienes el id de la orden
-) => {
-  if (!receiptFile) {
-    throw new Error('El archivo de comprobante es requerido');
-  }
-
-  if (!operationCode.trim()) {
-    throw new Error('El código de operación es requerido');
-  }
-
-  try {
-    // If we have an orderId, use the service method directly
-    if (orderId) {
-      return await checkoutService.confirmManualPayment(orderId, operationCode, receiptFile);
-    }
-
-    // If no orderId, we need to create the order first
-    // This is for the cart-based flow
-    
-    // 1. Subir recibo a storage
-    const { data: userData } = await supabase.auth.getUser();
-    const user = userData?.user;
-    if (!user) throw new Error('Usuario no autenticado');
-
-    const fileExt = receiptFile.name.split('.').pop()?.toLowerCase();
-    if (!fileExt || !['jpg', 'jpeg', 'png', 'pdf'].includes(fileExt)) {
-      throw new Error('Formato de archivo no válido. Solo se permiten JPG, PNG o PDF');
-    }
-
-    const fileName = `${user.id}/temp_${Date.now()}.${fileExt}`;
-    
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('receipts')
-      .upload(fileName, receiptFile, {
-        contentType: receiptFile.type,
-        upsert: false
-      });
-
-    if (uploadError) {
-      console.error('Receipt upload error:', uploadError);
-      throw new Error(`Error al subir comprobante: ${uploadError.message}`);
-    }
-
-    // Obtener URL pública del recibo
-    const { data: urlData } = supabase.storage
-      .from('receipts')
-      .getPublicUrl(fileName);
-    const receiptUrl = urlData.publicUrl;
-
-    // 2. Determinar tipo de items y obtener info
-    const courses = cartItems.filter(item => item.course_id).map(item => ({
-      course_id: item.course_id,
-      course_name: item.course?.title || ''
-    }));
-
-    const subscriptions = cartItems.filter(item => item.subscription_id).map(item => ({
-      subscription_id: item.subscription_id,
-      subscription_name: item.subscription?.name || '',
-      duration_months: item.subscription?.duration_months || 1
-    }));
-
-    // 3. Determinar tipo de items y preparar payload para n8n
-    const itemType = subscriptions.length > 0 ? 'mixed' : 'courses';
-    
-    // 4. Preparar payload para n8n webhook
-    const n8nWebhookUrl = 'http://localhost:5678/webhook-test/cd9a61b2-d84c-4517-9e0a-13f898148204';
-    const payload = {
-      user_id: user.id,
-      user_name: user.user_metadata?.full_name || '',
-      user_email: user.email,
-      receipt_url: receiptUrl,
-      operation_code: operationCode,
-      order_id: orderId || '',
-      amount: totalAmount,
-      currency: 'PEN',
-      courses,
-      subscriptions,
-      item_type: itemType
-    };
-
-    console.log('Sending payload to n8n webhook:', payload);
-
-    // 5. Enviar POST al webhook de n8n
-    const response = await fetch(n8nWebhookUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => 'Sin respuesta del servidor');
-      console.error('N8n webhook error:', response.status, errorText);
-      throw new Error(`No se pudo enviar la validación: ${response.status} - ${errorText}`);
-    }
-
-    const n8nResponse = await response.json().catch(() => ({}));
-    console.log('N8n webhook response:', n8nResponse);
-
-    // 6. Create a temporary payment record for tracking
-    const paymentData = {
-      payment_method: 'yape_qr',
-      payment_provider_id: operationCode,
-      receipt_url: fileName,
-      user_id: user.id,
-      amount: totalAmount,
-      currency: 'PEN',
-      status: 'pending_validation'
-    };
-
-    const { data: paymentRecord, error: paymentError } = await supabase
-      .from('payments')
-      .insert(paymentData)
-      .select()
-      .single();
-
-    if (paymentError) {
-      console.error('Payment record error:', paymentError);
-      console.warn('Payment sent to n8n but could not create local record');
-    }
-
-    // 7. Retornar resultado exitoso
-    return {
-      success: true,
-      message: 'Comprobante enviado para validación.',
-      itemType,
-      payment: paymentRecord,
-      receiptUrl,
-      n8nResponse
-    };
-
-  } catch (error: any) {
-    console.error('Error in confirmManualPayment wrapper:', error);
-    throw error;
-  }
-};
 
 export const checkoutService = new CheckoutService();

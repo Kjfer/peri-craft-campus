@@ -13,7 +13,7 @@ import { Loader2, CreditCard, Smartphone, DollarSign, CheckCircle, AlertTriangle
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/hooks/use-toast';
-import { checkoutService, CheckoutItem, confirmManualPayment } from '@/lib/checkoutService';
+import { checkoutService, CheckoutItem } from '@/lib/checkoutService';
 import { debugReceiptUpload, testFileUpload, testN8nWebhook } from '@/lib/debugReceiptUpload';
 import { supabase } from '@/integrations/supabase/client';
 import yapeQRImage from '@/assets/yape-qr-placeholder.jpeg';
@@ -209,12 +209,11 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
         console.log('✅ File upload test passed');
       }
 
-      const items = getCheckoutItems();
-      const result = await confirmManualPayment(
-        items,
-        total.amount,
-        receiptFile,
-        transactionId
+      // Use checkoutService.confirmManualPayment method instead
+      const result = await checkoutService.confirmManualPayment(
+        currentOrder.id,
+        transactionId,
+        receiptFile
       );
       
       if (result.success) {
