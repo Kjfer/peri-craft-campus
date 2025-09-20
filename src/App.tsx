@@ -43,6 +43,10 @@ import Settings from "./pages/admin/Settings";
 import PlanManagement from "./pages/admin/PlanManagement";
 import SecurityDashboard from "./components/admin/SecurityDashboard";
 import ConfirmEmail from "./pages/ConfirmEmail";
+import Subscriptions from "./pages/Subscriptions";
+import SubscriptionCheckout from "./pages/SubscriptionCheckout";
+import MySubscriptions from "./pages/MySubscriptions";
+import NotificationCenter from "./pages/NotificationCenter";
 
 const queryClient = new QueryClient();
 
@@ -68,6 +72,10 @@ const App = () => (
             <Route path="/learn/:courseId/lesson/:lessonId" element={<LearningPlatform />} />
                   <Route path="/curso/:id" element={<CourseDetail />} />
                   <Route path="/planes" element={<Plans />} />
+                  <Route path="/subscriptions" element={<Subscriptions />} />
+                  <Route path="/subscription-checkout" element={<SubscriptionCheckout />} />
+                  <Route path="/my-subscriptions" element={<MySubscriptions />} />
+                  <Route path="/notifications" element={<NotificationCenter />} />
                   <Route path="/nosotros" element={<About />} />
                   <Route path="/contacto" element={<Contact />} />
                   <Route path="/clases-en-vivo" element={<ClasesEnVivo />} />

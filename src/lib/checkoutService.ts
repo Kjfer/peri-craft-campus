@@ -2,7 +2,8 @@ import { supabase } from "@/integrations/supabase/client";
 
 // Servicio de checkout para manejar todo el flujo de pagos
 export interface CheckoutItem {
-  course_id: string;
+  course_id?: string;
+  subscription_id?: string;
   course?: {
     id: string;
     title: string;
@@ -11,6 +12,14 @@ export interface CheckoutItem {
     instructor_name: string;
     level: string;
     duration_hours: number;
+  };
+  subscription?: {
+    id: string;
+    name: string;
+    price: number;
+    description: string;
+    duration_months: number;
+    features: string[];
   };
 }
 
@@ -24,13 +33,21 @@ export interface CheckoutOrder {
   created_at: string;
   order_items: Array<{
     id: string;
-    course_id: string;
+    course_id?: string;
+    subscription_id?: string;
     price: number;
     courses?: {
       id: string;
       title: string;
       thumbnail_url?: string;
       instructor_name: string;
+    };
+    subscriptions?: {
+      id: string;
+      name: string;
+      description: string;
+      duration_months: number;
+      features: string[];
     };
   }>;
 }
@@ -41,19 +58,42 @@ export interface PaymentConfirmation {
 }
 
 class CheckoutService {
-  // Iniciar checkout desde el carrito
+  // Iniciar checkout desde el carrito - soporta cursos y suscripciones
   async startCheckoutFromCart(cartItems: CheckoutItem[], paymentMethod: string) {
     try {
+      // Separar items por tipo
+      const courseItems = cartItems.filter(item => item.course_id);
+      const subscriptionItems = cartItems.filter(item => item.subscription_id);
+
+      // Calcular total
+      const courseTotal = courseItems.reduce((sum, item) => sum + (item.course?.price || 0), 0);
+      const subscriptionTotal = subscriptionItems.reduce((sum, item) => sum + (item.subscription?.price || 0), 0);
+      const totalAmount = courseTotal + subscriptionTotal;
+
+      // Preparar items para el backend
+      const items = [
+        ...courseItems.map(item => ({
+          id: item.course_id!,
+          type: 'course',
+          title: item.course?.title || '',
+          price: item.course?.price || 0,
+          instructor_name: item.course?.instructor_name || '',
+          thumbnail_url: item.course?.thumbnail_url || ''
+        })),
+        ...subscriptionItems.map(item => ({
+          id: item.subscription_id!,
+          type: 'subscription',
+          title: item.subscription?.name || '',
+          price: item.subscription?.price || 0,
+          description: item.subscription?.description || '',
+          duration_months: item.subscription?.duration_months || 1
+        }))
+      ];
+
       const { data, error } = await supabase.functions.invoke('create-payment', {
         body: {
-          cartItems: cartItems.map(item => ({
-            id: item.course_id,
-            title: item.course?.title || '',
-            price: item.course?.price || 0,
-            instructor_name: item.course?.instructor_name || '',
-            thumbnail_url: item.course?.thumbnail_url || ''
-          })),
-          totalAmount: cartItems.reduce((sum, item) => sum + (item.course?.price || 0), 0),
+          items: items,
+          totalAmount: totalAmount,
           paymentMethod: paymentMethod,
           paymentData: {
             user: {
@@ -99,8 +139,86 @@ class CheckoutService {
     return this.startCheckoutFromCart([checkoutItem], paymentMethod);
   }
 
-  // Confirmar pago manual (Yape QR)
-  async confirmManualPayment(orderId: string, transactionId: string, receiptFile: File) {
+  // Iniciar checkout de una suscripción
+  async startSubscriptionCheckout(subscriptionId: string, subscriptionData: any, paymentMethod: string) {
+    const checkoutItem: CheckoutItem = {
+      subscription_id: subscriptionId,
+      subscription: {
+        id: subscriptionData.id,
+        name: subscriptionData.name,
+        price: subscriptionData.price || 0,
+        description: subscriptionData.description,
+        duration_months: subscriptionData.duration_months,
+        features: subscriptionData.features || []
+      }
+    };
+
+    return this.startCheckoutFromCart([checkoutItem], paymentMethod);
+  }
+
+  // Procesar pago de PayPal para suscripciones
+  async processPayPalSubscriptionPayment(subscriptionId: string, subscriptionData: any) {
+    try {
+      const response = await fetch('/api/payments/create-intent/subscription', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+        },
+        body: JSON.stringify({
+          subscription_id: subscriptionId,
+          payment_method: 'paypal'
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create PayPal subscription payment');
+      }
+
+      const data = await response.json();
+      return {
+        success: true,
+        paymentData: data,
+        redirectUrl: data.approval_url
+      };
+    } catch (error) {
+      console.error('PayPal subscription payment error:', error);
+      throw error;
+    }
+  }
+
+  // Procesar pago de Google Pay para suscripciones
+  async processGooglePaySubscriptionPayment(subscriptionId: string, subscriptionData: any, paymentData: any) {
+    try {
+      const response = await fetch('/api/payments/googlepay/subscription', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
+        },
+        body: JSON.stringify({
+          subscription_id: subscriptionId,
+          payment_data: paymentData
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to process Google Pay subscription payment');
+      }
+
+      const data = await response.json();
+      return {
+        success: true,
+        paymentResult: data
+      };
+    } catch (error) {
+      console.error('Google Pay subscription payment error:', error);
+      throw error;
+    }
+  }
+
+  // Confirmar pago manual (Yape QR) - soporta cursos y suscripciones
+  async confirmManualPayment(orderId: string, transactionId: string, receiptFile: File, itemType?: 'course' | 'subscription') {
     try {
       // Upload receipt to storage with user folder structure
       const user = await supabase.auth.getUser();
@@ -115,6 +233,25 @@ class CheckoutService {
 
       if (uploadError) throw uploadError;
 
+      // Get order details to determine if it's course or subscription
+      const { data: orderData, error: orderError } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          order_items (
+            course_id,
+            subscription_id
+          )
+        `)
+        .eq('id', orderId)
+        .single();
+
+      if (orderError) throw orderError;
+
+      // Determine payment type based on order items
+      const hasSubscription = orderData.order_items.some((item: any) => item.subscription_id);
+      const paymentType = hasSubscription ? 'subscription' : 'course';
+
       // Create payment record
       const { data, error } = await supabase
         .from('payments')
@@ -124,8 +261,10 @@ class CheckoutService {
           payment_provider_id: transactionId,
           receipt_url: fileName,
           user_id: user.data.user.id,
-          amount: 0, // Will be updated by n8n workflow
-          currency: 'PEN'
+          amount: orderData.total_amount || 0,
+          currency: 'PEN',
+          // Add subscription_id if it's a subscription payment
+          ...(hasSubscription && { subscription_id: orderData.order_items[0].subscription_id })
         })
         .select()
         .single();
@@ -135,6 +274,7 @@ class CheckoutService {
       return {
         success: true,
         payment: data,
+        paymentType,
         message: 'Comprobante subido. El pago será validado en breve.'
       };
     } catch (error) {
@@ -143,7 +283,7 @@ class CheckoutService {
     }
   }
 
-  // Obtener órdenes del usuario
+  // Obtener órdenes del usuario - incluye cursos y suscripciones
   async getUserOrders(page = 1, limit = 10, status?: string) {
     try {
       let query = supabase
@@ -157,6 +297,13 @@ class CheckoutService {
               title,
               thumbnail_url,
               instructor_name
+            ),
+            subscriptions:subscription_id (
+              id,
+              name,
+              description,
+              duration_months,
+              features
             )
           )
         `)
@@ -181,7 +328,7 @@ class CheckoutService {
     }
   }
 
-  // Obtener detalles de una orden específica
+  // Obtener detalles de una orden específica - incluye cursos y suscripciones
   async getOrderDetails(orderId: string) {
     try {
       const { data, error } = await supabase
@@ -195,6 +342,13 @@ class CheckoutService {
               title,
               thumbnail_url,
               instructor_name
+            ),
+            subscriptions:subscription_id (
+              id,
+              name,
+              description,
+              duration_months,
+              features
             )
           )
         `)
@@ -235,7 +389,7 @@ class CheckoutService {
   }
 
   // Obtener métodos de pago disponibles para el usuario
-  async getAvailablePaymentMethods(): Promise<Array<{
+  async getAvailablePaymentMethods(itemType?: 'course' | 'subscription'): Promise<Array<{
     id: string;
     name: string;
     icon: string;
@@ -268,22 +422,24 @@ class CheckoutService {
     ];
 
     if (canUsePeruvian) {
-      baseMethods.push(
-        {
-          id: 'yape_qr',
-          name: 'Yape QR',
-          icon: '📱',
-          type: 'manual_payment',
-          description: 'Escanea el QR y sube tu comprobante'
-        },
-        {
+      baseMethods.push({
+        id: 'yape_qr',
+        name: 'Yape QR',
+        icon: '📱',
+        type: 'manual_payment',
+        description: 'Escanea el QR y sube tu comprobante'
+      });
+
+      // Solo agregar MercadoPago para cursos, no para suscripciones
+      if (itemType !== 'subscription') {
+        baseMethods.push({
           id: 'mercadopago',
           name: 'MercadoPago',
           icon: '🏦',
-          type: 'digital_wallet',
-          description: 'Tarjetas de crédito y débito via MercadoPago'
-        }
-      );
+          type: 'external_payment',
+          description: 'Paga con tarjetas mediante enlace seguro'
+        });
+      }
     }
 
     return baseMethods;
@@ -305,9 +461,10 @@ class CheckoutService {
     return usdAmount * 3.75; // Tasa de cambio fija
   }
 
-  // Obtener precio en la moneda correcta según el método de pago
-  getPriceForPaymentMethod(usdPrice: number, paymentMethod: string) {
-    if (paymentMethod === 'mercadopago') {
+  // Obtener precio en la moneda correcta según el método de pago - soporta cursos y suscripciones
+  getPriceForPaymentMethod(usdPrice: number, paymentMethod: string, itemType?: 'course' | 'subscription') {
+    // MercadoPago solo funciona con cursos (no suscripciones)
+    if (paymentMethod === 'mercadopago' && itemType !== 'subscription') {
       return {
         amount: this.convertToPEN(usdPrice),
         currency: 'PEN'
@@ -319,9 +476,30 @@ class CheckoutService {
       currency: 'USD'
     };
   }
+
+  // Obtener suscripciones disponibles
+  async getAvailableSubscriptions() {
+    try {
+      const { data, error } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('is_active', true)
+        .order('price', { ascending: true });
+
+      if (error) throw error;
+
+      return {
+        success: true,
+        subscriptions: data || []
+      };
+    } catch (error) {
+      console.error('Error fetching subscriptions:', error);
+      throw error;
+    }
+  }
 }
 
-// Export the manual payment confirmation function
+// Export the manual payment confirmation function - soporta cursos y suscripciones
 export const confirmManualPayment = async (
   cartItems: any[],
   totalAmount: number,
@@ -353,11 +531,16 @@ export const confirmManualPayment = async (
   const user = userData?.user;
   if (!user) throw new Error('User not authenticated');
 
-  // 3. Obtener info de cursos
-  // cartItems: [{ course_id, course: { id, title, ... } }, ...]
-  const courses = cartItems.map(item => ({
+  // 3. Determinar tipo de items y obtener info
+  const courses = cartItems.filter(item => item.course_id).map(item => ({
     course_id: item.course_id,
     course_name: item.course?.title || ''
+  }));
+
+  const subscriptions = cartItems.filter(item => item.subscription_id).map(item => ({
+    subscription_id: item.subscription_id,
+    subscription_name: item.subscription?.name || '',
+    duration_months: item.subscription?.duration_months || 1
   }));
 
   // 4. Preparar payload para n8n
@@ -371,7 +554,9 @@ export const confirmManualPayment = async (
     order_id: orderId || '',
     amount: totalAmount,
     currency: 'PEN',
-    courses
+    courses,
+    subscriptions, // Nuevo campo para suscripciones
+    item_type: subscriptions.length > 0 ? 'mixed' : 'courses' // Indicar tipo de compra
   };
 
   // 5. Enviar POST al webhook de n8n
@@ -388,7 +573,8 @@ export const confirmManualPayment = async (
   // 6. Retornar resultado
   return {
     success: true,
-    message: 'Comprobante enviado para validación. Recibirás confirmación por email o WhatsApp.'
+    message: 'Comprobante enviado para validación.',
+    itemType: payload.item_type
   };
 };
 

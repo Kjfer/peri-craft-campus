@@ -16,7 +16,9 @@ const enrollmentRoutes = require('./routes/enrollments');
 const certificateRoutes = require('./routes/certificates');
 const paymentRoutes = require('./routes/payments');
 const subscriptionRoutes = require('./routes/subscriptions');
+const notificationRoutes = require('./routes/notifications');
 const adminRoutes = require('./routes/admin');
+const cronAdminRoutes = require('./routes/cronAdmin');
 const uploadRoutes = require('./routes/upload');
 const cartRoutes = require('./routes/cart');
 const orderRoutes = require('./routes/orders');
@@ -25,6 +27,12 @@ const checkoutRoutes = require('./routes/checkout');
 // Import middleware
 const errorHandler = require('./middleware/errorHandler');
 const notFound = require('./middleware/notFound');
+
+// Initialize cron jobs (only in production or when specifically enabled)
+if (process.env.ENABLE_CRON_JOBS === 'true' || process.env.NODE_ENV === 'production') {
+  console.log('🕐 Initializing cron jobs...');
+  require('./services/cronJobs');
+}
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -99,7 +107,9 @@ app.use('/api/enrollments', enrollmentRoutes);
 app.use('/api/certificates', certificateRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
+app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/admin/cron', cronAdminRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);

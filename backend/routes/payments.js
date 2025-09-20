@@ -90,7 +90,7 @@ router.post('/create-payment', authenticateToken, async (req, res, next) => {
 
     // Conversión de USD a PEN para métodos peruanos
     const USD_TO_PEN_RATE = 3.75; // Tasa de cambio aproximada
-    const isPeruvianMethod = ['yape', 'plin'].includes(paymentMethod);
+    const isPeruvianMethod = ['yape', 'mercadopago'].includes(paymentMethod);
     const convertedAmount = isPeruvianMethod ? Math.round(totalAmount * USD_TO_PEN_RATE) : totalAmount;
     const currency = isPeruvianMethod ? 'PEN' : 'USD';
 
@@ -209,13 +209,10 @@ router.post('/create-payment', authenticateToken, async (req, res, next) => {
           paymentResult = await processCardPayment(paymentData, order.id, totalAmount);
           break;
         case 'mercadopago':
-          paymentResult = await processMercadoPagoPayment(cartItems, totalAmount, order.id);
+          paymentResult = await processMercadoPagoPayment(cartItems, convertedAmount, order.id);
           break;
         case 'yape':
           paymentResult = await processYapePayment(cartItems, convertedAmount, order.id);
-          break;
-        case 'plin':
-          paymentResult = await processPlinPayment(cartItems, convertedAmount, order.id);
           break;
         case 'paypal':
           paymentResult = await processPayPalPayment(cartItems, totalAmount, order.id, paymentData);
@@ -371,9 +368,6 @@ router.post('/process-order', authenticateToken, async (req, res) => {
       case 'yape':
         paymentResult = await processYapePayment(order.order_items || [], order.total_amount, order.id);
         break;
-      case 'plin':
-        paymentResult = await processPlinPayment(order.order_items || [], order.total_amount, order.id);
-        break;
       case 'paypal':
         paymentResult = await processPayPalPayment(order.order_items || [], order.total_amount, order.id, paymentData);
         break;
@@ -479,11 +473,17 @@ async function processMercadoPagoPayment(cartItems, amount, orderId) {
   
   await new Promise(resolve => setTimeout(resolve, 500));
   
+  // Generar enlace de pago con external_reference para el tracking automático
+  // Reemplaza 'YOUR_MERCADOPAGO_LINK' con tu enlace real de MercadoPago
+  const paymentLink = `https://link.mercadopago.com.ar/periinstitute?external_reference=${orderId}`;
+  
   return {
-    success: true,
-    message: "Redirecting to MercadoPago",
-    paymentId: `mp_${Date.now()}`,
-    paymentUrl: `http://localhost:8080/payment/success/${orderId}?method=mercadopago&amount=${amount}`
+    success: false, // False para que redirija al usuario
+    message: "Redirigiendo a MercadoPago",
+    paymentId: `mp_${orderId}_${Date.now()}`,
+    paymentUrl: paymentLink,
+    orderId: orderId,
+    instructions: "Completa el pago en MercadoPago. El acceso será activado automáticamente tras la confirmación."
   };
 }
 
@@ -1178,6 +1178,108 @@ router.post('/webhook', async (req, res, next) => {
 
   } catch (error) {
     next(error);
+  }
+});
+
+// MercadoPago webhook para validación automática
+router.post('/mercadopago-webhook', async (req, res) => {
+  try {
+    console.log('🎯 MercadoPago webhook received:', req.body);
+    
+    const { data, type } = req.body;
+    
+    // Solo procesar pagos aprobados
+    if (type === 'payment' && data?.id) {
+      const paymentId = data.id;
+      
+      // Buscar la orden asociada al pago usando external_reference
+      const externalReference = data.external_reference || req.body.external_reference;
+      
+      if (externalReference) {
+        // Actualizar orden a completada
+        const { error: orderError } = await supabaseAdmin
+          .from('orders')
+          .update({ 
+            payment_status: 'completed',
+            payment_reference: paymentId.toString(),
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', externalReference);
+          
+        if (orderError) {
+          console.error('Error updating order:', orderError);
+          return res.status(500).json({ error: 'Failed to update order' });
+        }
+        
+        console.log(`✅ Order ${externalReference} marked as completed via MercadoPago payment ${paymentId}`);
+        
+        // El trigger automáticamente creará el payment record y las inscripciones
+      }
+    }
+    
+    res.status(200).json({ received: true });
+    
+  } catch (error) {
+    console.error('MercadoPago webhook error:', error);
+    res.status(500).json({ error: 'Webhook processing failed' });
+  }
+});
+
+// Payment confirmation endpoint for external payment methods (MercadoPago, PayPal)
+router.post('/confirm-external-payment', authenticateToken, async (req, res) => {
+  try {
+    const { orderId, paymentMethod, transactionId, paymentReference } = req.body;
+    const userId = req.user.id;
+
+    console.log('💳 Confirming external payment:', { orderId, paymentMethod, transactionId, userId });
+
+    // Verify order belongs to user
+    const { data: order, error: orderError } = await supabaseAdmin
+      .from('orders')
+      .select('*')
+      .eq('id', orderId)
+      .eq('user_id', userId)
+      .single();
+
+    if (orderError || !order) {
+      return res.status(404).json({
+        success: false,
+        error: 'Order not found'
+      });
+    }
+
+    // Update order status to completed
+    const { error: orderUpdateError } = await supabaseAdmin
+      .from('orders')
+      .update({
+        payment_status: 'completed',
+        updated_at: new Date().toISOString(),
+        payment_reference: paymentReference || transactionId
+      })
+      .eq('id', orderId);
+
+    if (orderUpdateError) {
+      console.error('Order update error:', orderUpdateError);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to update order status'
+      });
+    }
+
+    // The trigger will automatically create payment record and enrollments
+
+    res.json({
+      success: true,
+      message: 'External payment confirmed successfully',
+      order: { ...order, payment_status: 'completed' }
+    });
+
+  } catch (error) {
+    console.error('External payment confirmation error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to confirm external payment'
+    });
   }
 });
 
