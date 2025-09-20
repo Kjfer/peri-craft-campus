@@ -604,36 +604,49 @@ class CheckoutService {
     try {
       const n8nWebhookUrl = 'http://localhost:5678/webhook-test/cd9a61b2-d84c-4517-9e0a-13f898148204';
       
-      const testParams = new URLSearchParams({
-        test: 'true',
+      console.log('🧪 Testing N8n webhook connection...');
+      console.log('🔗 Testing URL:', n8nWebhookUrl);
+      
+      // First test with GET method
+      console.log('📡 Testing GET request...');
+      const getResponse = await fetch(n8nWebhookUrl, {
+        method: 'GET',
+        mode: 'no-cors'
+      });
+      
+      console.log('📊 GET Response - Status:', getResponse.status);
+      console.log('📊 GET Response - Type:', getResponse.type);
+      
+      // Then test with POST method
+      console.log('📡 Testing POST request...');
+      const testPayload = {
+        test: true,
         timestamp: new Date().toISOString(),
         message: 'Test connection from Peri Craft Campus'
-      });
-
-      console.log('Testing n8n webhook connection...');
+      };
       
-      const response = await fetch(`${n8nWebhookUrl}?${testParams.toString()}`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
+      const postResponse = await fetch(n8nWebhookUrl, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(testPayload)
       });
 
-      const result: any = {
-        success: response.ok,
-        status: response.status,
-        statusText: response.statusText,
+      console.log('📊 POST Response - Status:', postResponse.status);
+      console.log('📊 POST Response - Type:', postResponse.type);
+
+      const result = {
+        success: true,
+        get_status: getResponse.status,
+        get_type: getResponse.type,
+        post_status: postResponse.status,
+        post_type: postResponse.type,
         url: n8nWebhookUrl
       };
 
-      if (response.ok) {
-        try {
-          const responseData = await response.json();
-          result.data = responseData;
-        } catch (e) {
-          result.data = await response.text();
-        }
-      }
-
-      console.log('N8n webhook test result:', result);
+      console.log('✅ N8n webhook test completed:', result);
       return result;
       
     } catch (error: any) {
@@ -641,6 +654,10 @@ class CheckoutService {
       return {
         success: false,
         error: error.message,
+        get_status: 0,
+        get_type: 'error' as ResponseType,
+        post_status: 0,
+        post_type: 'error' as ResponseType,
         url: 'http://localhost:5678/webhook-test/cd9a61b2-d84c-4517-9e0a-13f898148204'
       };
     }

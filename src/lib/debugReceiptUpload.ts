@@ -119,7 +119,7 @@ export const testN8nWebhook = async () => {
       console.error('❌ N8n webhook test failed:', result);
       return {
         success: false,
-        error: result.error || 'N8n webhook test failed'
+        error: 'error' in result ? result.error : 'N8n webhook test failed'
       };
     }
     
