@@ -351,148 +351,20 @@ async function processGooglePayPayment(paymentData: any, orderId: string, amount
 }
 
 async function processYapeQRPayment(orderId: string, amount: number, paymentId?: string, cartItems?: any[], user?: any, receiptUrl?: string, operationCode?: string) {
-  // For Yape QR, we create the order and send webhook for validation
-  try {
-    // Get webhook URL from admin settings
-    const supabaseService = createClient(
-      getEnv("SUPABASE_URL") ?? "",
-      getEnv("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-    );
-
-    const { data: webhookSetting } = await supabaseService
-      .from('admin_settings')
-      .select('setting_value')
-      .eq('setting_key', 'webhook_validation_url')
-      .single();
-
-    if (!webhookSetting?.setting_value) {
-      console.error('Webhook URL not configured');
-      return {
-        success: false,
-        message: "Webhook not configured. Contact administrator.",
-        paymentId: null,
-        paymentUrl: null
-      };
-    }
-
-    // Prepare webhook payload
-    const webhookPayload = {
-      user_id: user?.id,
-      user_name: user?.user_metadata?.full_name || user?.email,
-      user_email: user?.email,
-      receipt_url: receiptUrl,
-      operation_code: operationCode,
-      order_id: orderId,
-      amount: amount,
-      currency: "PEN",
-      courses: cartItems?.map(item => ({
-        course_id: item.id,
-        course_name: item.title
-      })) || []
-    };
-
-    console.log('Sending webhook to:', webhookSetting.setting_value);
-    console.log('Webhook payload:', webhookPayload);
-
-    // Send webhook
-    const webhookResponse = await fetch(webhookSetting.setting_value, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(webhookPayload),
-    });
-
-    if (!webhookResponse.ok) {
-      throw new Error(`Webhook failed: ${webhookResponse.status}`);
-    }
-
-    const webhookResult = await webhookResponse.json();
-    console.log('Webhook response:', webhookResult);
-
-    // Handle webhook response
-    if (webhookResult.status === 'success') {
-      // Update order status to paid
-      await supabaseService
-        .from('orders')
-        .update({ payment_status: 'completed' })
-        .eq('id', orderId);
-
-      // Create enrollments
-      if (cartItems && cartItems.length > 0) {
-        const enrollments = cartItems.map(item => ({
-          user_id: user?.id,
-          course_id: item.id,
-          enrolled_at: new Date().toISOString(),
-          progress_percentage: 0
-        }));
-
-        await supabaseService
-          .from('enrollments')
-          .insert(enrollments);
-      }
-
-      return {
-        success: true,
-        message: webhookResult.message || "Payment validated successfully",
-        paymentId: `yape_${Date.now()}`,
-        paymentUrl: null,
-        redirectUrl: webhookResult.redirect_url || '/payment-success',
-        courses: cartItems?.map(item => ({
-          course_id: item.id,
-          course_name: item.title
-        })) || []
-      };
-    } else {
-      // Log failed payment
-      await supabaseService
-        .from('payment_logs')
-        .insert({
-          user_id: user?.id,
-          order_id: orderId,
-          payment_method: 'yape_qr',
-          error_message: webhookResult.message,
-          webhook_response: webhookResult
-        });
-
-      return {
-        success: false,
-        message: webhookResult.message || "Payment validation failed",
-        paymentId: null,
-        paymentUrl: null,
-        redirectUrl: webhookResult.redirect_url || '/payment-error'
-      };
-    }
-
-  } catch (error: any) {
-    console.error('Yape QR payment error:', error);
-    
-    // Log error
-    try {
-      const supabaseService = createClient(
-        getEnv("SUPABASE_URL") ?? "",
-        getEnv("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-      );
-      
-      await supabaseService
-        .from('payment_logs')
-        .insert({
-          user_id: user?.id,
-          order_id: orderId,
-          payment_method: 'yape_qr',
-          error_message: error.message,
-          webhook_response: { error: error.message }
-        });
-    } catch (logError) {
-      console.error('Failed to log payment error:', logError);
-    }
-
-    return {
-      success: false,
-      message: "Error processing payment. Please try again.",
-      paymentId: null,
-      paymentUrl: null,
-      redirectUrl: '/payment-error'
-    };
-  }
+  // For Yape QR, we just create the order and return success
+  // Payment confirmation happens later through confirmManualPayment endpoint
+  
+  console.log('Processing Yape QR order creation for order ID:', orderId);
+  
+  return {
+    success: true,
+    message: "Order created successfully. Please complete payment and upload receipt.",
+    paymentId: `yape_pending_${Date.now()}`,
+    paymentUrl: null,
+    redirectUrl: null,
+    courses: cartItems?.map(item => ({
+      course_id: item.id,
+      course_name: item.title
+    })) || []
+  };
 }
