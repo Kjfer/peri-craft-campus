@@ -1,25 +1,62 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Clock, ArrowLeft, Loader2 } from 'lucide-react';
 import { useOrderStatusListener } from '@/hooks/useOrderStatusListener';
 
-// Utilidad para extraer orderId de location
-function getOrderIdFromLocation(location: any): string | null {
-  if (location?.state?.orderId) return location.state.orderId;
-  const params = new URLSearchParams(location.search);
-  return params.get('orderId');
-}
-
 export default function CheckoutPending() {
   const navigate = useNavigate();
   const location = useLocation();
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const orderId = getOrderIdFromLocation(location);
+  const [isProcessing, setIsProcessing] = useState(true);
+  
+  // Obtener orderId de múltiples fuentes y persistirlo en sessionStorage
+  const getOrderId = (): string | null => {
+    // 1. Intentar desde sessionStorage (persiste en la sesión)
+    const storedOrderId = sessionStorage.getItem('checkout_order_id');
+    if (storedOrderId) return storedOrderId;
+    
+    // 2. Desde location.state
+    if (location?.state?.orderId) {
+      sessionStorage.setItem('checkout_order_id', location.state.orderId);
+      return location.state.orderId;
+    }
+    
+    // 3. Desde URL params
+    const params = new URLSearchParams(location.search);
+    const paramOrderId = params.get('orderId');
+    if (paramOrderId) {
+      sessionStorage.setItem('checkout_order_id', paramOrderId);
+      return paramOrderId;
+    }
+    
+    return null;
+  };
+  
+  const orderId = getOrderId();
+
+  // Limpiar sessionStorage cuando el pago sea exitoso o haya error
+  useEffect(() => {
+    if (errorMsg) {
+      setIsProcessing(false);
+      sessionStorage.removeItem('checkout_order_id');
+    }
+  }, [errorMsg]);
 
   // El estado exitoso es 'completed', no 'paid'
-  useOrderStatusListener(orderId || '', (msg) => setErrorMsg(msg), 'completed');
+  useOrderStatusListener(orderId || '', (msg) => {
+    setErrorMsg(msg);
+    setIsProcessing(false);
+  }, 'completed');
+
+  // Si no hay orderId después de intentar obtenerlo, redirigir
+  useEffect(() => {
+    if (!orderId && isProcessing) {
+      console.log('❌ No orderId found, redirecting to courses');
+      navigate('/cursos');
+    }
+  }, [orderId, navigate, isProcessing]);
 
   if (errorMsg) {
     return (
@@ -59,7 +96,10 @@ export default function CheckoutPending() {
                   </p>
                   <Button 
                     size="sm" 
-                    onClick={() => navigate('/cursos')}
+                    onClick={() => {
+                      sessionStorage.removeItem('checkout_order_id');
+                      navigate('/cursos');
+                    }}
                     className="w-full"
                   >
                     Volver a los Cursos

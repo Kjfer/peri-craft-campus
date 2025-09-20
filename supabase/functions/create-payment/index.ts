@@ -34,12 +34,15 @@ const corsHeaders = {
 };
 
 interface PaymentRequest {
-  cartItems: {
+  items: {
     id: string;
+    type: 'course' | 'subscription';
     title: string;
     price: number;
-    instructor_name: string;
+    instructor_name?: string;
     thumbnail_url?: string;
+    description?: string;
+    duration_months?: number;
   }[];
   totalAmount: number;
   paymentMethod: string;
@@ -80,13 +83,14 @@ serve(async (req) => {
     const user = userData.user;
     // Parse and validate request body
     const body = await req.json() as PaymentRequest;
-    const { cartItems = [], totalAmount, paymentMethod, paymentData } = body;
+    const { items = [], totalAmount, paymentMethod, paymentData } = body;
 
     console.log("Processing payment:", { 
       userId: user.id, 
       totalAmount, 
       paymentMethod, 
-      itemCount: Array.isArray(cartItems) ? cartItems.length : 0 
+      itemCount: Array.isArray(items) ? items.length : 0,
+      items: items.map(item => ({ id: item.id, type: item.type, title: item.title }))
     });
 
     // Use service role client for database operations
@@ -116,11 +120,14 @@ serve(async (req) => {
     }
 
     // Create order items
-    const orderItems = cartItems.map(item => ({
+    const orderItems = items.map(item => ({
       order_id: order.id,
-      course_id: item.id,
+      course_id: item.type === 'course' ? item.id : null,
+      subscription_id: item.type === 'subscription' ? item.id : null,
       price: (paymentMethod === 'mercadopago' || paymentMethod === 'yape_qr') ? item.price * 3.75 : item.price
     }));
+
+    console.log("Creating order items:", orderItems);
 
     const { error: itemsError } = await supabaseService
       .from('order_items')
@@ -156,13 +163,13 @@ serve(async (req) => {
         paymentResult = await processCardPayment(paymentData, order.id, totalAmount, payment?.id);
         break;
       case 'mercadopago':
-        paymentResult = await processMercadoPagoPayment(cartItems, totalAmount, order.id, paymentData, authHeader, payment?.id);
+        paymentResult = await processMercadoPagoPayment(items, totalAmount, order.id, paymentData, authHeader, payment?.id);
         break;
       case 'yape_qr':
-        paymentResult = await processYapeQRPayment(order.id, totalAmount, payment?.id, cartItems, user, paymentData?.receiptUrl, paymentData?.operationCode);
+        paymentResult = await processYapeQRPayment(order.id, totalAmount, payment?.id, items, user, paymentData?.receiptUrl, paymentData?.operationCode);
         break;
       case 'paypal':
-        paymentResult = await processPayPalPayment(cartItems, totalAmount, order.id, paymentData, payment?.id);
+        paymentResult = await processPayPalPayment(items, totalAmount, order.id, paymentData, payment?.id);
         break;
       case 'googlepay':
         paymentResult = await processGooglePayPayment(paymentData, order.id, totalAmount, payment?.id);
@@ -205,21 +212,44 @@ serve(async (req) => {
         .eq('id', payment.id);
     }
 
-    // Create enrollments only for immediately processed payments
+    // Create enrollments only for immediately processed payments (only for courses)
     if (finalStatus === 'completed') {
-      const enrollments = cartItems.map(item => ({
-        user_id: user.id,
-        course_id: item.id,
-        enrolled_at: new Date().toISOString(),
-        progress_percentage: 0
-      }));
+      const courseItems = items.filter(item => item.type === 'course');
+      if (courseItems.length > 0) {
+        const enrollments = courseItems.map(item => ({
+          user_id: user.id,
+          course_id: item.id,
+          enrolled_at: new Date().toISOString(),
+          progress_percentage: 0
+        }));
 
-      const { error: enrollError } = await supabaseService
-        .from('enrollments')
-        .insert(enrollments);
+        const { error: enrollError } = await supabaseService
+          .from('enrollments')
+          .insert(enrollments);
 
-      if (enrollError) {
-        console.error('Failed to create enrollments:', enrollError);
+        if (enrollError) {
+          console.error('Failed to create enrollments:', enrollError);
+        }
+      }
+      
+      // Handle subscriptions (create user_subscriptions)
+      const subscriptionItems = items.filter(item => item.type === 'subscription');
+      if (subscriptionItems.length > 0) {
+        const userSubscriptions = subscriptionItems.map(item => ({
+          user_id: user.id,
+          plan_id: item.id,
+          start_date: new Date().toISOString(),
+          end_date: new Date(Date.now() + (item.duration_months || 1) * 30 * 24 * 60 * 60 * 1000).toISOString(),
+          status: 'active'
+        }));
+
+        const { error: subError } = await supabaseService
+          .from('user_subscriptions')
+          .insert(userSubscriptions);
+
+        if (subError) {
+          console.error('Failed to create subscriptions:', subError);
+        }
       }
     }
 
@@ -237,7 +267,7 @@ serve(async (req) => {
         paymentUrl: paymentResult.paymentUrl,
         message: paymentResult.message,
         redirectUrl: paymentResult.redirectUrl,
-        courses: paymentResult.courses
+        items: items
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -284,7 +314,7 @@ async function processCardPayment(paymentData: any, orderId: string, amount: num
 }
 
 async function processMercadoPagoPayment(
-  cartItems: any[],
+  items: any[],
   amount: number,
   orderId: string,
   paymentData?: any,
@@ -300,7 +330,7 @@ async function processMercadoPagoPayment(
         ...(authHeader ? { Authorization: authHeader } : {}),
       },
       body: JSON.stringify({
-        cartItems,
+        items: items,
         totalAmount: amount,
         orderId,
         paymentData,
@@ -326,7 +356,7 @@ async function processMercadoPagoPayment(
   }
 }
 
-async function processPayPalPayment(cartItems: any[], amount: number, orderId: string, paymentData?: any, paymentId?: string) {
+async function processPayPalPayment(items: any[], amount: number, orderId: string, paymentData?: any, paymentId?: string) {
   // Mock PayPal integration
   await new Promise(resolve => setTimeout(resolve, 500));
   
@@ -350,7 +380,7 @@ async function processGooglePayPayment(paymentData: any, orderId: string, amount
   };
 }
 
-async function processYapeQRPayment(orderId: string, amount: number, paymentId?: string, cartItems?: any[], user?: any, receiptUrl?: string, operationCode?: string) {
+async function processYapeQRPayment(orderId: string, amount: number, paymentId?: string, items?: any[], user?: any, receiptUrl?: string, operationCode?: string) {
   // For Yape QR, we just create the order and return success
   // Payment confirmation happens later through confirmManualPayment endpoint
   
@@ -362,9 +392,10 @@ async function processYapeQRPayment(orderId: string, amount: number, paymentId?:
     paymentId: `yape_pending_${Date.now()}`,
     paymentUrl: null,
     redirectUrl: null,
-    courses: cartItems?.map(item => ({
-      course_id: item.id,
-      course_name: item.title
+    items: items?.map(item => ({
+      id: item.id,
+      type: item.type,
+      name: item.title
     })) || []
   };
 }
