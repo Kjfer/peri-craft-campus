@@ -1,6 +1,7 @@
 const express = require('express');
 const { supabaseAdmin } = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
+const { exchangeRateService } = require('../services/exchangeRateService');
 
 const router = express.Router();
 
@@ -82,12 +83,23 @@ router.post('/start', authenticateToken, async (req, res) => {
       currency = 'PEN';
     }
 
-    // Crear la orden
+    // Crear la orden - convertir precios usando tasa real si es necesario
+    let finalTotalAmount = total_amount;
+    if (currency === 'PEN') {
+      try {
+        finalTotalAmount = await exchangeRateService.convertUSDToPEN(total_amount);
+        console.log(`💱 Checkout: Converted $${total_amount} USD to S/${finalTotalAmount} PEN`);
+      } catch (error) {
+        console.warn('⚠️ Exchange rate service failed in checkout, using fallback');
+        finalTotalAmount = total_amount * 3.50; // Fallback actualizado
+      }
+    }
+
     const { data: order, error: orderError } = await supabaseAdmin
       .from('orders')
       .insert({
         user_id: userId,
-        total_amount: currency === 'PEN' ? total_amount * 3.75 : total_amount, // Convertir a PEN si es necesario
+        total_amount: finalTotalAmount,
         currency,
         payment_method,
         payment_status: 'pending'
@@ -103,12 +115,32 @@ router.post('/start', authenticateToken, async (req, res) => {
       });
     }
 
-    // Crear los order_items
-    const orderItems = cart_items.map(item => ({
-      order_id: order.id,
-      course_id: item.course_id,
-      price: currency === 'PEN' ? (item.course?.price || 0) * 3.75 : (item.course?.price || 0)
-    }));
+    // Crear los order_items - convertir precios individualmente si es necesario
+    let orderItems;
+    if (currency === 'PEN') {
+      orderItems = await Promise.all(cart_items.map(async (item) => {
+        let itemPrice = item.course?.price || 0;
+        
+        try {
+          itemPrice = await exchangeRateService.convertUSDToPEN(itemPrice);
+        } catch (error) {
+          console.warn('⚠️ Failed to convert item price in checkout, using fallback');
+          itemPrice = (item.course?.price || 0) * 3.50;
+        }
+        
+        return {
+          order_id: order.id,
+          course_id: item.course_id,
+          price: itemPrice
+        };
+      }));
+    } else {
+      orderItems = cart_items.map(item => ({
+        order_id: order.id,
+        course_id: item.course_id,
+        price: item.course?.price || 0
+      }));
+    }
 
     const { error: itemsError } = await supabaseAdmin
       .from('order_items')

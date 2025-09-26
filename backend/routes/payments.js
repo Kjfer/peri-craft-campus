@@ -1,6 +1,7 @@
 const express = require('express');
 const { supabase, supabaseAdmin } = require('../config/database');
 const { authenticateToken, requireAdmin } = require('../middleware/auth');
+const { exchangeRateService } = require('../services/exchangeRateService');
 
 const router = express.Router();
 
@@ -88,11 +89,22 @@ router.post('/create-payment', authenticateToken, async (req, res, next) => {
     const { cartItems, totalAmount, paymentMethod, paymentData } = req.body;
     const userId = req.user.id;
 
-    // Conversión de USD a PEN para métodos peruanos
-    const USD_TO_PEN_RATE = 3.75; // Tasa de cambio aproximada
+    // Conversión de USD a PEN para métodos peruanos usando tasa real
     const isPeruvianMethod = ['yape', 'mercadopago'].includes(paymentMethod);
-    const convertedAmount = isPeruvianMethod ? Math.round(totalAmount * USD_TO_PEN_RATE) : totalAmount;
-    const currency = isPeruvianMethod ? 'PEN' : 'USD';
+    let convertedAmount = totalAmount;
+    let currency = 'USD';
+    
+    if (isPeruvianMethod) {
+      try {
+        convertedAmount = await exchangeRateService.convertUSDToPEN(totalAmount);
+        currency = 'PEN';
+        console.log(`💱 Exchange rate applied: $${totalAmount} USD = S/${convertedAmount} PEN`);
+      } catch (error) {
+        console.warn('⚠️ Exchange rate service failed, using fallback rate');
+        convertedAmount = Math.round(totalAmount * 3.50); // Fallback actualizado según BCRP
+        currency = 'PEN';
+      }
+    }
 
     console.log('💳 Processing payment:', {
       userId,
@@ -137,13 +149,34 @@ router.post('/create-payment', authenticateToken, async (req, res, next) => {
     // Create order items using the existing order_items table
     console.log('📝 Creating order items...');
     
-    const orderItems = cartItems.map(item => ({
-      order_id: order.id,
-      course_id: item.course?.id || item.course_id || item.id,
-      price: isPeruvianMethod ? 
-        Math.round((item.course?.price || item.price || (totalAmount / cartItems.length)) * USD_TO_PEN_RATE) :
-        (item.course?.price || item.price || (totalAmount / cartItems.length))
-    }));
+    let orderItems;
+    if (isPeruvianMethod) {
+      // Para métodos peruanos, convertir cada precio individualmente usando tasa real
+      orderItems = await Promise.all(cartItems.map(async (item) => {
+        const itemPriceUSD = item.course?.price || item.price || (totalAmount / cartItems.length);
+        let itemPricePEN;
+        
+        try {
+          itemPricePEN = await exchangeRateService.convertUSDToPEN(itemPriceUSD);
+        } catch (error) {
+          console.warn('⚠️ Failed to convert item price, using fallback');
+          itemPricePEN = Math.round(itemPriceUSD * 3.50);
+        }
+        
+        return {
+          order_id: order.id,
+          course_id: item.course?.id || item.course_id || item.id,
+          price: itemPricePEN
+        };
+      }));
+    } else {
+      // Para métodos internacionales, mantener precios en USD
+      orderItems = cartItems.map(item => ({
+        order_id: order.id,
+        course_id: item.course?.id || item.course_id || item.id,
+        price: item.course?.price || item.price || (totalAmount / cartItems.length)
+      }));
+    }
 
     console.log('📝 Order items to create:', orderItems);
 
@@ -1388,3 +1421,42 @@ router.post('/confirm-payment', authenticateToken, async (req, res) => {
 });
 
 module.exports = router;
+
+// Exchange rate endpoint for frontend
+router.get('/exchange-rate', async (req, res) => {
+  try {
+    const rateInfo = await exchangeRateService.getRateInfo();
+    
+    res.json({
+      success: true,
+      rate_info: rateInfo,
+      cache_info: exchangeRateService.getCacheInfo()
+    });
+  } catch (error) {
+    console.error('Error fetching exchange rate:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch exchange rate',
+      fallback_rate: 3.75
+    });
+  }
+});
+
+// Force refresh exchange rate endpoint (useful for admin)
+router.post('/exchange-rate/refresh', authenticateToken, async (req, res) => {
+  try {
+    const newRate = await exchangeRateService.forceRefresh();
+    
+    res.json({
+      success: true,
+      message: 'Exchange rate refreshed successfully',
+      new_rate: newRate
+    });
+  } catch (error) {
+    console.error('Error refreshing exchange rate:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to refresh exchange rate'
+    });
+  }
+});

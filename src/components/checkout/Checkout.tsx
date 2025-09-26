@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { checkoutService, CheckoutItem } from '@/lib/checkoutService';
 import { debugReceiptUpload, testFileUpload, testN8nWebhook } from '@/lib/debugReceiptUpload';
 import { supabase } from '@/integrations/supabase/client';
+import { ExchangeRateDisplay } from '@/components/payment/ExchangeRateDisplay';
 import yapeQRImage from '@/assets/yape-qr-placeholder.jpeg';
 
 interface CheckoutProps {
@@ -56,6 +57,7 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
     }
 
     loadPaymentMethods();
+    loadExchangeRate(); // Cargar tasa de cambio al inicio
   }, [user]);
 
   const loadPaymentMethods = async () => {
@@ -64,6 +66,16 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
       setAvailablePaymentMethods(methods);
     } catch (error) {
       console.error('Error loading payment methods:', error);
+    }
+  };
+
+  const loadExchangeRate = async () => {
+    try {
+      console.log('🔄 Loading current exchange rate...');
+      await checkoutService.getExchangeRateInfo();
+      console.log('✅ Exchange rate loaded successfully');
+    } catch (error) {
+      console.warn('⚠️ Failed to load exchange rate:', error);
     }
   };
 
@@ -95,7 +107,7 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
     
     if (selectedPaymentMethod === 'mercadopago' || selectedPaymentMethod === 'yape_qr') {
       return {
-        amount: checkoutService.convertToPEN(usdTotal),
+        amount: checkoutService.convertToPENSync(usdTotal), // Usar versión síncrona para UI
         currency: 'PEN'
       };
     }
@@ -654,6 +666,15 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
                   </div>
                   <p className="mt-2 text-sm text-muted-foreground">
                     Escanea este código con tu app de Yape
+                  </p>
+                </div>
+
+                {/* Exchange Rate Info */}
+                <div className="bg-amber-50 p-4 rounded-lg border border-amber-200">
+                  <h4 className="font-medium mb-2 text-amber-800">Información de Tasa de Cambio:</h4>
+                  <ExchangeRateDisplay showDetails={false} className="mb-2" />
+                  <p className="text-xs text-amber-700">
+                    Los precios se convierten automáticamente usando la tasa de cambio actual.
                   </p>
                 </div>
 

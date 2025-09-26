@@ -2,6 +2,7 @@ const express = require('express');
 const { MercadoPagoConfig, Preference, Payment } = require('mercadopago');
 const { authenticateToken } = require('../middleware/auth');
 const { supabase } = require('../config/database');
+const { exchangeRateService } = require('../services/exchangeRateService');
 
 const router = express.Router();
 
@@ -285,17 +286,34 @@ router.post('/yape', authenticateToken, async (req, res) => {
       throw itemsError;
     }
 
-    // Convert USD to PEN (approximate rate: 1 USD = 3.75 PEN)
-    const amountInPEN = Math.round(totalAmount * 3.75 * 100) / 100;
+    // Convert USD to PEN using real exchange rate
+    let amountInPEN;
+    try {
+      amountInPEN = await exchangeRateService.convertUSDToPEN(totalAmount);
+      console.log(`💱 Yape: Converted $${totalAmount} USD to S/${amountInPEN} PEN`);
+    } catch (error) {
+      console.warn('⚠️ Exchange rate service failed for Yape, using fallback');
+      amountInPEN = Math.round(totalAmount * 3.50 * 100) / 100;
+    }
 
     // Create MercadoPago preference with Yape specific settings
-    const items = cartItems.map(item => ({
-      id: item.id,
-      title: item.title,
-      description: `Curso: ${item.title}`,
-      quantity: 1,
-      currency_id: 'PEN',
-      unit_price: parseFloat((item.price * 3.75).toFixed(2))
+    const items = await Promise.all(cartItems.map(async (item) => {
+      let itemPricePEN;
+      try {
+        itemPricePEN = await exchangeRateService.convertUSDToPEN(item.price);
+      } catch (error) {
+        console.warn('⚠️ Failed to convert item price for Yape, using fallback');
+        itemPricePEN = item.price * 3.50;
+      }
+      
+      return {
+        id: item.id,
+        title: item.title,
+        description: `Curso: ${item.title}`,
+        quantity: 1,
+        currency_id: 'PEN',
+        unit_price: parseFloat(itemPricePEN.toFixed(2))
+      };
     }));
 
     const preferenceData = {
@@ -394,17 +412,34 @@ router.post('/plin', authenticateToken, async (req, res) => {
       throw itemsError;
     }
 
-    // Convert USD to PEN
-    const amountInPEN = Math.round(totalAmount * 3.75 * 100) / 100;
+    // Convert USD to PEN using real exchange rate
+    let amountInPEN;
+    try {
+      amountInPEN = await exchangeRateService.convertUSDToPEN(totalAmount);
+      console.log(`💱 Plin: Converted $${totalAmount} USD to S/${amountInPEN} PEN`);
+    } catch (error) {
+      console.warn('⚠️ Exchange rate service failed for Plin, using fallback');
+      amountInPEN = Math.round(totalAmount * 3.50 * 100) / 100;
+    }
 
     // Create MercadoPago preference with Plin specific settings
-    const items = cartItems.map(item => ({
-      id: item.id,
-      title: item.title,
-      description: `Curso: ${item.title}`,
-      quantity: 1,
-      currency_id: 'PEN',
-      unit_price: parseFloat((item.price * 3.75).toFixed(2))
+    const items = await Promise.all(cartItems.map(async (item) => {
+      let itemPricePEN;
+      try {
+        itemPricePEN = await exchangeRateService.convertUSDToPEN(item.price);
+      } catch (error) {
+        console.warn('⚠️ Failed to convert item price for Plin, using fallback');
+        itemPricePEN = item.price * 3.50;
+      }
+      
+      return {
+        id: item.id,
+        title: item.title,
+        description: `Curso: ${item.title}`,
+        quantity: 1,
+        currency_id: 'PEN',
+        unit_price: parseFloat(itemPricePEN.toFixed(2))
+      };
     }));
 
     const preferenceData = {
