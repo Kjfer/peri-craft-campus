@@ -105,38 +105,23 @@ export default function AccountSettings() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label>Nombre Completo</Label>
-                  <div className="flex items-center gap-2">
-                    <Input 
-                      value={profile?.full_name || ""} 
-                      disabled 
-                      className="bg-muted"
-                    />
-                    <Badge variant="secondary">No editable</Badge>
-                  </div>
+                  <Input 
+                    value={profile?.full_name || ""} 
+                  />
                 </div>
                 
                 <div className="space-y-2">
                   <Label>Email</Label>
-                  <div className="flex items-center gap-2">
-                    <Input 
-                      value={user?.email || ""} 
-                      disabled 
-                      className="bg-muted"
-                    />
-                    <Badge variant="secondary">No editable</Badge>
-                  </div>
+                  <Input 
+                    value={user?.email || ""} 
+                  />
                 </div>
                 
                 <div className="space-y-2">
                   <Label>Teléfono</Label>
-                  <div className="flex items-center gap-2">
-                    <Input 
-                      value={profile?.phone || "No especificado"} 
-                      disabled 
-                      className="bg-muted"
-                    />
-                    <Badge variant="secondary">No editable</Badge>
-                  </div>
+                  <Input 
+                    value={profile?.phone || "No especificado"} 
+                  />
                 </div>
                 
                 <div className="space-y-2">

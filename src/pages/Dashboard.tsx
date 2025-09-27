@@ -133,7 +133,7 @@ export default function Dashboard() {
               progress_percentage,
               enrolled_at,
               completed_at,
-              courses (
+              courses!inner (
                 id,
                 title,
                 description,
@@ -150,7 +150,13 @@ export default function Dashboard() {
             console.error('❌ Error fetching enrollments:', enrollmentsError);
           } else {
             console.log('✅ Enrollments fetched:', enrollmentsData);
-            setEnrollments(enrollmentsData || []);
+            // Filter out enrollments with null courses
+            const validEnrollments = (enrollmentsData || []).filter(enrollment => 
+              enrollment.courses && 
+              typeof enrollment.courses === 'object' && 
+              enrollment.courses.id
+            );
+            setEnrollments(validEnrollments);
           }
 
           // Fetch certificates
