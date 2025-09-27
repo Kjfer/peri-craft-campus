@@ -179,6 +179,7 @@ export default function Checkout() {
   };
 
   if (!user || cartState.items.length === 0) {
+    console.log('🚫 Checkout: User not authenticated or empty cart', { user: !!user, cartItems: cartState.items.length });
     return null; // Will be redirected by useEffect
   }
 

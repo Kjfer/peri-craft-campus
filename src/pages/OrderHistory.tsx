@@ -88,6 +88,7 @@ export default function OrderHistory() {
   };
 
   if (!user) {
+    console.log('🚫 OrderHistory: User not authenticated');
     return null;
   }
 

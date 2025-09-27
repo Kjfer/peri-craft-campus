@@ -54,6 +54,7 @@ export default function CourseCheckout() {
   };
 
   if (!user) {
+    console.log('🚫 CourseCheckout: User not authenticated, redirecting to auth');
     return null;
   }
 

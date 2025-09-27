@@ -413,6 +413,7 @@ export default function LearningPlatform() {
   }
 
   if (!access?.hasAccess) {
+    console.log('🚫 LearningPlatform: No access to course', { access });
     return null; // Will redirect in useEffect
   }
 

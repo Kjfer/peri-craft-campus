@@ -8,6 +8,7 @@ import { CartProvider } from "@/contexts/CartContext";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { AuthDebug } from "@/components/AuthDebug";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Home from "./pages/Home";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -52,75 +53,92 @@ import NotificationCenter from "./pages/NotificationCenter";
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <AuthProvider>
-        <CartProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <div className="min-h-screen flex flex-col">
-              <Header />
-              <main className="flex-1">
-                <Routes>
-                  <Route path="/" element={<Home />} />
-                  <Route path="/auth" element={<Auth />} />
-                  <Route path="/confirm-email" element={<ConfirmEmail />} />
-                  <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/cursos" element={<Courses />} />
-            <Route path="/courses/:courseId/lessons/:lessonId" element={<LessonPlayer />} />
-            <Route path="/learn/:courseId" element={<LearningPlatform />} />
-            <Route path="/learn/:courseId/lesson/:lessonId" element={<LearningPlatform />} />
-                  <Route path="/curso/:id" element={<CourseDetail />} />
-                  <Route path="/planes" element={<Plans />} />
-                  <Route path="/subscriptions" element={<Subscriptions />} />
-                  <Route path="/subscription-checkout" element={<SubscriptionCheckout />} />
-                  <Route path="/my-subscriptions" element={<MySubscriptions />} />
-                  <Route path="/notifications" element={<NotificationCenter />} />
-                  <Route path="/nosotros" element={<About />} />
-                  <Route path="/contacto" element={<Contact />} />
-                  <Route path="/clases-en-vivo" element={<ClasesEnVivo />} />
-                  <Route path="/verificar-certificado" element={<VerifyCertificate />} />
-                  <Route path="/checkout" element={<Checkout />} />
-                  <Route path="/checkout/carrito" element={<CartCheckout />} />
-                  <Route path="/checkout/curso/:courseId" element={<CourseCheckout />} />
-                  <Route path="/carrito" element={<Cart />} />
-                  <Route path="/ordenes" element={<OrderHistory />} />
-                  <Route path="/configuracion" element={<AccountSettings />} />
-                  <Route path="/checkout/success/:orderId" element={<CheckoutSuccess />} />
-                  <Route path="/checkout/failed" element={<CheckoutFailed />} />
-                  <Route path="/checkout/pending" element={<CheckoutPending />} />
-                  <Route path="/payment/redirect/:orderId" element={<PaymentRedirect />} />
-                  <Route path="/payment/success/:orderId" element={<PaymentSuccess />} />
-                  <Route path="/payment/success" element={<PaymentResult />} />
-                  <Route path="/payment-success" element={<PaymentSuccess />} />
-                  <Route path="/payment-error" element={<PaymentError />} />
-                  <Route path="/payment/failure" element={<PaymentResult />} />
-                  <Route path="/payment/pending" element={<PaymentResult />} />
-                  
-                  {/* Admin Routes */}
-                  <Route path="/admin" element={<AdminDashboard />} />
-                  <Route path="/admin/cursos" element={<CourseManagement />} />
-                  <Route path="/admin/cursos/crear" element={<CreateCourse />} />
-                  <Route path="/admin/cursos/editar/:id" element={<EditCourse />} />
-                  <Route path="/admin/usuarios" element={<UserManagement />} />
-                  <Route path="/admin/certificados" element={<CertificateManagement />} />
-                  <Route path="/admin/planes" element={<PlanManagement />} />
-                  <Route path="/admin/seguridad" element={<SecurityDashboard />} />
-                  <Route path="/admin/configuracion" element={<Settings />} />
-                  
-                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </main>
-              <Footer />
-              <AuthDebug />
-            </div>
-          </BrowserRouter>
-        </CartProvider>
-      </AuthProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <AuthProvider>
+          <CartProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <div className="min-h-screen flex flex-col">
+                <Header />
+                <main className="flex-1">
+                  <ErrorBoundary fallback={
+                    <div className="min-h-[400px] flex items-center justify-center">
+                      <div className="text-center">
+                        <h2 className="text-xl font-semibold mb-2">Error de navegación</h2>
+                        <p className="text-muted-foreground mb-4">No se pudo cargar la página solicitada</p>
+                        <button 
+                          onClick={() => window.location.href = '/'}
+                          className="px-4 py-2 bg-primary text-primary-foreground rounded-md"
+                        >
+                          Volver al inicio
+                        </button>
+                      </div>
+                    </div>
+                  }>
+                    <Routes>
+                      <Route path="/" element={<Home />} />
+                      <Route path="/auth" element={<Auth />} />
+                      <Route path="/confirm-email" element={<ConfirmEmail />} />
+                      <Route path="/dashboard" element={<Dashboard />} />
+                      <Route path="/cursos" element={<Courses />} />
+                <Route path="/courses/:courseId/lessons/:lessonId" element={<LessonPlayer />} />
+                <Route path="/learn/:courseId" element={<LearningPlatform />} />
+                <Route path="/learn/:courseId/lesson/:lessonId" element={<LearningPlatform />} />
+                      <Route path="/curso/:id" element={<CourseDetail />} />
+                      <Route path="/planes" element={<Plans />} />
+                      <Route path="/subscriptions" element={<Subscriptions />} />
+                      <Route path="/subscription-checkout" element={<SubscriptionCheckout />} />
+                      <Route path="/my-subscriptions" element={<MySubscriptions />} />
+                      <Route path="/notifications" element={<NotificationCenter />} />
+                      <Route path="/nosotros" element={<About />} />
+                      <Route path="/contacto" element={<Contact />} />
+                      <Route path="/clases-en-vivo" element={<ClasesEnVivo />} />
+                      <Route path="/verificar-certificado" element={<VerifyCertificate />} />
+                      <Route path="/checkout" element={<Checkout />} />
+                      <Route path="/checkout/carrito" element={<CartCheckout />} />
+                      <Route path="/checkout/curso/:courseId" element={<CourseCheckout />} />
+                      <Route path="/carrito" element={<Cart />} />
+                      <Route path="/ordenes" element={<OrderHistory />} />
+                      <Route path="/configuracion" element={<AccountSettings />} />
+                      <Route path="/checkout/success/:orderId" element={<CheckoutSuccess />} />
+                      <Route path="/checkout/failed" element={<CheckoutFailed />} />
+                      <Route path="/checkout/pending" element={<CheckoutPending />} />
+                      <Route path="/payment/redirect/:orderId" element={<PaymentRedirect />} />
+                      <Route path="/payment/success/:orderId" element={<PaymentSuccess />} />
+                      <Route path="/payment/success" element={<PaymentResult />} />
+                      <Route path="/payment-success" element={<PaymentSuccess />} />
+                      <Route path="/payment-error" element={<PaymentError />} />
+                      <Route path="/payment/failure" element={<PaymentResult />} />
+                      <Route path="/payment/pending" element={<PaymentResult />} />
+                      
+                      {/* Admin Routes */}
+                      <Route path="/admin" element={<AdminDashboard />} />
+                      <Route path="/admin/cursos" element={<CourseManagement />} />
+                      <Route path="/admin/cursos/crear" element={<CreateCourse />} />
+                      <Route path="/admin/cursos/editar/:id" element={<EditCourse />} />
+                      <Route path="/admin/usuarios" element={<UserManagement />} />
+                      <Route path="/admin/certificados" element={<CertificateManagement />} />
+                      <Route path="/admin/planes" element={<PlanManagement />} />
+                      <Route path="/admin/seguridad" element={<SecurityDashboard />} />
+                      <Route path="/admin/configuracion" element={<Settings />} />
+                      
+                      {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </ErrorBoundary>
+                </main>
+                <Footer />
+                <AuthDebug />
+              </div>
+            </BrowserRouter>
+          </CartProvider>
+        </AuthProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;

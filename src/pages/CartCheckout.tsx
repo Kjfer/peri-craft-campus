@@ -12,6 +12,7 @@ export default function CartCheckout() {
   const { user } = useAuth();
 
   if (!user) {
+    console.log('🚫 CartCheckout: User not authenticated, redirecting to auth');
     navigate('/auth');
     return null;
   }
