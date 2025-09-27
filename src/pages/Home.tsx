@@ -131,12 +131,12 @@ export default function Home() {
                 </Card>
               ))
             ) : featuredCourses.length > 0 ? (
-              featuredCourses.slice(0, 3).map((course) => (
+              featuredCourses.filter(course => course && course.id).slice(0, 3).map((course) => (
                 <Card key={course.id} className="group hover:shadow-elegant transition-all duration-300 cursor-pointer">
                   <div className="relative overflow-hidden rounded-t-lg">
                     <img 
-                      src={course.thumbnail_url || "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=225&fit=crop"} 
-                      alt={course.title}
+                      src={course?.thumbnail_url || "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=225&fit=crop"} 
+                      alt={course?.title || 'Curso'}
                       style={{ width: '100%', height: 225, objectFit: 'cover', transition: 'transform 0.3s' }}
                     />
                     <Badge className="absolute top-4 left-4 bg-primary text-primary-foreground">

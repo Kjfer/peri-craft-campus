@@ -403,12 +403,12 @@ export default function Dashboard() {
             </Card>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {enrollments.map((enrollment) => (
+              {enrollments.filter(enrollment => enrollment.courses).map((enrollment) => (
                 <Card key={enrollment.id} className="hover:shadow-lg transition-shadow">
                   <div className="relative">
                     <img
-                      src={enrollment.courses.thumbnail_url || '/placeholder.svg'}
-                      alt={enrollment.courses.title}
+                      src={enrollment.courses?.thumbnail_url || '/placeholder.svg'}
+                      alt={enrollment.courses?.title || 'Curso'}
                       className="w-full h-48 object-cover rounded-t-lg"
                     />
                     <div className="absolute top-2 right-2">

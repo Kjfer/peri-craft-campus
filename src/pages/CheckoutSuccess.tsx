@@ -178,13 +178,13 @@ export default function CheckoutSuccess() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-3">
-                {order.order_items.map((item) => (
+                {order.order_items.filter(item => item.courses).map((item) => (
                   <div key={item.id} className="flex items-center gap-3 p-3 border rounded-lg">
                     <div className="flex-shrink-0">
-                      {item.courses.thumbnail_url ? (
+                      {item.courses?.thumbnail_url ? (
                         <img
                           src={item.courses.thumbnail_url}
-                          alt={item.courses.title}
+                          alt={item.courses?.title || 'Curso'}
                           className="w-12 h-9 object-cover rounded"
                         />
                       ) : (
@@ -195,7 +195,7 @@ export default function CheckoutSuccess() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <h4 className="font-medium text-sm leading-tight">
-                        {item.courses.title}
+                        {item.courses?.title || 'Curso'}
                       </h4>
                       <p className="text-xs text-muted-foreground">
                         {item.courses.instructor_name}

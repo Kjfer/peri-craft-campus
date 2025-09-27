@@ -331,10 +331,10 @@ export default function Dashboard() {
           {/* Tab: Mis Cursos */}
           <TabsContent value="courses">
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {enrollments.map((enrollment) => (
+              {enrollments.filter(enrollment => enrollment.courses).map((enrollment) => (
                 <Card key={enrollment.id} className="shadow-elegant hover:shadow-glow transition-shadow">
                   <div className="relative">
-                    {enrollment.courses.thumbnail_url && (
+                    {enrollment.courses?.thumbnail_url && (
                       <img 
                         src={enrollment.courses.thumbnail_url} 
                         alt={enrollment.courses.title}

@@ -197,7 +197,7 @@ export default function OrderHistory() {
                 <CardContent>
                   <div className="space-y-3">
                     <h4 className="font-medium">Cursos:</h4>
-                    {order.order_items.map((item, index) => (
+                    {order.order_items.filter(item => item.courses).map((item, index) => (
                       <div key={item.id}>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-3">
@@ -205,7 +205,7 @@ export default function OrderHistory() {
                               {item.courses?.thumbnail_url ? (
                                 <img 
                                   src={item.courses.thumbnail_url} 
-                                  alt={item.courses.title}
+                                  alt={item.courses?.title || 'Curso'}
                                   className="w-full h-full object-cover rounded"
                                 />
                               ) : (
