@@ -560,54 +560,69 @@ class CheckoutService {
     icon: string;
     type: string;
     description?: string;
+    available: boolean;
   }>> {
-    const canUsePeruvian = await this.canUsePeruvianPayments();
-    
-    const baseMethods: Array<{
-      id: string;
-      name: string;
-      icon: string;
-      type: string;
-      description?: string;
-    }> = [
-      {
-        id: 'paypal',
-        name: 'PayPal',
-        icon: '🅿️',
-        type: 'digital_wallet',
-        description: 'Paga de forma segura con tu cuenta PayPal'
-      },
-      {
-        id: 'googlepay',
-        name: 'Google Pay',
-        icon: '💳',
-        type: 'digital_wallet',
-        description: 'Pago rápido con Google Pay'
-      }
-    ];
-
-    if (canUsePeruvian) {
-      baseMethods.push({
-        id: 'yape_qr',
-        name: 'Yape QR',
-        icon: '📱',
-        type: 'manual_payment',
-        description: 'Escanea el QR y sube tu comprobante'
-      });
-
-      // Solo agregar MercadoPago para cursos, no para suscripciones
-      if (itemType !== 'subscription') {
-        baseMethods.push({
+    try {
+      console.log('💳 Getting available payment methods...');
+      
+      // Check user profile for country-specific methods
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('country')
+        .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
+        .single();
+      
+      const userCountry = profile?.country?.toLowerCase();
+      console.log('🌍 User country:', userCountry);
+      
+      const methods = [
+        {
+          id: 'paypal',
+          name: 'PayPal',
+          description: 'Paga con tu cuenta PayPal o tarjeta de crédito',
+          available: true,
+          icon: 'paypal',
+          type: 'digital_wallet'
+        }
+      ];
+      
+      // Add MercadoPago and Yape for Peru users only
+      if (userCountry === 'peru' || userCountry === 'perú' || userCountry === 'pe') {
+        methods.unshift({
           id: 'mercadopago',
           name: 'MercadoPago',
-          icon: '🏦',
-          type: 'external_payment',
-          description: 'Paga con tarjetas mediante enlace seguro'
+          description: 'Tarjetas de crédito/débito y transferencias',
+          available: true,
+          icon: 'mercadopago',
+          type: 'external_payment'
+        });
+        
+        methods.push({
+          id: 'yape_qr',
+          name: 'Yape QR',
+          description: 'Escanea código QR y confirma con comprobante',
+          available: true,
+          icon: 'smartphone',
+          type: 'manual_payment'
         });
       }
+      
+      console.log('💳 Available payment methods:', methods);
+      return methods;
+    } catch (error) {
+      console.error('❌ Error getting payment methods:', error);
+      // Return default methods on error
+      return [
+        {
+          id: 'paypal',
+          name: 'PayPal',
+          description: 'Paga con tu cuenta PayPal o tarjeta de crédito',
+          available: true,
+          icon: 'paypal',
+          type: 'digital_wallet'
+        }
+      ];
     }
-
-    return baseMethods;
   }
 
   // Formatear precio según la moneda

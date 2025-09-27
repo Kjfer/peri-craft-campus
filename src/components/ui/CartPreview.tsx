@@ -121,23 +121,32 @@ export default function CartPreview() {
                   </span>
                 </div>
                 
-                <Button 
-                  onClick={handleCheckout}
-                  className="w-full"
-                  disabled={cartState.loading || cartState.items.length === 0}
-                >
-                  {cartState.loading ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
-                      Procesando...
-                    </>
-                  ) : (
-                    <>
-                      Proceder al Pago
-                      <ShoppingCart className="w-4 h-4 ml-2" />
-                    </>
-                  )}
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline"
+                    onClick={() => navigate('/carrito')}
+                    className="flex-1"
+                  >
+                    Ver Carrito
+                  </Button>
+                  <Button 
+                    onClick={handleCheckout}
+                    className="flex-1"
+                    disabled={cartState.loading || cartState.items.length === 0}
+                  >
+                    {cartState.loading ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+                        Procesando...
+                      </>
+                    ) : (
+                      <>
+                        Checkout
+                        <ShoppingCart className="w-4 h-4 ml-2" />
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
             </>
           )}

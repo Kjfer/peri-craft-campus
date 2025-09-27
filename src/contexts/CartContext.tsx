@@ -224,9 +224,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       // Add to state first for immediate UI update
       dispatch({ type: 'ADD_ITEM', payload: newCartItem });
       
-      // Save to localStorage
-      const updatedItems = [...state.items, newCartItem];
-      saveCartToLocalStorage(updatedItems);
+      // Save to localStorage after state update
+      setTimeout(() => {
+        saveCartToLocalStorage([...state.items, newCartItem]);
+      }, 0);
 
       toast({
         title: "¡Agregado al carrito!",

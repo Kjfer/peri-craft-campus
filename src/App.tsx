@@ -26,6 +26,7 @@ import PaymentError from "./pages/PaymentError";
 import PaymentRedirect from "./pages/PaymentRedirect";
 import Checkout from "./pages/Checkout";
 import CheckoutSuccess from "./pages/CheckoutSuccess";
+import Cart from "./pages/Cart";
 import CartCheckout from "./pages/CartCheckout";
 import CourseCheckout from "./pages/CourseCheckout";
 import OrderHistory from "./pages/OrderHistory";
@@ -83,6 +84,7 @@ const App = () => (
                   <Route path="/checkout" element={<Checkout />} />
                   <Route path="/checkout/carrito" element={<CartCheckout />} />
                   <Route path="/checkout/curso/:courseId" element={<CourseCheckout />} />
+                  <Route path="/carrito" element={<Cart />} />
                   <Route path="/ordenes" element={<OrderHistory />} />
                   <Route path="/configuracion" element={<AccountSettings />} />
                   <Route path="/checkout/success/:orderId" element={<CheckoutSuccess />} />

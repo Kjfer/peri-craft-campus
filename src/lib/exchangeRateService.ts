@@ -178,6 +178,13 @@ class ExchangeRateService {
   }
 
   /**
+   * Get cached rate (public method for checkoutService)
+   */
+  getCachedRatePublic(cacheKey: string): number | null {
+    return this.getCachedRate(cacheKey);
+  }
+
+  /**
    * Guarda tasa en cache
    */
   private setCachedRate(cacheKey: string, rate: number): void {
