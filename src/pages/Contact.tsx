@@ -73,24 +73,24 @@ export default function Contact() {
   };
 
   // Datos de contacto principales
-  const whatsappNumber = "+52 55 1234 5678"; // Cambia por el real
-  const whatsappLink = "https://wa.me/525512345678"; // Cambia por el real
-  const whatsappHours = "Lun a Vie: 9:00 - 18:00";
-  const supportEmail = "soporte@periinstitute.com";
-  const supportHours = "Lun a Vie: 9:00 - 18:00";
+  const whatsappNumber = "+51 920 545 678"; // Cambia por el real
+  const whatsappLink = "https://wa.me/51920545678"; // Cambia por el real
+  const whatsappHours = "Lun a Vie: 9:00 a.m. - 6:00 p.m.";
+  const supportEmail = "soporte@instituto.pericompanygroup.com";
+  const supportHours = "Lun a Vie: 9:00 a.m.- 10 p.m.";
 
   // Ejemplo de personal comercial
   const commercialStaff = {
-    name: "María López",
-    role: "Asesora Comercial",
-    photo: "https://randomuser.me/api/portraits/women/44.jpg",
+    name: "Pether Peri",
+    role: "Asesor Comercial",
+    photo: "https://idjmabhvzupcdygguqzm.supabase.co/storage/v1/object/sign/images/Captura%20de%20pantalla%202025-09-29%20100039.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV82MGYzZmU5YS1lMWI0LTQ1YzktOTJiYy1jZjU1OTljYWQ0YjIiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJpbWFnZXMvQ2FwdHVyYSBkZSBwYW50YWxsYSAyMDI1LTA5LTI5IDEwMDAzOS5wbmciLCJpYXQiOjE3NTkxNTgwOTMsImV4cCI6MTc5MDY5NDA5M30.xqMPwRVWF5vVgB5HXE6vWtd_hM_fYTIwCtDKBgYQUoY",
     description: "Te ayudará a resolver tus dudas y a encontrar el curso en vivo ideal para ti."
   };
 
   const faqItems = [
     {
       question: "¿Cómo puedo inscribirme a un curso?",
-      answer: "Puedes inscribirte directamente desde la página del curso. Si es gratuito, el acceso es inmediato. Para cursos pagos, serás dirigido al proceso de pago seguro."
+      answer: "Puedes inscribirte directamente desde la página del curso cuando hayas iniciado sesión. Si es gratuito, el acceso es inmediato. Para cursos pagos, serás dirigido al proceso de pago seguro."
     },
     {
       question: "¿Los certificados son reconocidos oficialmente?",
@@ -120,13 +120,13 @@ export default function Contact() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
               <Button className="bg-green-500 text-white text-lg px-8 py-6" asChild>
-                <a href="#LINK_COMUNIDAD_WHATSAPP" target="_blank" rel="noopener">
+                <a href="https://whatsapp.com/channel/0029VbBND0PGpLHSErI7mC1i" target="_blank" rel="noopener">
                   <MessageCircle className="mr-2" /> Unirse a la comunidad WhatsApp
                 </a>
               </Button>
             </div>
             <div className="text-muted-foreground text-base mb-2">
-              ¿Te gustaría recibir información constante sobre nuestros cursos y eventos en vivo? Únete a nuestra comunidad exclusiva de WhatsApp y mantente al día.
+              ¿Te gustaría recibir información constante sobre nuestros cursos y eventos en vivo? Únete a nuestro canal de difusión exclusiva de WhatsApp y mantente al día.
             </div>
           </div>
         </div>
