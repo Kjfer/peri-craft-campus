@@ -282,7 +282,7 @@ export default function ClasesEnVivo() {
                       Contactar área comercial
                     </button>
                   </a>
-                  <a href="#LINK_COMUNIDAD_WHATSAPP" target="_blank" rel="noopener" className="inline-block">
+                  <a href="https://whatsapp.com/channel/0029VbBND0PGpLHSErI7mC1i" target="_blank" rel="noopener" className="inline-block">
                     <button className="bg-success text-success-foreground font-semibold px-6 py-3 rounded-lg shadow hover:bg-success/90 transition-all w-full sm:w-auto">
                       Unirse a la comunidad WhatsApp
                     </button>

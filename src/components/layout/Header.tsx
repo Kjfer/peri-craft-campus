@@ -49,8 +49,12 @@ export function Header() {
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-3">
-            <div className="w-10 h-10 gradient-primary rounded-lg flex items-center justify-center">
-              <span className="text-lg font-bold text-primary-foreground">P</span>
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden">
+              <img 
+                src="https://idjmabhvzupcdygguqzm.supabase.co/storage/v1/object/sign/images/logo.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV82MGYzZmU5YS1lMWI0LTQ1YzktOTJiYy1jZjU1OTljYWQ0YjIiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJpbWFnZXMvbG9nby5wbmciLCJpYXQiOjE3NTkxNjU5NzQsImV4cCI6MTc5MDcwMTk3NH0.EPW4Mnk0ZvuraUMWuDffz6h_KZsu_2tM5D3mcenC6lg" 
+                alt="Peri Institute Logo" 
+                className="w-full h-full object-cover rounded-lg"
+              />
             </div>
             <span className="text-xl font-bold">Peri Institute</span>
           </Link>

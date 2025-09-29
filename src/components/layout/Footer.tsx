@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Facebook, Instagram, Youtube, Mail, Phone, MapPin } from "lucide-react";
+import { Facebook, Instagram, Youtube, Linkedin, Mail, Phone, MapPin } from "lucide-react";
 
 export function Footer() {
   return (
@@ -19,13 +19,16 @@ export function Footer() {
               Aprende con los mejores profesionales del sector.
             </p>
             <div className="flex space-x-4">
-              <a href="#" className="text-secondary-foreground/60 hover:text-secondary-foreground transition-smooth">
+              <a href="https://www.facebook.com/p/PERI-Institute-100031453284473" className="text-secondary-foreground/60 hover:text-secondary-foreground transition-smooth">
                 <Facebook className="h-5 w-5" />
               </a>
-              <a href="#" className="text-secondary-foreground/60 hover:text-secondary-foreground transition-smooth">
+              <a href="https://www.instagram.com/peri.institute/" className="text-secondary-foreground/60 hover:text-secondary-foreground transition-smooth">
                 <Instagram className="h-5 w-5" />
               </a>
-              <a href="#" className="text-secondary-foreground/60 hover:text-secondary-foreground transition-smooth">
+              <a href="https://www.linkedin.com/company/peri-institute/" className="text-secondary-foreground/60 hover:text-secondary-foreground transition-smooth">
+                <Linkedin className="h-5 w-5" />
+              </a>
+              <a href="https://www.youtube.com/channel/UCefyuv5d-LZqcNiNWSX9NdQ" className="text-secondary-foreground/60 hover:text-secondary-foreground transition-smooth">
                 <Youtube className="h-5 w-5" />
               </a>
             </div>
@@ -83,16 +86,16 @@ export function Footer() {
             <div className="space-y-3">
               <div className="flex items-center space-x-3">
                 <Mail className="h-4 w-4 text-primary" />
-                <span className="text-sm text-secondary-foreground/80">info@periinstitute.com</span>
+                <span className="text-sm text-secondary-foreground/80">info@instituto.pericompanygroup.com</span>
               </div>
               <div className="flex items-center space-x-3">
                 <Phone className="h-4 w-4 text-primary" />
-                <span className="text-sm text-secondary-foreground/80">+1 (555) 123-4567</span>
+                <span className="text-sm text-secondary-foreground/80">+51 920 545 678</span>
               </div>
               <div className="flex items-center space-x-3">
                 <MapPin className="h-4 w-4 text-primary" />
                 <span className="text-sm text-secondary-foreground/80">
-                  123 Fashion St, Design City
+                  Lima, Lima Metropolitana PE
                 </span>
               </div>
             </div>

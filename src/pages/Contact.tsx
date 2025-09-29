@@ -121,7 +121,7 @@ export default function Contact() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
               <Button className="bg-green-500 text-white text-lg px-8 py-6" asChild>
                 <a href="https://whatsapp.com/channel/0029VbBND0PGpLHSErI7mC1i" target="_blank" rel="noopener">
-                  <MessageCircle className="mr-2" /> Unirse a la comunidad WhatsApp
+                  <MessageCircle className="mr-2" /> Unirse al canal de WhatsApp
                 </a>
               </Button>
             </div>

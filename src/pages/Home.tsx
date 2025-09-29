@@ -20,8 +20,8 @@ export default function Home() {
   }
   
   const stats: StatItem[] = [
-    { icon: Users, value: "5,000+", label: "Estudiantes Activos" },
-    { icon: BookOpen, value: "50+", label: "Cursos Disponibles" },
+    { icon: Users, value: "200+", label: "Estudiantes Activos" },
+    { icon: BookOpen, value: "15+", label: "Cursos Disponibles" },
     { icon: Award, value: "4.9/5", label: "Calificación Promedio" },
     { icon: TrendingUp, value: "95%", label: "Tasa de Éxito" }
   ];

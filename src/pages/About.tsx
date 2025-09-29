@@ -13,13 +13,16 @@ import {
   Palette,
   Star
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export default function About() {
+  const navigate = useNavigate();
+
   const stats = [
-    { label: "Estudiantes Activos", value: "10,000+", icon: Users },
-    { label: "Cursos Disponibles", value: "50+", icon: BookOpen },
-    { label: "Certificados Emitidos", value: "5,000+", icon: Award },
-    { label: "Países", value: "25+", icon: Globe },
+    { label: "Estudiantes Activos", value: "200+", icon: Users },
+    { label: "Cursos Disponibles", value: "15+", icon: BookOpen },
+    { label: "Certificados Emitidos", value: "200+", icon: Award },
+    { label: "Países en Latinoamérica", value: "5+", icon: Globe },
   ];
 
   const values = [
@@ -47,16 +50,16 @@ export default function About() {
 
   const team = [
     {
-      name: "María Fernández",
+      name: "Nitza Peri",
       role: "Directora Académica",
-      description: "15 años de experiencia en diseño de moda y educación textil.",
-      image: "/placeholder.svg"
+      description: "Empresaria en el rubro Textil, Ingeniería, Educación e Importación de Cosméticos.",
+      image: "https://idjmabhvzupcdygguqzm.supabase.co/storage/v1/object/sign/images/1701365672457.jpg?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV82MGYzZmU5YS1lMWI0LTQ1YzktOTJiYy1jZjU1OTljYWQ0YjIiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJpbWFnZXMvMTcwMTM2NTY3MjQ1Ny5qcGciLCJpYXQiOjE3NTkxNjQzNTAsImV4cCI6MTc5MDcwMDM1MH0.Rj_w3VPPYFlrULxPKJjFEd-ldz6HRK4afPDaG_D1j38"
     },
     {
-      name: "Carlos Mendoza",
-      role: "Instructor Principal",
-      description: "Especialista en confección y patronaje con certificaciones internacionales.",
-      image: "/placeholder.svg"
+      name: "Pether Peri",
+      role: "Director e Instructor Principal",
+      description: "Diseñador de modas reconocido internacionalmente y con amplia experiencia en la industria.",
+      image: "https://idjmabhvzupcdygguqzm.supabase.co/storage/v1/object/sign/images/Captura%20de%20pantalla%202025-09-29%20100039.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV82MGYzZmU5YS1lMWI0LTQ1YzktOTJiYy1jZjU1OTljYWQ0YjIiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJpbWFnZXMvQ2FwdHVyYSBkZSBwYW50YWxsYSAyMDI1LTA5LTI5IDEwMDAzOS5wbmciLCJpYXQiOjE3NTkxNTgwOTMsImV4cCI6MTc5MDY5NDA5M30.xqMPwRVWF5vVgB5HXE6vWtd_hM_fYTIwCtDKBgYQUoY"
     },
     {
       name: "Ana García",
@@ -76,8 +79,11 @@ export default function About() {
               Sobre Peri Institute
             </h1>
             <p className="text-xl opacity-90 mb-8 leading-relaxed">
-              Somos una institución líder en educación de moda, diseño y confección de ropa, 
-              comprometida con formar a los profesionales del futuro de la industria textil.
+              Peri Institute es un instituto virtual de moda que ofrece un programa intensivo de un año, 
+              desde fundamentos de diseño y confección hasta técnicas avanzadas de producción. 
+              Su metodología 100% online, práctica y accesible, está dirigida a personas con o sin experiencia, 
+              acompañadas por docentes especializados y una comunidad creativa. La escuela impulsa el talento emergente, 
+              brindando recursos para emprender o integrarse al mundo laboral de la moda con confianza y visión profesional.
             </p>
             <div className="flex items-center justify-center space-x-4">
               <Scissors className="w-8 h-8" />
@@ -121,17 +127,17 @@ export default function About() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
               <div className="space-y-6">
                 <p className="text-muted-foreground leading-relaxed">
-                  En Peri Institute, creemos que el talento y la creatividad no tienen fronteras. 
-                  Nuestra misión es proporcionar educación de calidad mundial en moda, diseño y 
-                  confección de ropa a estudiantes de todo el mundo, sin importar su ubicación 
-                  geográfica o situación económica.
+                 En Peri Institute creemos que la pasión creativa puede transformarse en una carrera 
+                 profesional. Nuestra misión es brindar formación en moda, diseño y confección accesible 
+                 a nivel global, eliminando barreras geográficas y económicas para que cualquier persona 
+                 pueda desarrollar su talento y convertirlo en una oportunidad real.
                 </p>
                 
                 <p className="text-muted-foreground leading-relaxed">
-                  A través de nuestra plataforma digital innovadora, ofrecemos cursos prácticos 
-                  y teóricos impartidos por profesionales reconocidos en la industria, 
-                  garantizando que nuestros estudiantes adquieran las habilidades y conocimientos 
-                  necesarios para destacar en el competitivo mundo de la moda.
+                  A través de nuestra plataforma 100% virtual, ofrecemos programas intensivos con un enfoque 
+                  práctico y actualizado, dirigidos por docentes especializados en la industria. De esta manera, 
+                  aseguramos que cada estudiante adquiera competencias sólidas y aplicables para destacar en 
+                  el dinámico y exigente mundo de la moda.
                 </p>
 
                 <div className="flex space-x-4">
@@ -148,9 +154,9 @@ export default function About() {
                 <CardContent className="p-8">
                   <h3 className="text-xl font-semibold mb-4">Visión 2030</h3>
                   <p className="text-muted-foreground leading-relaxed">
-                    Ser la plataforma educativa de referencia mundial en moda y diseño, 
-                    reconocida por la excelencia de nuestros programas y el éxito profesional 
-                    de nuestros graduados en la industria global de la moda.
+                    Convertirnos en la plataforma educativa líder a nivel mundial en moda y diseño, 
+                    reconocida por la calidad de nuestros programas y por impulsar el éxito profesional 
+                    de nuestros estudiantes dentro de la industria global de la moda.
                   </p>
                 </CardContent>
               </Card>
@@ -235,10 +241,10 @@ export default function About() {
               Únete a miles de estudiantes que ya están transformando sus sueños en realidad
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" className="px-8">
+              <Button size="lg" className="px-8" onClick={() => navigate("/cursos")}>
                 Ver Cursos
               </Button>
-              <Button size="lg" variant="outline" className="px-8">
+              <Button size="lg" variant="outline" className="px-8" onClick={() => navigate("/contacto")}>
                 Contactar
               </Button>
             </div>
