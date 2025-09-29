@@ -19,16 +19,28 @@ export function Footer() {
               Aprende con los mejores profesionales del sector.
             </p>
             <div className="flex space-x-4">
-              <a href="https://www.facebook.com/p/PERI-Institute-100031453284473" className="text-secondary-foreground/60 hover:text-secondary-foreground transition-smooth">
+              <a href="https://www.facebook.com/p/PERI-Institute-100031453284473" 
+                 target="_blank" 
+                 rel="noopener noreferrer" 
+                 className="text-secondary-foreground/60 hover:text-secondary-foreground transition-smooth">
                 <Facebook className="h-5 w-5" />
               </a>
-              <a href="https://www.instagram.com/peri.institute/" className="text-secondary-foreground/60 hover:text-secondary-foreground transition-smooth">
+              <a href="https://www.instagram.com/peri.institute/" 
+                 target="_blank" 
+                 rel="noopener noreferrer" 
+                 className="text-secondary-foreground/60 hover:text-secondary-foreground transition-smooth">
                 <Instagram className="h-5 w-5" />
               </a>
-              <a href="https://www.linkedin.com/company/peri-institute/" className="text-secondary-foreground/60 hover:text-secondary-foreground transition-smooth">
+              <a href="https://www.linkedin.com/company/peri-institute/" 
+                 target="_blank" 
+                 rel="noopener noreferrer" 
+                 className="text-secondary-foreground/60 hover:text-secondary-foreground transition-smooth">
                 <Linkedin className="h-5 w-5" />
               </a>
-              <a href="https://www.youtube.com/channel/UCefyuv5d-LZqcNiNWSX9NdQ" className="text-secondary-foreground/60 hover:text-secondary-foreground transition-smooth">
+              <a href="https://www.youtube.com/channel/UCefyuv5d-LZqcNiNWSX9NdQ" 
+                 target="_blank" 
+                 rel="noopener noreferrer" 
+                 className="text-secondary-foreground/60 hover:text-secondary-foreground transition-smooth">
                 <Youtube className="h-5 w-5" />
               </a>
             </div>

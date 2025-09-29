@@ -212,10 +212,21 @@ export default function About() {
               {team.map((member, index) => (
                 <Card key={index} className="text-center border-0 bg-background hover:shadow-elegant transition-all duration-300">
                   <CardContent className="pt-6">
-                    <div className="w-24 h-24 mx-auto rounded-full bg-gradient-primary mb-4 flex items-center justify-center">
-                      <span className="text-2xl font-bold text-primary-foreground">
-                        {member.name.charAt(0)}
-                      </span>
+                    <div className="w-24 h-24 mx-auto rounded-full mb-4 overflow-hidden">
+                      <img 
+                        src={member.image} 
+                        alt={member.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          // Fallback to letter if image fails to load
+                          e.currentTarget.style.display = 'none';
+                          e.currentTarget.parentElement.innerHTML = `
+                            <div class="w-24 h-24 rounded-full bg-gradient-primary flex items-center justify-center">
+                              <span class="text-2xl font-bold text-primary-foreground">${member.name.charAt(0)}</span>
+                            </div>
+                          `;
+                        }}
+                      />
                     </div>
                     <h3 className="text-xl font-semibold mb-2">{member.name}</h3>
                     <Badge variant="secondary" className="mb-4">{member.role}</Badge>
