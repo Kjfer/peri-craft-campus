@@ -1,85 +1,56 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Users, Play, Calendar as CalendarIcon } from "lucide-react";
+import { Clock, Users, Play, Calendar as CalendarIcon, RefreshCw, AlertCircle } from "lucide-react";
 import { format, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
-
-// Datos de muestra de clases en vivo
-const clasesEnVivo = [
-  {
-    id: 1,
-    title: "Taller Patronaje de Vestidos Básicos - Módulo 1",
-    date: new Date(2025, 8, 18), // 18 de septiembre 2025
-    time: "19:00",
-    duration: "2 horas",
-    instructor: "Pether Peri",
-    students: 25,
-    status: "iniciado",
-    type: "live",
-    description: "Introducción al patronaje básico y toma de medidas"
-  },
-  {
-    id: 2,
-    title: "Taller Patronaje de Vestidos de Gala - Sesión Práctica",
-    date: new Date(2025, 8, 20), // 20 de septiembre 2025
-    time: "18:30",
-    duration: "2.5 horas",
-    instructor: "Pether Peri",
-    students: 18,
-    status: "proximo",
-    type: "live",
-    description: "Desarrollo de moldes para vestidos sirena"
-  },
-  {
-    id: 3,
-    title: "Taller Patronaje de Blusas y Faldas - Técnicas Avanzadas",
-    date: new Date(2025, 8, 22), // 22 de septiembre 2025
-    time: "20:00",
-    duration: "1.5 horas",
-    instructor: "Pether Peri",
-    students: 32,
-    status: "proximo",
-    type: "live",
-    description: "Variaciones de blusas asimétricas y off shoulder"
-  },
-  {
-    id: 4,
-    title: "Sesión de Preguntas y Respuestas - Patronaje General",
-    date: new Date(2025, 8, 25), // 25 de septiembre 2025
-    time: "19:30",
-    duration: "1 hora",
-    instructor: "Pether Peri",
-    students: 45,
-    status: "proximo",
-    type: "qa",
-    description: "Resuelve todas tus dudas sobre patronaje en vivo"
-  },
-  {
-    id: 5,
-    title: "Masterclass: Técnicas de Alta Costura",
-    date: new Date(2025, 8, 28), // 28 de septiembre 2025
-    time: "18:00",
-    duration: "3 horas",
-    instructor: "Pether Peri",
-    students: 15,
-    status: "proximo",
-    type: "masterclass",
-    description: "Aprende técnicas exclusivas de la alta costura francesa"
-  }
-];
+import googleSheetsService, { type CursoEnVivo } from "@/services/googleSheetsService";
+import { Button } from "@/components/ui/button";
 
 export default function ClasesEnVivo() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [cursos, setCursos] = useState<CursoEnVivo[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+  // Cargar datos de cursos
+  const loadCursos = async (showLoader = true) => {
+    try {
+      if (showLoader) setLoading(true);
+      setError(null);
+      
+      const cursosData = await googleSheetsService.getCursosEnVivo();
+      setCursos(cursosData);
+      setLastUpdated(new Date());
+      
+    } catch (err) {
+      console.error('Error cargando cursos:', err);
+      setError('No se pudieron cargar los cursos en tiempo real');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Cargar datos al montar el componente
+  useEffect(() => {
+    loadCursos();
+  }, []);
+
+  // Refrescar datos manualmente
+  const handleRefresh = () => {
+    googleSheetsService.clearCache();
+    loadCursos();
+  };
   
   // Filtrar clases por fecha seleccionada
   const clasesDelDia = selectedDate 
-    ? clasesEnVivo.filter(clase => isSameDay(clase.date, selectedDate))
+    ? cursos.filter(clase => isSameDay(clase.date, selectedDate))
     : [];
 
   // Obtener fechas que tienen clases
-  const fechasConClases = clasesEnVivo.map(clase => clase.date);
+  const fechasConClases = cursos.map(clase => clase.date);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -113,10 +84,45 @@ export default function ClasesEnVivo() {
           <h1 className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent mb-4">
             Cursos en Vivo
           </h1>
-          <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+          <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-6">
             Únete a nuestras sesiones interactivas en tiempo real con profesionales de la moda. 
             Selecciona una fecha en el calendario para ver inicios de cursos programados.
           </p>
+          
+          {/* Estado y controles */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-4">
+            <Button 
+              variant="outline" 
+              onClick={handleRefresh}
+              disabled={loading}
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              {loading ? 'Cargando...' : 'Actualizar cursos'}
+            </Button>
+            
+            {lastUpdated && (
+              <span className="text-sm text-muted-foreground">
+                Última actualización: {format(lastUpdated, "HH:mm", { locale: es })}
+              </span>
+            )}
+          </div>
+
+          {/* Indicador de fuente de datos */}
+          <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            <span>📊 Datos en tiempo real desde Google Sheets</span>
+          </div>
+
+          {/* Error state */}
+          {error && (
+            <div className="mt-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg max-w-md mx-auto">
+              <div className="flex items-center gap-2 text-destructive">
+                <AlertCircle className="h-4 w-4" />
+                <span className="text-sm">{error}</span>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
@@ -173,7 +179,17 @@ export default function ClasesEnVivo() {
 
           {/* Lista de clases */}
           <div className="lg:col-span-2">
-            {selectedDate ? (
+            {loading ? (
+              <Card className="border-0 shadow-elegant bg-card/50 backdrop-blur-sm">
+                <CardContent className="p-8 text-center">
+                  <RefreshCw className="h-12 w-12 text-primary mx-auto mb-4 animate-spin" />
+                  <h3 className="text-xl font-semibold mb-2">Cargando cursos...</h3>
+                  <p className="text-muted-foreground">
+                    Obteniendo la información más actualizada desde Google Sheets
+                  </p>
+                </CardContent>
+              </Card>
+            ) : selectedDate ? (
               <div>
                 <h2 className="text-2xl font-bold mb-6">
                   Inicios para {format(selectedDate, "EEEE, d 'de' MMMM", { locale: es })}
