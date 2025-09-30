@@ -99,13 +99,13 @@ export default function About() {
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {stats.map((stat, index) => (
-              <Card key={index} className="text-center border-0 bg-gradient-to-br from-background to-muted/50">
+              <Card key={index} className="text-center border-0 bg-gradient-to-br from-white via-primary/5 to-primary/10 hover:shadow-elegant hover:shadow-primary/20 transition-all duration-300 transform hover:-translate-y-2">
                 <CardContent className="pt-6">
-                  <div className="w-12 h-12 mx-auto rounded-full bg-primary/10 flex items-center justify-center text-primary mb-4">
-                    <stat.icon className="w-6 h-6" />
+                  <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-primary to-yellow-500 flex items-center justify-center text-white mb-4 shadow-lg">
+                    <stat.icon className="w-8 h-8" />
                   </div>
-                  <h3 className="text-2xl font-bold text-primary mb-2">{stat.value}</h3>
-                  <p className="text-sm text-muted-foreground">{stat.label}</p>
+                  <h3 className="text-3xl font-bold text-primary mb-2 drop-shadow-sm">{stat.value}</h3>
+                  <p className="text-sm text-gray-700 font-semibold">{stat.label}</p>
                 </CardContent>
               </Card>
             ))}
@@ -126,14 +126,14 @@ export default function About() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
               <div className="space-y-6">
-                <p className="text-muted-foreground leading-relaxed">
+                <p className="text-gray-700 font-medium leading-relaxed text-lg">
                  En Peri Institute creemos que la pasión creativa puede transformarse en una carrera 
                  profesional. Nuestra misión es brindar formación en moda, diseño y confección accesible 
                  a nivel global, eliminando barreras geográficas y económicas para que cualquier persona 
                  pueda desarrollar su talento y convertirlo en una oportunidad real.
                 </p>
                 
-                <p className="text-muted-foreground leading-relaxed">
+                <p className="text-gray-700 font-medium leading-relaxed text-lg">
                   A través de nuestra plataforma 100% virtual, ofrecemos programas intensivos con un enfoque 
                   práctico y actualizado, dirigidos por docentes especializados en la industria. De esta manera, 
                   aseguramos que cada estudiante adquiera competencias sólidas y aplicables para destacar en 
@@ -141,19 +141,19 @@ export default function About() {
                 </p>
 
                 <div className="flex space-x-4">
-                  <Badge variant="secondary" className="px-4 py-2">
+                  <Badge variant="secondary" className="px-4 py-2 bg-primary/10 text-primary font-semibold">
                     Accesibilidad Global
                   </Badge>
-                  <Badge variant="secondary" className="px-4 py-2">
+                  <Badge variant="secondary" className="px-4 py-2 bg-primary/10 text-primary font-semibold">
                     Calidad Premium
                   </Badge>
                 </div>
               </div>
 
-              <Card className="border-0 bg-gradient-to-br from-primary/5 to-accent/5">
+              <Card className="border-0 bg-gradient-to-br from-primary/5 via-white to-yellow-50/50 shadow-elegant hover:shadow-glow transition-all duration-300">
                 <CardContent className="p-8">
-                  <h3 className="text-xl font-semibold mb-4">Visión 2030</h3>
-                  <p className="text-muted-foreground leading-relaxed">
+                  <h3 className="text-2xl font-bold mb-4 text-gray-900">Visión 2030</h3>
+                  <p className="text-gray-700 font-medium leading-relaxed">
                     Convertirnos en la plataforma educativa líder a nivel mundial en moda y diseño, 
                     reconocida por la calidad de nuestros programas y por impulsar el éxito profesional 
                     de nuestros estudiantes dentro de la industria global de la moda.
@@ -178,15 +178,15 @@ export default function About() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {values.map((value, index) => (
-                <Card key={index} className="border-0 bg-gradient-to-br from-background to-muted/50 hover:shadow-elegant transition-all duration-300">
+                <Card key={index} className="border-0 bg-gradient-to-br from-white via-gray-50/50 to-primary/5 hover:shadow-elegant hover:shadow-primary/20 transition-all duration-300 transform hover:-translate-y-1">
                   <CardHeader>
-                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-4">
-                      <value.icon className="w-6 h-6" />
+                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-yellow-500 flex items-center justify-center text-white mb-4 shadow-lg">
+                      <value.icon className="w-8 h-8" />
                     </div>
-                    <CardTitle className="text-xl">{value.title}</CardTitle>
+                    <CardTitle className="text-xl font-bold text-gray-900">{value.title}</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-muted-foreground leading-relaxed">
+                    <p className="text-gray-700 font-medium leading-relaxed">
                       {value.description}
                     </p>
                   </CardContent>
@@ -210,27 +210,27 @@ export default function About() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {team.map((member, index) => (
-                <Card key={index} className="text-center border-0 bg-background hover:shadow-elegant transition-all duration-300">
-                  <CardContent className="pt-6">
-                    <div className="w-24 h-24 mx-auto rounded-full mb-4 overflow-hidden">
+                <Card key={index} className="text-center border-0 bg-gradient-to-br from-white via-gray-50/50 to-primary/5 hover:shadow-elegant hover:shadow-primary/20 transition-all duration-300 transform hover:-translate-y-2">
+                  <CardContent className="pt-8">
+                    <div className="w-28 h-28 mx-auto rounded-full mb-6 overflow-hidden shadow-lg border-4 border-primary/20">
                       <img 
                         src={member.image} 
                         alt={member.name}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover hover:scale-110 transition-transform duration-300"
                         onError={(e) => {
                           // Fallback to letter if image fails to load
                           e.currentTarget.style.display = 'none';
                           e.currentTarget.parentElement.innerHTML = `
-                            <div class="w-24 h-24 rounded-full bg-gradient-primary flex items-center justify-center">
-                              <span class="text-2xl font-bold text-primary-foreground">${member.name.charAt(0)}</span>
+                            <div class="w-28 h-28 rounded-full bg-gradient-to-br from-primary to-yellow-500 flex items-center justify-center shadow-lg">
+                              <span class="text-3xl font-bold text-white">${member.name.charAt(0)}</span>
                             </div>
                           `;
                         }}
                       />
                     </div>
-                    <h3 className="text-xl font-semibold mb-2">{member.name}</h3>
-                    <Badge variant="secondary" className="mb-4">{member.role}</Badge>
-                    <p className="text-muted-foreground text-sm leading-relaxed">
+                    <h3 className="text-xl font-bold mb-3 text-gray-900">{member.name}</h3>
+                    <Badge variant="secondary" className="mb-4 bg-primary/10 text-primary font-semibold">{member.role}</Badge>
+                    <p className="text-gray-700 font-medium text-sm leading-relaxed bg-white/80 p-4 rounded-lg">
                       {member.description}
                     </p>
                   </CardContent>

@@ -184,22 +184,22 @@ export default function Contact() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto mb-16">
             {/* WhatsApp Card con personal */}
-            <Card className="text-center border-0 bg-gradient-to-br from-background to-muted/50 hover:shadow-elegant transition-all duration-300">
+            <Card className="text-center border-0 bg-gradient-to-br from-white via-green-50/50 to-green-100/30 hover:shadow-elegant hover:shadow-green-200/50 transition-all duration-300 transform hover:-translate-y-1">
               <CardContent className="pt-6">
-                <div className="flex flex-col items-center justify-center mb-2">
-                  <img src={commercialStaff.photo} alt={commercialStaff.name} className="w-16 h-16 rounded-full object-cover border-2 border-green-400 mb-2" />
-                  <div className="font-semibold text-lg">{commercialStaff.name}</div>
-                  <div className="text-xs text-green-700 mb-1">{commercialStaff.role}</div>
+                <div className="flex flex-col items-center justify-center mb-4">
+                  <img src={commercialStaff.photo} alt={commercialStaff.name} className="w-20 h-20 rounded-full object-cover border-4 border-green-400 shadow-lg mb-3" />
+                  <div className="font-bold text-xl text-gray-900">{commercialStaff.name}</div>
+                  <div className="text-sm text-green-700 font-semibold mb-1">{commercialStaff.role}</div>
                 </div>
-                <div className="w-12 h-12 mx-auto rounded-full bg-green-100 flex items-center justify-center text-green-600 mb-4">
-                  <MessageCircle className="w-6 h-6" />
+                <div className="w-16 h-16 mx-auto rounded-full bg-green-500 flex items-center justify-center text-white mb-4 shadow-lg">
+                  <MessageCircle className="w-8 h-8" />
                 </div>
-                <h3 className="font-semibold mb-2">WhatsApp</h3>
-                <p className="text-sm text-muted-foreground mb-1">Atención inmediata</p>
-                <div className="font-medium text-lg mb-1">{whatsappNumber}</div>
-                <div className="text-xs text-muted-foreground mb-3">{whatsappHours}</div>
-                <p className="text-xs text-muted-foreground mb-3">{commercialStaff.description}</p>
-                <Button className="bg-green-500 text-white w-full" asChild>
+                <h3 className="font-bold text-xl mb-2 text-gray-900">WhatsApp</h3>
+                <p className="text-sm text-gray-600 font-semibold mb-2">Atención inmediata</p>
+                <div className="font-bold text-xl mb-2 text-green-700">{whatsappNumber}</div>
+                <div className="text-sm text-gray-600 font-medium mb-4">{whatsappHours}</div>
+                <p className="text-sm text-gray-700 font-medium mb-4 bg-white/80 p-3 rounded-lg">{commercialStaff.description}</p>
+                <Button className="bg-green-500 hover:bg-green-600 text-white w-full font-semibold py-3 shadow-lg" asChild>
                   <a href={whatsappLink} target="_blank" rel="noopener">
                     Chatear ahora
                   </a>
@@ -207,15 +207,15 @@ export default function Contact() {
               </CardContent>
             </Card>
             {/* Email Card */}
-            <Card className="text-center border-0 bg-gradient-to-br from-background to-muted/50 hover:shadow-elegant transition-all duration-300">
+            <Card className="text-center border-0 bg-gradient-to-br from-white via-blue-50/50 to-blue-100/30 hover:shadow-elegant hover:shadow-blue-200/50 transition-all duration-300 transform hover:-translate-y-1">
               <CardContent className="pt-6">
-                <div className="w-12 h-12 mx-auto rounded-full bg-primary/10 flex items-center justify-center text-primary mb-4">
-                  <Mail className="w-6 h-6" />
+                <div className="w-16 h-16 mx-auto rounded-full bg-primary flex items-center justify-center text-white mb-6 shadow-lg">
+                  <Mail className="w-8 h-8" />
                 </div>
-                <h3 className="font-semibold mb-2">Correo</h3>
-                <p className="text-sm text-muted-foreground mb-1">Soporte por correo</p>
-                <div className="font-medium text-lg mb-1">{supportEmail}</div>
-                <div className="text-xs text-muted-foreground mb-3">{supportHours}</div>
+                <h3 className="font-bold text-xl mb-3 text-gray-900">Correo</h3>
+                <p className="text-sm text-gray-600 font-semibold mb-3">Soporte por correo</p>
+                <div className="font-bold text-lg mb-3 text-primary bg-white/80 p-3 rounded-lg">{supportEmail}</div>
+                <div className="text-sm text-gray-600 font-medium">{supportHours}</div>
               </CardContent>
             </Card>
           </div>
@@ -228,24 +228,24 @@ export default function Contact() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 max-w-6xl mx-auto">
             {/* ¿No encuentras lo que buscas? */}
             <div className="mb-6 lg:col-span-2">
-              <Card className="bg-primary/5 border-primary/20">
+              <Card className="bg-gradient-to-r from-primary/10 via-primary/5 to-yellow-50/50 border-primary/30 shadow-lg">
                 <CardContent className="pt-6">
-                  <h3 className="font-semibold mb-2 text-lg">¿No encuentras lo que buscas?</h3>
-                  <p className="text-sm text-muted-foreground mb-2">
+                  <h3 className="font-bold mb-3 text-xl text-gray-900">¿No encuentras lo que buscas?</h3>
+                  <p className="text-gray-700 font-medium mb-2 leading-relaxed">
                     Si no encuentras respuesta en las preguntas frecuentes, puedes enviarnos tu consulta usando el formulario y te responderemos lo antes posible.
                   </p>
                 </CardContent>
               </Card>
             </div>
             {/* Contact Form */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-2xl">Envíanos un mensaje</CardTitle>
-                <CardDescription>
+            <Card className="border-0 shadow-elegant bg-gradient-to-br from-white to-gray-50/50 hover:shadow-glow transition-all duration-300">
+              <CardHeader className="bg-gradient-to-r from-primary/10 to-primary/5 rounded-t-lg">
+                <CardTitle className="text-2xl font-bold text-gray-900">Envíanos un mensaje</CardTitle>
+                <CardDescription className="text-gray-700 font-medium">
                   Completa el formulario y te responderemos lo antes posible
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-6">
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -341,12 +341,12 @@ export default function Contact() {
 
               <div className="space-y-4">
                 {faqItems.map((item, index) => (
-                  <Card key={index}>
+                  <Card key={index} className="border-0 bg-gradient-to-r from-white to-gray-50/70 hover:shadow-lg hover:from-primary/5 hover:to-primary/10 transition-all duration-300 transform hover:-translate-y-1">
                     <CardHeader className="pb-3">
-                      <CardTitle className="text-lg">{item.question}</CardTitle>
+                      <CardTitle className="text-lg font-bold text-gray-900">{item.question}</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-muted-foreground">{item.answer}</p>
+                      <p className="text-gray-700 font-medium leading-relaxed">{item.answer}</p>
                     </CardContent>
                   </Card>
                 ))}
