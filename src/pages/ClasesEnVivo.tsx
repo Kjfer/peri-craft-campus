@@ -108,12 +108,6 @@ export default function ClasesEnVivo() {
             )}
           </div>
 
-          {/* Indicador de fuente de datos */}
-          <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-            <span>📊 Datos en tiempo real desde Google Sheets</span>
-          </div>
-
           {/* Error state */}
           {error && (
             <div className="mt-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg max-w-md mx-auto">

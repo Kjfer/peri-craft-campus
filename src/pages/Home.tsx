@@ -3,15 +3,20 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Play, Users, Award, Star, ArrowRight, BookOpen, Clock, TrendingUp } from "lucide-react";
+import { Play, Users, Award, Star, ArrowRight, BookOpen, Clock, TrendingUp, Calendar as CalendarIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import googleSheetsService, { type CursoEnVivo } from "@/services/googleSheetsService";
 import type { Course } from "@/types/course";
 import heroImage from "@/assets/hero-banner.jpg";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 
 export default function Home() {
   const navigate = useNavigate();
   const [featuredCourses, setFeaturedCourses] = useState<Course[]>([]);
+  const [cursosEnVivo, setCursosEnVivo] = useState<CursoEnVivo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingCursos, setLoadingCursos] = useState(true);
 
   interface StatItem {
     icon: React.ComponentType<{ className?: string }>;
@@ -45,8 +50,49 @@ export default function Home() {
       }
     };
 
+    const fetchCursosEnVivo = async () => {
+      try {
+        const cursos = await googleSheetsService.getCursosEnVivo();
+        // Obtener solo los próximos 3 cursos
+        const proximosCursos = cursos
+          .filter(curso => new Date(curso.date) >= new Date())
+          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+          .slice(0, 3);
+        setCursosEnVivo(proximosCursos);
+      } catch (error) {
+        console.error('Error fetching cursos en vivo:', error);
+      } finally {
+        setLoadingCursos(false);
+      }
+    };
+
     fetchFeaturedCourses();
+    fetchCursosEnVivo();
   }, []);
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "iniciado":
+        return <Badge className="bg-green-500 text-white">En vivo</Badge>;
+      case "proximo":
+        return <Badge variant="outline" className="border-primary text-primary">Próximamente</Badge>;
+      default:
+        return <Badge variant="secondary">Programado</Badge>;
+    }
+  };
+
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case "live":
+        return <Play className="h-4 w-4" />;
+      case "qa":
+        return <Users className="h-4 w-4" />;
+      case "masterclass":
+        return <CalendarIcon className="h-4 w-4" />;
+      default:
+        return <Clock className="h-4 w-4" />;
+    }
+  };
 
   return (
     <div className="min-h-screen">
@@ -228,38 +274,85 @@ export default function Home() {
               Aprende en tiempo real, interactúa con instructores y resuelve tus dudas al instante. ¡Vive la experiencia de una clase en vivo y lleva tu aprendizaje al siguiente nivel!
             </p>
           </div>
+          
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-            <Card className="border-0 shadow-elegant bg-card/50 backdrop-blur-sm">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-2 mb-2">
-                  <Play className="h-5 w-5 text-primary" />
-                  <span className="font-semibold">Taller Patronaje de Vestidos Básicos</span>
-                  <Badge variant="default" className="ml-2">En vivo</Badge>
-                </div>
-                <div className="text-muted-foreground mb-2 text-sm">18 de septiembre, 19:00</div>
-                <div className="text-muted-foreground text-xs mb-2">Instructor: Pether Peri</div>
-                <p className="text-sm mb-2">Introducción al patronaje básico y toma de medidas.</p>
-                <Button size="sm" className="bg-primary text-primary-foreground w-full mt-2" onClick={() => navigate('/clases-en-vivo')}>
-                  Ver más clases en vivo
-                </Button>
-              </CardContent>
-            </Card>
-            <Card className="border-0 shadow-elegant bg-card/50 backdrop-blur-sm">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-2 mb-2">
-                  <Play className="h-5 w-5 text-primary" />
-                  <span className="font-semibold">Masterclass: Técnicas de Alta Costura</span>
-                  <Badge variant="default" className="ml-2">En vivo</Badge>
-                </div>
-                <div className="text-muted-foreground mb-2 text-sm">28 de septiembre, 18:00</div>
-                <div className="text-muted-foreground text-xs mb-2">Instructor: Pether Peri</div>
-                <p className="text-sm mb-2">Aprende técnicas exclusivas de la alta costura francesa.</p>
-                <Button size="sm" className="bg-primary text-primary-foreground w-full mt-2" onClick={() => navigate('/clases-en-vivo')}>
-                  Ver más clases en vivo
-                </Button>
-              </CardContent>
-            </Card>
+            {loadingCursos ? (
+              // Loading skeleton
+              Array.from({ length: 3 }).map((_, index) => (
+                <Card key={index} className="border-0 shadow-elegant bg-card/50 backdrop-blur-sm animate-pulse">
+                  <CardContent className="p-6">
+                    <div className="h-4 bg-gray-300 rounded w-3/4 mb-2"></div>
+                    <div className="h-3 bg-gray-300 rounded w-1/2 mb-2"></div>
+                    <div className="h-3 bg-gray-300 rounded w-2/3 mb-2"></div>
+                    <div className="h-16 bg-gray-300 rounded w-full mb-2"></div>
+                    <div className="h-8 bg-gray-300 rounded w-full"></div>
+                  </CardContent>
+                </Card>
+              ))
+            ) : cursosEnVivo.length > 0 ? (
+              cursosEnVivo.map((curso) => (
+                <Card key={curso.id} className="border-0 shadow-elegant bg-card/50 backdrop-blur-sm hover:shadow-glow transition-all duration-300">
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-2 mb-2">
+                      {getTypeIcon(curso.type)}
+                      <span className="font-semibold text-sm">{curso.title}</span>
+                      {getStatusBadge(curso.status)}
+                    </div>
+                    
+                    <div className="text-muted-foreground mb-2 text-sm">
+                      {format(curso.date, "d 'de' MMMM, HH:mm", { locale: es })}
+                    </div>
+                    
+                    <div className="text-muted-foreground text-xs mb-2">
+                      Instructor: {curso.instructor}
+                    </div>
+                    
+                    <p className="text-sm mb-4 line-clamp-2">{curso.description}</p>
+                    
+                    <div className="flex items-center justify-between text-xs text-muted-foreground mb-4">
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        <span>{curso.duration}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Users className="h-3 w-3" />
+                        <span>{curso.students} estudiantes</span>
+                      </div>
+                    </div>
+                    
+                    <Button 
+                      size="sm" 
+                      className="bg-primary text-primary-foreground w-full" 
+                      onClick={() => navigate('/clases-en-vivo')}
+                    >
+                      Ver más clases en vivo
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              // Fallback cuando no hay cursos
+              <div className="col-span-full">
+                <Card className="border-0 shadow-elegant bg-card/50 backdrop-blur-sm">
+                  <CardContent className="p-8 text-center">
+                    <CalendarIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold mb-2">Próximamente nuevas clases</h3>
+                    <p className="text-muted-foreground mb-4">
+                      Estamos preparando emocionantes clases en vivo. ¡Mantente atento!
+                    </p>
+                    <Button 
+                      size="sm" 
+                      className="bg-primary text-primary-foreground" 
+                      onClick={() => navigate('/clases-en-vivo')}
+                    >
+                      Ver calendario completo
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
           </div>
+          
           <div className="text-center">
             <Button 
               size="lg"
