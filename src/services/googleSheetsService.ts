@@ -19,8 +19,8 @@ interface CursoEnVivo {
 
 class GoogleSheetsService {
   private baseUrl = 'https://sheets.googleapis.com/v4/spreadsheets';
-  private spreadsheetId = process.env.REACT_APP_GOOGLE_SHEET_ID;
-  private apiKey = process.env.REACT_APP_GOOGLE_SHEETS_API_KEY;
+  private spreadsheetId = import.meta.env.VITE_GOOGLE_SHEET_ID;
+  private apiKey = import.meta.env.VITE_GOOGLE_SHEETS_API_KEY;
   private range = 'Sheet1!A:F'; // Ajustado para tu estructura: ID_cursoIniciado | Proyecto | Estrategia | FechaInicio | FechaFin | Estado
 
   // Cache para evitar múltiples requests
