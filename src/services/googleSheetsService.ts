@@ -21,7 +21,7 @@ class GoogleSheetsService {
   private baseUrl = 'https://sheets.googleapis.com/v4/spreadsheets';
   private spreadsheetId = import.meta.env.VITE_GOOGLE_SHEET_ID;
   private apiKey = import.meta.env.VITE_GOOGLE_SHEETS_API_KEY;
-  private range = 'Sheet1!A:F'; // Ajustado para tu estructura: ID_cursoIniciado | Proyecto | Estrategia | FechaInicio | FechaFin | Estado
+  private range = 'INICIO_CURSOS!A:F'; // Ajustado para tu estructura: ID_cursoIniciado | Proyecto | Estrategia | FechaInicio | FechaFin | Estado
 
   // Cache para evitar múltiples requests
   private cache: {
@@ -56,10 +56,22 @@ class GoogleSheetsService {
       console.log('🔄 Obteniendo datos frescos de Google Sheets...');
       
       const url = `${this.baseUrl}/${this.spreadsheetId}/values/${this.range}?key=${this.apiKey}`;
+      console.log('🌐 URL de solicitud:', url);
+      
       const response = await fetch(url);
+      console.log('📡 Status de respuesta:', response.status, response.statusText);
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        // Intentar obtener más detalles del error
+        let errorDetails = '';
+        try {
+          const errorData = await response.json();
+          errorDetails = JSON.stringify(errorData, null, 2);
+          console.error('📄 Detalles del error:', errorDetails);
+        } catch (e) {
+          console.error('📄 No se pudo parsear el error como JSON');
+        }
+        throw new Error(`HTTP ${response.status}: ${response.statusText}\nDetalles: ${errorDetails}`);
       }
 
       const data = await response.json();
@@ -74,6 +86,15 @@ class GoogleSheetsService {
 
     } catch (error) {
       console.error('❌ Error obteniendo datos de Google Sheets:', error);
+      console.error('💡 Soluciones posibles:');
+      console.error('   1. Verifica que el Google Sheet sea público:');
+      console.error('      - Abre el Sheet → Compartir → "Cualquier persona con el enlace puede ver"');
+      console.error('   2. Verifica que el Sheet ID sea correcto en la URL');
+      console.error('   3. Verifica que la hoja se llame "Sheet1" o cambia el rango');
+      console.error('   4. Verifica que la API Key tenga permisos para Google Sheets API');
+      console.error('   5. URL de prueba directa:');
+      console.error(`      https://sheets.googleapis.com/v4/spreadsheets/${this.spreadsheetId}/values/${this.range}?key=${this.apiKey?.slice(0, 10)}...`);
+      
       return this.getFallbackData();
     }
   }
