@@ -11,6 +11,29 @@ import heroImage from "@/assets/hero-banner.jpg";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
+// Helper functions para el estado y visualización de cursos
+const getCursoStatus = (fecha: Date): 'futuro' | 'reciente' | 'pasado' => {
+  const ahora = new Date();
+  const diferenciaDias = Math.floor((fecha.getTime() - ahora.getTime()) / (1000 * 60 * 60 * 24));
+  
+  if (diferenciaDias > 0) return 'futuro';
+  if (diferenciaDias >= -30) return 'reciente'; // Últimos 30 días
+  return 'pasado';
+};
+
+const getCursoStatusBadge = (fecha: Date) => {
+  const status = getCursoStatus(fecha);
+  
+  switch (status) {
+    case 'futuro':
+      return <Badge className="bg-green-100 text-green-800 text-xs">Próximo</Badge>;
+    case 'reciente':
+      return <Badge className="bg-blue-100 text-blue-800 text-xs">Disponible</Badge>;
+    default:
+      return <Badge className="bg-gray-100 text-gray-800 text-xs">Archivo</Badge>;
+  }
+};
+
 export default function Home() {
   const navigate = useNavigate();
   const [featuredCourses, setFeaturedCourses] = useState<Course[]>([]);
@@ -71,9 +94,15 @@ export default function Home() {
           .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
           .slice(0, 3);
           
+        // Si no hay cursos futuros, tomar los 3 más recientes
+        const cursosAMostrar = proximosCursos.length > 0 ? proximosCursos : cursos
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) // Ordenar por fecha descendente
+          .slice(0, 3);
+          
         console.log('🏠 HOME: Cursos próximos filtrados:', proximosCursos.length);
-        console.log('🏠 HOME: Cursos a mostrar:', proximosCursos);
-        setCursosEnVivo(proximosCursos);
+        console.log('🏠 HOME: Cursos a mostrar (finales):', cursosAMostrar.length);
+        console.log('🏠 HOME: Cursos seleccionados:', cursosAMostrar);
+        setCursosEnVivo(cursosAMostrar);
       } catch (error) {
         console.error('🏠 HOME: Error fetching cursos en vivo:', error);
       } finally {
@@ -284,9 +313,9 @@ export default function Home() {
       <section className="py-20 bg-background">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
-            <h2 className="text-3xl lg:text-4xl font-bold mb-4">Cursos en Vivo</h2>
+            <h2 className="text-3xl lg:text-4xl font-bold mb-4">Cursos Disponibles</h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Aprende en tiempo real, interactúa con instructores y resuelve tus dudas al instante. ¡Vive la experiencia de una clase en vivo y lleva tu aprendizaje al siguiente nivel!
+              Descubre nuestros cursos de moda y diseño. Aprende patronaje, confección y técnicas profesionales con instructores expertos.
             </p>
             
             {/* Botón de debug temporal */}
@@ -299,7 +328,23 @@ export default function Home() {
                   // Limpiar cache del servicio
                   const googleSheetsService = (await import('../services/googleSheetsService')).default;
                   (googleSheetsService as any).cache = { data: null, timestamp: 0 };
-                  await fetchCursosEnVivo();
+                  // Recargar cursos
+                  try {
+                    const cursos = await googleSheetsService.getCursosEnVivo();
+                    const ahora = new Date();
+                    const proximosCursos = cursos
+                      .filter(curso => new Date(curso.date) >= ahora)
+                      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                      .slice(0, 3);
+                    const cursosAMostrar = proximosCursos.length > 0 ? proximosCursos : cursos
+                      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                      .slice(0, 3);
+                    setCursosEnVivo(cursosAMostrar);
+                  } catch (error) {
+                    console.error('Error:', error);
+                  } finally {
+                    setLoadingCursos(false);
+                  }
                 }}
                 variant="outline" 
                 size="sm"
@@ -358,10 +403,12 @@ export default function Home() {
               cursosEnVivo.map((curso) => (
                 <Card key={curso.id} className="border-0 shadow-elegant bg-card/50 backdrop-blur-sm hover:shadow-glow transition-all duration-300">
                   <CardContent className="p-6">
-                    <div className="flex items-center gap-2 mb-2">
-                      {getTypeIcon(curso.type)}
-                      <span className="font-semibold text-sm">{curso.title}</span>
-                      {getStatusBadge(curso.status)}
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-2">
+                        {getTypeIcon(curso.type)}
+                        <span className="font-semibold text-sm">{curso.title}</span>
+                      </div>
+                      {getCursoStatusBadge(curso.date)}
                     </div>
                     
                     <div className="text-muted-foreground mb-2 text-sm">
