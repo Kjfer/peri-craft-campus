@@ -44,13 +44,43 @@ export default function WebhookSettings() {
   const saveWebhookSettings = async () => {
     setSaving(true);
     try {
-      const { error } = await supabase
+      // Primero verificar si existe el registro
+      const { data: existing } = await supabase
         .from('admin_settings')
-        .update({ setting_value: webhookUrl })
-        .eq('setting_key', 'webhook_validation_url');
+        .select('id')
+        .eq('setting_key', 'webhook_validation_url')
+        .maybeSingle();
 
-      if (error) {
-        throw error;
+      if (existing) {
+        // Actualizar registro existente
+        const { error } = await supabase
+          .from('admin_settings')
+          .update({ 
+            setting_value: webhookUrl,
+            updated_at: new Date().toISOString()
+          })
+          .eq('setting_key', 'webhook_validation_url')
+          .select()
+          .single();
+
+        if (error) {
+          throw error;
+        }
+      } else {
+        // Crear nuevo registro si no existe
+        const { error } = await supabase
+          .from('admin_settings')
+          .insert({
+            setting_key: 'webhook_validation_url',
+            setting_value: webhookUrl,
+            description: 'URL del webhook de n8n para validación de pagos Yape QR'
+          })
+          .select()
+          .single();
+
+        if (error) {
+          throw error;
+        }
       }
 
       toast({
