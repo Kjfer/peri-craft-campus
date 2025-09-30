@@ -22,13 +22,12 @@ serve(async (req) => {
     const payload = await req.json();
     console.log('Received payment validation request:', payload);
 
-    // El problema es que localhost:5678 no es accesible desde los edge functions de Supabase
-    // Los edge functions corren en la infraestructura de Supabase, no localmente
-    // Se necesita una URL pública de N8n o usar ngrok para exponer localhost:5678
+    // Los edge functions pueden conectarse a webhooks públicos de N8n
+    // N8n debe estar disponible en una URL pública accesible desde internet
     
-    // Por ahora, simularemos el envío y mostraremos la información que se enviaría
-    console.log('Data that would be sent to N8n webhook:', {
-      url: 'http://localhost:5678/webhook-test/cd9a61b2-d84c-4517-9e0a-13f898148204',
+    // Por ahora, enviaremos directamente al webhook de producción de N8n
+    console.log('Data that will be sent to N8n webhook:', {
+      url: 'https://peri-n8n-1-n8n.j60naj.easypanel.host/webhook-test/cd9a61b2-d84c-4517-9e0a-13f898148204',
       payload: payload
     });
 
@@ -71,22 +70,22 @@ serve(async (req) => {
         throw new Error(`N8n webhook failed with status ${n8nResponse.status}`);
       }
 
-    } catch (n8nError) {
-      console.error('N8n webhook error (expected if using localhost):', n8nError.message);
+    } catch (n8nError: any) {
+      console.error('N8n webhook error:', n8nError.message);
       
-      // En lugar de fallar completamente, continuamos sin N8n por ahora
-      // En producción, esto debería fallar si N8n es crítico
+      // En lugar de fallar completamente, continuamos sin N8n
+      // En producción con N8n disponible públicamente, esto debería fallar si es crítico
       return new Response(JSON.stringify({ 
         success: true, 
-        message: 'Payment data received, N8n webhook not accessible from edge function',
-        note: 'N8n webhook requires a public URL accessible from Supabase infrastructure',
+        message: 'Payment data received, N8n webhook not accessible',
+        note: 'N8n webhook requires proper CORS and network access',
         data: payload
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in process-payment-validation:', error);
     return new Response(JSON.stringify({ 
       success: false, 

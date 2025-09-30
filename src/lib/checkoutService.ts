@@ -357,7 +357,7 @@ class CheckoutService {
 
       // Send notification to n8n webhook for validation (from frontend)
       try {
-        const n8nWebhookUrl = 'http://localhost:5678/webhook-test/cd9a61b2-d84c-4517-9e0a-13f898148204';
+        const n8nWebhookUrl = 'https://peri-n8n-1-n8n.j60naj.easypanel.host/webhook-test/cd9a61b2-d84c-4517-9e0a-13f898148204';
         
         // Crear parámetros para GET request
         const n8nParams = new URLSearchParams({
@@ -382,7 +382,10 @@ class CheckoutService {
         // Usar GET method con parámetros de consulta para N8n
         const n8nResponse = await fetch(fullUrl, {
           method: 'GET',
-          mode: 'no-cors'
+          mode: 'cors', // Cambiar a cors para el webhook de producción
+          headers: {
+            'Content-Type': 'application/json'
+          }
         });
 
         console.log('📊 Respuesta de N8n - Status:', n8nResponse.status);
@@ -560,69 +563,54 @@ class CheckoutService {
     icon: string;
     type: string;
     description?: string;
-    available: boolean;
   }>> {
-    try {
-      console.log('💳 Getting available payment methods...');
-      
-      // Check user profile for country-specific methods
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('country')
-        .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
-        .single();
-      
-      const userCountry = profile?.country?.toLowerCase();
-      console.log('🌍 User country:', userCountry);
-      
-      const methods = [
-        {
-          id: 'paypal',
-          name: 'PayPal',
-          description: 'Paga con tu cuenta PayPal o tarjeta de crédito',
-          available: true,
-          icon: 'paypal',
-          type: 'digital_wallet'
-        }
-      ];
-      
-      // Add MercadoPago and Yape for Peru users only
-      if (userCountry === 'peru' || userCountry === 'perú' || userCountry === 'pe') {
-        methods.unshift({
+    const canUsePeruvian = await this.canUsePeruvianPayments();
+    
+    const baseMethods: Array<{
+      id: string;
+      name: string;
+      icon: string;
+      type: string;
+      description?: string;
+    }> = [
+      {
+        id: 'paypal',
+        name: 'PayPal',
+        icon: '🅿️',
+        type: 'digital_wallet',
+        description: 'Paga de forma segura con tu cuenta PayPal'
+      },
+      {
+        id: 'googlepay',
+        name: 'Google Pay',
+        icon: '💳',
+        type: 'digital_wallet',
+        description: 'Pago rápido con Google Pay'
+      }
+    ];
+
+    if (canUsePeruvian) {
+      baseMethods.push({
+        id: 'yape_qr',
+        name: 'Yape QR',
+        icon: '📱',
+        type: 'manual_payment',
+        description: 'Escanea el QR y sube tu comprobante'
+      });
+
+      // Solo agregar MercadoPago para cursos, no para suscripciones
+      if (itemType !== 'subscription') {
+        baseMethods.push({
           id: 'mercadopago',
           name: 'MercadoPago',
-          description: 'Tarjetas de crédito/débito y transferencias',
-          available: true,
-          icon: 'mercadopago',
-          type: 'external_payment'
-        });
-        
-        methods.push({
-          id: 'yape_qr',
-          name: 'Yape QR',
-          description: 'Escanea código QR y confirma con comprobante',
-          available: true,
-          icon: 'smartphone',
-          type: 'manual_payment'
+          icon: '🏦',
+          type: 'external_payment',
+          description: 'Paga con tarjetas mediante enlace seguro'
         });
       }
-      
-      console.log('💳 Available payment methods:', methods);
-      return methods;
-    } catch (error) {
-      console.error('❌ Error getting payment methods:', error);
-      // Return default methods on error
-      return [
-        {
-          id: 'paypal',
-          name: 'PayPal',
-          description: 'Paga con tu cuenta PayPal o tarjeta de crédito',
-          available: true,
-          icon: 'paypal',
-          type: 'digital_wallet'
-        }
-      ];
     }
+
+    return baseMethods;
   }
 
   // Formatear precio según la moneda
@@ -703,7 +691,7 @@ class CheckoutService {
   // Test n8n webhook connection
   async testN8nWebhook() {
     try {
-      const n8nWebhookUrl = 'http://localhost:5678/webhook-test/cd9a61b2-d84c-4517-9e0a-13f898148204';
+      const n8nWebhookUrl = 'https://peri-n8n-1-n8n.j60naj.easypanel.host/webhook-test/cd9a61b2-d84c-4517-9e0a-13f898148204';
       
       console.log('🧪 Testing N8n webhook connection...');
       console.log('🔗 Testing URL:', n8nWebhookUrl);
@@ -712,7 +700,7 @@ class CheckoutService {
       console.log('📡 Testing GET request...');
       const getResponse = await fetch(n8nWebhookUrl, {
         method: 'GET',
-        mode: 'no-cors'
+        mode: 'cors'
       });
       
       console.log('📊 GET Response - Status:', getResponse.status);
@@ -728,7 +716,7 @@ class CheckoutService {
       
       const postResponse = await fetch(n8nWebhookUrl, {
         method: 'POST',
-        mode: 'no-cors',
+        mode: 'cors',
         headers: {
           'Content-Type': 'application/json'
         },
@@ -759,7 +747,7 @@ class CheckoutService {
         get_type: 'error' as ResponseType,
         post_status: 0,
         post_type: 'error' as ResponseType,
-        url: 'http://localhost:5678/webhook-test/cd9a61b2-d84c-4517-9e0a-13f898148204'
+        url: 'https://peri-n8n-1-n8n.j60naj.easypanel.host/webhook-test/cd9a61b2-d84c-4517-9e0a-13f898148204'
       };
     }
   }
