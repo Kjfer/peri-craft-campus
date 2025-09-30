@@ -31,29 +31,51 @@ export default function Contact() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  // Configurable webhook URL (can be set via admin settings)
-  const WEBHOOK_URL = "";
+  // Webhook URL para n8n (configurar con tu instancia real)
+  const N8N_WEBHOOK_URL = process.env.REACT_APP_N8N_WEBHOOK_URL || "https://peri-n8n-1-n8n.j60naj.easypanel.host/webhook-test/contact-form";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    
+    // Preparar datos para n8n con metadatos adicionales
+    const submissionData = {
+      ...formData,
+      timestamp: new Date().toISOString(),
+      source: "website_contact_form",
+      userAgent: navigator.userAgent,
+      language: navigator.language || "es",
+      // Datos adicionales para clasificación IA
+      metadata: {
+        urgency: formData.type === "technical" ? "high" : "medium",
+        category: formData.type || "general",
+        requiresResponse: true,
+        autoRespond: true
+      }
+    };
+
     try {
-      // If webhook is configured, send the data
-      if (WEBHOOK_URL) {
-        await fetch(WEBHOOK_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          mode: "no-cors",
-          body: JSON.stringify(formData),
+      // Enviar a n8n webhook
+      const response = await fetch(N8N_WEBHOOK_URL, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        body: JSON.stringify(submissionData),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        toast({
+          title: "✅ Mensaje enviado correctamente",
+          description: "Gracias por contactarnos. Nuestro sistema IA procesará tu consulta y te responderemos automáticamente por email.",
         });
       } else {
-        // Simulación si no hay webhook
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-      toast({
-        title: "Mensaje enviado",
-        description: "Gracias por contactarnos. Te responderemos pronto.",
-      });
+      
+      // Limpiar formulario tras envío exitoso
       setFormData({
         name: "",
         email: "",
@@ -61,10 +83,12 @@ export default function Contact() {
         message: "",
         type: ""
       });
+      
     } catch (error) {
+      console.error("Error enviando a n8n:", error);
       toast({
-        title: "Error",
-        description: "No se pudo enviar el mensaje. Inténtalo de nuevo.",
+        title: "⚠️ Error de conectividad",
+        description: "No pudimos procesar tu mensaje automáticamente. Por favor, contáctanos directamente por WhatsApp o email.",
         variant: "destructive",
       });
     } finally {
@@ -120,7 +144,7 @@ export default function Contact() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
               <Button className="bg-green-500 text-white text-lg px-8 py-6" asChild>
-                <a href="https://whatsapp.com/channel/0029VbBND0PGpLHSErI7mC1i" target="_blank" rel="noopener">
+                <a href="https://whatsapp.com/channel/0029VbBND0PGpLHSErI7mC1iP" target="_blank" rel="noopener">
                   <MessageCircle className="mr-2" /> Unirse al canal de WhatsApp
                 </a>
               </Button>
