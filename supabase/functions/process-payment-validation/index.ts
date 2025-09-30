@@ -35,7 +35,7 @@ serve(async (req) => {
     // Intentar enviar a N8n solo si está configurado correctamente
     try {
       // Nota: Cambiar esta URL por una pública cuando N8n esté disponible públicamente
-      const n8nWebhookUrl = 'http://localhost:5678/webhook-test/cd9a61b2-d84c-4517-9e0a-13f898148204';
+      const n8nWebhookUrl = 'https://peri-n8n-1-n8n.j60naj.easypanel.host/webhook-test/cd9a61b2-d84c-4517-9e0a-13f898148204';
       
       console.log('Attempting to send to N8n webhook:', n8nWebhookUrl);
       
