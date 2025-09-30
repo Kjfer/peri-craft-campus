@@ -89,7 +89,7 @@ export default function Contact() {
         console.log("Resultado:", result);
         toast({
           title: "✅ Mensaje enviado correctamente",
-          description: "Gracias por contactarnos. Nuestro sistema IA procesará tu consulta y te responderemos automáticamente por email.",
+          description: "Gracias por contactarnos. Nuestro sistema procesará tu consulta y te responderemos por email.",
         });
       } else {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
