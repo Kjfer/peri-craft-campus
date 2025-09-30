@@ -97,7 +97,7 @@ class GoogleSheetsService {
     if (!hasSheetId || !hasApiKey) {
       console.log('💡 Para configurar:');
       console.log('   1. Agrega REACT_APP_GOOGLE_SHEET_ID a tu .env');
-      console.log('   2. Agrega REACT_APP_GOOGLE_SHEETS_API_KEY a tu .env');
+      console.log('   2. Agrega REACT_APP_GOOGLE_SHEETS_API_KEY a tu .env (formato: AIzaSy...)');
       console.log('   3. Reinicia el servidor de desarrollo');
     }
   }
