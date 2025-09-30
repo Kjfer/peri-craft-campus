@@ -38,6 +38,20 @@ export default function Contact() {
     e.preventDefault();
     setLoading(true);
     
+    // Debug: Verificar datos del formulario antes de enviar
+    console.log("Datos del formulario:", formData);
+    
+    // Validación adicional
+    if (!formData.type) {
+      toast({
+        title: "⚠️ Tipo de consulta requerido",
+        description: "Por favor selecciona el tipo de consulta antes de enviar.",
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
+    
     // Preparar datos para n8n con metadatos adicionales
     const submissionData = {
       ...formData,
@@ -54,6 +68,9 @@ export default function Contact() {
       }
     };
 
+    // Debug: Verificar datos que se enviarán
+    console.log("Datos a enviar al webhook:", submissionData);
+
     try {
       // Enviar a n8n webhook
       const response = await fetch(N8N_WEBHOOK_URL, {
@@ -65,8 +82,11 @@ export default function Contact() {
         body: JSON.stringify(submissionData),
       });
 
+      console.log("Respuesta del webhook:", response.status, response.statusText);
+
       if (response.ok) {
         const result = await response.json();
+        console.log("Resultado:", result);
         toast({
           title: "✅ Mensaje enviado correctamente",
           description: "Gracias por contactarnos. Nuestro sistema IA procesará tu consulta y te responderemos automáticamente por email.",
@@ -255,9 +275,13 @@ export default function Contact() {
                     <Label htmlFor="type">Tipo de consulta</Label>
                     <Select 
                       value={formData.type} 
-                      onValueChange={(value) => handleInputChange("type", value)}
+                      onValueChange={(value) => {
+                        console.log("Seleccionado:", value); // Debug
+                        handleInputChange("type", value);
+                      }}
+                      required
                     >
-                      <SelectTrigger>
+                      <SelectTrigger id="type">
                         <SelectValue placeholder="Selecciona el tipo de consulta" />
                       </SelectTrigger>
                       <SelectContent>
@@ -269,6 +293,10 @@ export default function Contact() {
                         <SelectItem value="partnership">Alianzas</SelectItem>
                       </SelectContent>
                     </Select>
+                    {/* Debug: Mostrar valor actual */}
+                    <div className="text-xs text-muted-foreground">
+                      Valor seleccionado: {formData.type || "ninguno"}
+                    </div>
                   </div>
 
 
