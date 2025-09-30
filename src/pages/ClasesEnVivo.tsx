@@ -85,8 +85,8 @@ export default function ClasesEnVivo() {
             Cursos en Vivo
           </h1>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-6">
-            Únete a nuestras sesiones interactivas en tiempo real con profesionales de la moda. 
-            Selecciona una fecha en el calendario para ver inicios de cursos programados.
+            Consulta el calendario de inicio de nuestros cursos especializados de moda y diseño. 
+            Selecciona una fecha para ver qué cursos comienzan ese día y únete a nuestra comunidad de aprendizaje.
           </p>
           
           {/* Estado y controles */}
@@ -153,18 +153,23 @@ export default function ClasesEnVivo() {
             {/* Leyenda */}
             <Card className="mt-4 border-0 shadow-elegant bg-card/50 backdrop-blur-sm">
               <CardContent className="pt-6">
-                <div className="space-y-2">
+                <h4 className="font-semibold mb-3 text-center">Leyenda</h4>
+                <div className="space-y-3">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full bg-primary"></div>
-                    <span className="text-sm text-muted-foreground">Días con clases</span>
+                    <span className="text-sm text-muted-foreground">Fechas de inicio de cursos</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant="success" className="text-xs">En vivo</Badge>
-                    <span className="text-sm text-muted-foreground">Curso en iniciado</span>
+                    <span className="text-sm text-muted-foreground">Curso actualmente iniciado</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant="outline" className="border-primary text-primary text-xs">Próximamente</Badge>
-                    <span className="text-sm text-muted-foreground">Curso programado</span>
+                    <span className="text-sm text-muted-foreground">Próximo a iniciar</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="text-xs">Programado</Badge>
+                    <span className="text-sm text-muted-foreground">Disponible para inscripción</span>
                   </div>
                 </div>
               </CardContent>
@@ -186,7 +191,7 @@ export default function ClasesEnVivo() {
             ) : selectedDate ? (
               <div>
                 <h2 className="text-2xl font-bold mb-6">
-                  Inicios para {format(selectedDate, "EEEE, d 'de' MMMM", { locale: es })}
+                  Cursos que inician el {format(selectedDate, "EEEE, d 'de' MMMM", { locale: es })}
                 </h2>
                 
                 {clasesDelDia.length > 0 ? (
@@ -225,16 +230,16 @@ export default function ClasesEnVivo() {
                     ))}
                   </div>
                 ) : (
-                  <Card className="border-0 shadow-elegant bg-card/50 backdrop-blur-sm">
-                    <CardContent className="p-8 text-center">
-                      <CalendarIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                      <h3 className="text-xl font-semibold mb-2">No hay clases programadas</h3>
-                      <p className="text-muted-foreground">
-                        No hay clases en vivo programadas para esta fecha. 
-                        Selecciona otra fecha o revisa las próximas sesiones.
-                      </p>
-                    </CardContent>
-                  </Card>
+                    <Card className="border-0 shadow-elegant bg-card/50 backdrop-blur-sm">
+                      <CardContent className="p-8 text-center">
+                        <CalendarIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                        <h3 className="text-xl font-semibold mb-2">No hay cursos iniciando</h3>
+                        <p className="text-muted-foreground">
+                          No hay cursos programados para iniciar en esta fecha. 
+                          Selecciona otra fecha en el calendario para ver otros inicios.
+                        </p>
+                      </CardContent>
+                    </Card>
                 )}
               </div>
             ) : (

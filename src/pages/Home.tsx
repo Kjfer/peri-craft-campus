@@ -146,25 +146,33 @@ export default function Home() {
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{ backgroundImage: `url(${heroImage})` }}
         >
-          <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-black/50"></div>
+          {/* Overlay muy sutil solo para separar el texto del fondo */}
+          <div className="absolute inset-0 bg-gradient-to-b from-white/20 via-transparent to-white/10"></div>
         </div>
         <div className="container mx-auto px-4 relative z-10">
-          <div className="text-center max-w-4xl mx-auto text-white">
-            <h1 className="text-4xl lg:text-6xl font-bold mb-6 leading-tight">
+          <div className="text-center max-w-4xl mx-auto">
+            <h1 className="text-4xl lg:text-6xl font-bold mb-6 leading-tight text-gray-900" 
+                style={{ 
+                  textShadow: '3px 3px 6px rgba(255,255,255,0.9), -1px -1px 3px rgba(0,0,0,0.4)',
+                  fontWeight: '800'
+                }}>
               Transforma tu Pasión por la Moda en tu{" "}
-              <span className="bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-primary via-yellow-500 to-yellow-600 bg-clip-text text-transparent" 
+                    style={{ textShadow: 'none' }}>
                 Profesión
               </span>
             </h1>
-            <p className="text-xl lg:text-2xl mb-8 opacity-90 max-w-3xl mx-auto">
-              Aprende patronaje, diseño y confección con los mejores profesionales de la industria. 
-              Cursos online y clases en vivo para dominar el arte de la moda.
-            </p>
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 mx-auto max-w-3xl mb-8 shadow-lg border border-white/50">
+              <p className="text-xl lg:text-2xl text-gray-800 font-semibold">
+                Aprende patronaje, diseño y confección con los mejores profesionales de la industria. 
+                Cursos online y clases en vivo para dominar el arte de la moda.
+              </p>
+            </div>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
               <Button 
                 size="lg" 
-                className="bg-primary text-primary-foreground hover:bg-primary/90 px-8 py-6 text-lg"
+                className="bg-primary text-primary-foreground hover:bg-primary/90 px-8 py-6 text-lg shadow-lg"
                 onClick={() => navigate("/auth")}
               >
                 Comenzar Ahora
@@ -172,7 +180,7 @@ export default function Home() {
               <Button 
                 size="lg" 
                 variant="outline"
-                className="glass-effect text-white border-white/30 hover:bg-white/20 px-8 py-6 text-lg"
+                className="bg-white/90 text-gray-900 border-gray-300 hover:bg-white hover:shadow-lg px-8 py-6 text-lg font-semibold"
                 onClick={() => navigate("/planes")}
               >
                 Ver Planes
@@ -183,10 +191,10 @@ export default function Home() {
             {/* Stats */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 max-w-4xl mx-auto">
               {stats.map((stat, index) => (
-                <div key={index} className="glass-effect rounded-lg p-6">
+                <div key={index} className="bg-white/90 backdrop-blur-sm rounded-lg p-6 shadow-lg border border-white/50">
                   <stat.icon className="h-8 w-8 text-primary mx-auto mb-2" />
-                  <div className="text-2xl font-bold text-white">{stat.value}</div>
-                  <div className="text-sm text-white/80 font-semibold">{stat.label}</div>
+                  <div className="text-2xl font-bold text-gray-900">{stat.value}</div>
+                  <div className="text-sm text-gray-700 font-semibold">{stat.label}</div>
                 </div>
               ))}
             </div>
@@ -313,7 +321,7 @@ export default function Home() {
       <section className="py-20 bg-background">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
-            <h2 className="text-3xl lg:text-4xl font-bold mb-4">Cursos Disponibles</h2>
+            <h2 className="text-3xl lg:text-4xl font-bold mb-4">Cursos En Vivo</h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               Descubre nuestros cursos de moda y diseño. Aprende patronaje, confección y técnicas profesionales con instructores expertos.
             </p>
@@ -350,37 +358,7 @@ export default function Home() {
                 size="sm"
                 className="bg-blue-500 text-white border-blue-500 hover:bg-blue-600"
               >
-                🔧 Debug: Recargar Cursos
-              </Button>
-              
-              <Button 
-                onClick={async () => {
-                  console.log('🧪 HOME: Usando datos de prueba...');
-                  setLoadingCursos(true);
-                  setCursosEnVivo([]);
-                  // Simular datos de prueba
-                  const testData = [
-                    {
-                      id: 'test-1',
-                      title: 'Taller de Patronaje TEST',
-                      date: new Date(Date.now() + 24 * 60 * 60 * 1000), // Mañana
-                      time: '19:00',
-                      duration: '2 horas',
-                      instructor: 'Pether Peri',
-                      students: 25,
-                      status: 'proximo' as const,
-                      type: 'live' as const,
-                      description: 'Curso de prueba para debugging'
-                    }
-                  ];
-                  setCursosEnVivo(testData);
-                  setLoadingCursos(false);
-                }}
-                variant="outline" 
-                size="sm"
-                className="bg-green-500 text-white border-green-500 hover:bg-green-600"
-              >
-                🧪 Usar Datos Prueba
+                Recargar Cursos
               </Button>
             </div>
           </div>
