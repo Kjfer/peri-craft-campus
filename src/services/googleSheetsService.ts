@@ -129,12 +129,18 @@ class GoogleSheetsService {
    * Solo usamos: Proyecto (columna B) y FechaInicio (columna D)
    */
   private parseSheetData(rows: string[][]): CursoEnVivo[] {
-    if (!rows || rows.length < 2) return [];
+    if (!rows || rows.length < 2) {
+      console.log('📊 No hay datos en la hoja o solo hay headers');
+      return [];
+    }
+
+    console.log(`📊 Procesando ${rows.length} filas de Google Sheets`);
+    console.log('📊 Headers:', rows[0]);
 
     // Saltar la primera fila (headers)
     const dataRows = rows.slice(1);
     
-    return dataRows
+    const cursosProcesados = dataRows
       .filter(row => row.length >= 4 && row[1] && row[3]) // Filtrar filas que tengan Proyecto y FechaInicio
       .map((row, index) => {
         try {
@@ -142,10 +148,15 @@ class GoogleSheetsService {
           const fechaInicio = row[3].trim(); // Columna D: FechaInicio
           const estado = row[5] ? row[5].trim() : ''; // Columna F: Estado (opcional)
           
+          console.log(`📊 Procesando fila ${index + 2}: Proyecto="${proyecto}", FechaInicio="${fechaInicio}"`);
+          
+          const fechaParseada = this.parseDate(fechaInicio);
+          console.log(`📊 Fecha parseada: ${fechaParseada.toISOString()}`);
+          
           return {
             id: `sheet-${index + 1}`,
             title: proyecto,
-            date: this.parseDate(fechaInicio),
+            date: fechaParseada,
             time: '19:00', // Hora por defecto
             duration: '2 horas', // Duración por defecto
             instructor: 'Pether Peri', // Instructor por defecto
@@ -161,6 +172,9 @@ class GoogleSheetsService {
         }
       })
       .filter(curso => curso !== null) as CursoEnVivo[];
+      
+    console.log(`📊 Total cursos procesados: ${cursosProcesados.length}`);
+    return cursosProcesados;
   }
 
   /**
@@ -168,15 +182,21 @@ class GoogleSheetsService {
    * Formatos soportados: DD/MM/YYYY, YYYY-MM-DD, DD-MM-YYYY
    */
   private parseDate(dateString: string): Date {
-    if (!dateString) return new Date();
+    if (!dateString) {
+      console.log('📅 Fecha vacía, usando fecha actual');
+      return new Date();
+    }
 
     // Limpiar string
     const cleaned = dateString.trim();
+    console.log(`📅 Parseando fecha: "${cleaned}"`);
 
     // Formato DD/MM/YYYY
     if (cleaned.includes('/')) {
       const [day, month, year] = cleaned.split('/');
-      return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      const fecha = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      console.log(`📅 Formato DD/MM/YYYY → ${fecha.toISOString()}`);
+      return fecha;
     }
 
     // Formato YYYY-MM-DD o DD-MM-YYYY
@@ -184,17 +204,24 @@ class GoogleSheetsService {
       const parts = cleaned.split('-');
       if (parts[0].length === 4) {
         // YYYY-MM-DD
-        return new Date(cleaned);
+        const fecha = new Date(cleaned);
+        console.log(`📅 Formato YYYY-MM-DD → ${fecha.toISOString()}`);
+        return fecha;
       } else {
         // DD-MM-YYYY
         const [day, month, year] = parts;
-        return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+        const fecha = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+        console.log(`📅 Formato DD-MM-YYYY → ${fecha.toISOString()}`);
+        return fecha;
       }
     }
 
     // Fallback: intentar parseo directo
     const parsed = new Date(cleaned);
-    return isNaN(parsed.getTime()) ? new Date() : parsed;
+    const esValida = !isNaN(parsed.getTime());
+    const fecha = esValida ? parsed : new Date();
+    console.log(`📅 Formato directo ${esValida ? 'exitoso' : 'falló'} → ${fecha.toISOString()}`);
+    return fecha;
   }
 
   /**

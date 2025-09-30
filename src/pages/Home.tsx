@@ -52,15 +52,30 @@ export default function Home() {
 
     const fetchCursosEnVivo = async () => {
       try {
+        console.log('🏠 HOME: Obteniendo cursos en vivo...');
         const cursos = await googleSheetsService.getCursosEnVivo();
+        console.log('🏠 HOME: Cursos obtenidos:', cursos.length);
+        console.log('🏠 HOME: Cursos completos:', cursos);
+        
+        const ahora = new Date();
+        console.log('🏠 HOME: Fecha actual:', ahora.toISOString());
+        
         // Obtener solo los próximos 3 cursos
         const proximosCursos = cursos
-          .filter(curso => new Date(curso.date) >= new Date())
+          .filter(curso => {
+            const fechaCurso = new Date(curso.date);
+            const esFuturo = fechaCurso >= ahora;
+            console.log(`🏠 HOME: Curso "${curso.title}" - Fecha: ${fechaCurso.toISOString()}, Es futuro: ${esFuturo}`);
+            return esFuturo;
+          })
           .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
           .slice(0, 3);
+          
+        console.log('🏠 HOME: Cursos próximos filtrados:', proximosCursos.length);
+        console.log('🏠 HOME: Cursos a mostrar:', proximosCursos);
         setCursosEnVivo(proximosCursos);
       } catch (error) {
-        console.error('Error fetching cursos en vivo:', error);
+        console.error('🏠 HOME: Error fetching cursos en vivo:', error);
       } finally {
         setLoadingCursos(false);
       }
@@ -273,6 +288,56 @@ export default function Home() {
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               Aprende en tiempo real, interactúa con instructores y resuelve tus dudas al instante. ¡Vive la experiencia de una clase en vivo y lleva tu aprendizaje al siguiente nivel!
             </p>
+            
+            {/* Botón de debug temporal */}
+            <div className="mt-4 flex gap-2 justify-center">
+              <Button 
+                onClick={async () => {
+                  console.log('🔄 HOME: Forzando recarga de cursos...');
+                  setLoadingCursos(true);
+                  setCursosEnVivo([]);
+                  // Limpiar cache del servicio
+                  const googleSheetsService = (await import('../services/googleSheetsService')).default;
+                  (googleSheetsService as any).cache = { data: null, timestamp: 0 };
+                  await fetchCursosEnVivo();
+                }}
+                variant="outline" 
+                size="sm"
+                className="bg-blue-500 text-white border-blue-500 hover:bg-blue-600"
+              >
+                🔧 Debug: Recargar Cursos
+              </Button>
+              
+              <Button 
+                onClick={async () => {
+                  console.log('🧪 HOME: Usando datos de prueba...');
+                  setLoadingCursos(true);
+                  setCursosEnVivo([]);
+                  // Simular datos de prueba
+                  const testData = [
+                    {
+                      id: 'test-1',
+                      title: 'Taller de Patronaje TEST',
+                      date: new Date(Date.now() + 24 * 60 * 60 * 1000), // Mañana
+                      time: '19:00',
+                      duration: '2 horas',
+                      instructor: 'Pether Peri',
+                      students: 25,
+                      status: 'proximo' as const,
+                      type: 'live' as const,
+                      description: 'Curso de prueba para debugging'
+                    }
+                  ];
+                  setCursosEnVivo(testData);
+                  setLoadingCursos(false);
+                }}
+                variant="outline" 
+                size="sm"
+                className="bg-green-500 text-white border-green-500 hover:bg-green-600"
+              >
+                🧪 Usar Datos Prueba
+              </Button>
+            </div>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
@@ -340,9 +405,26 @@ export default function Home() {
                     <p className="text-muted-foreground mb-4">
                       Estamos preparando emocionantes clases en vivo. ¡Mantente atento!
                     </p>
+                    
+                    {/* Información de debug */}
+                    <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mt-4 text-left">
+                      <div className="flex">
+                        <div className="ml-3">
+                          <p className="text-sm text-yellow-700">
+                            <strong>Debug Info:</strong>
+                          </p>
+                          <ul className="mt-2 text-sm text-yellow-600 list-disc list-inside">
+                            <li>Estado de carga: {loadingCursos ? 'Cargando...' : 'Completado'}</li>
+                            <li>Cursos encontrados: {cursosEnVivo.length}</li>
+                            <li>Revisa la consola del navegador (F12) para más detalles</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                    
                     <Button 
                       size="sm" 
-                      className="bg-primary text-primary-foreground" 
+                      className="bg-primary text-primary-foreground mt-4" 
                       onClick={() => navigate('/clases-en-vivo')}
                     >
                       Ver calendario completo
