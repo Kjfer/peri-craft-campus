@@ -52,14 +52,20 @@ export default function ClasesEnVivo() {
   // Obtener fechas que tienen clases
   const fechasConClases = cursos.map(clase => clase.date);
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "iniciado":
-        return <Badge variant="success">En vivo</Badge>;
-      case "proximo":
-        return <Badge variant="outline" className="border-primary text-primary">Próximamente</Badge>;
-      default:
-        return <Badge variant="secondary">Programado</Badge>;
+  const getStatusBadge = (date: Date) => {
+    const today = new Date();
+    const courseDate = new Date(date);
+    
+    // Normalizar fechas para comparar solo día, mes y año
+    today.setHours(0, 0, 0, 0);
+    courseDate.setHours(0, 0, 0, 0);
+    
+    if (courseDate <= today) {
+      // Si la fecha del curso ya pasó o es hoy, está "iniciado"
+      return <Badge variant="success">En vivo</Badge>;
+    } else {
+      // Si la fecha del curso es futura, está "programado"
+      return <Badge variant="outline" className="border-primary text-primary">Próximamente</Badge>;
     }
   };
 
@@ -167,10 +173,6 @@ export default function ClasesEnVivo() {
                     <Badge variant="outline" className="border-primary text-primary text-xs">Próximamente</Badge>
                     <span className="text-sm text-muted-foreground">Próximo a iniciar</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className="text-xs">Programado</Badge>
-                    <span className="text-sm text-muted-foreground">Disponible para inscripción</span>
-                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -204,7 +206,7 @@ export default function ClasesEnVivo() {
                               <div className="flex items-center gap-2 mb-2">
                                 {getTypeIcon(clase.type)}
                                 <h3 className="text-lg font-semibold">{clase.title}</h3>
-                                {getStatusBadge(clase.status)}
+                                {getStatusBadge(clase.date)}
                               </div>
                               
                               <p className="text-muted-foreground mb-3">{clase.description}</p>
