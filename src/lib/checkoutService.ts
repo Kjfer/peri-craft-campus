@@ -355,6 +355,9 @@ class CheckoutService {
       console.log('💾 Payment record created successfully:', data);
       console.log('🎯 Iniciando envío de webhook a N8n...');
 
+      // Record in Google Sheets after payment record is created
+      await this.recordPaymentInSheets(orderId, transactionId);
+
       // Send notification to n8n webhook for validation (from frontend)
       try {
         const n8nWebhookUrl = 'https://peri-n8n-1-n8n.j60naj.easypanel.host/webhook-test/cd9a61b2-d84c-4517-9e0a-13f898148204';
@@ -770,6 +773,29 @@ class CheckoutService {
     } catch (error) {
       console.error('Error fetching subscriptions:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Records payment in Google Sheets via edge function
+   */
+  private async recordPaymentInSheets(orderId: string, transactionId?: string): Promise<void> {
+    try {
+      const { error } = await supabase.functions.invoke('record-payment-sheets', {
+        body: {
+          orderId,
+          transactionId,
+        },
+      });
+
+      if (error) {
+        console.error('Error recording payment in sheets:', error);
+      } else {
+        console.log('✅ Payment recorded in Google Sheets');
+      }
+    } catch (error) {
+      console.error('Error calling record-payment-sheets function:', error);
+      // Don't throw error, just log it
     }
   }
 }

@@ -46,3 +46,6 @@ verify_jwt = true
 
 [functions.process-payment-validation]
 verify_jwt = false
+
+[functions.record-payment-sheets]
+verify_jwt = true

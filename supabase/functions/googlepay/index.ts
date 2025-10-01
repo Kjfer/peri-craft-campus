@@ -63,9 +63,10 @@ serve(async (req) => {
     // Create order items
     const orderItems = cartItems.map((item: any) => ({
       order_id: order.id,
-      course_id: item.id,
-      price: item.price
-    }))
+      course_id: item.course_id || item.id || null,
+      subscription_id: item.subscription_id || null,
+      price: item.price || item.course?.price || 0,
+    }));
 
     const { error: itemsError } = await supabase
       .from('order_items')
@@ -103,21 +104,63 @@ serve(async (req) => {
       }
 
       // Create enrollments for each course
-      const enrollments = cartItems.map((item: any) => ({
-        user_id: user.id,
-        course_id: item.id,
-        enrolled_at: new Date().toISOString(),
-        progress_percentage: 0
-      }))
+      const courseItems = cartItems.filter((item: any) => item.course_id || (item.id && !item.subscription_id));
+      if (courseItems.length > 0) {
+        const enrollments = courseItems.map((item: any) => ({
+          user_id: user.id,
+          course_id: item.course_id || item.id,
+          enrolled_at: new Date().toISOString(),
+          progress_percentage: 0
+        }));
 
-      const { error: enrollmentError } = await supabase
-        .from('enrollments')
-        .insert(enrollments)
+        const { error: enrollmentError } = await supabase
+          .from('enrollments')
+          .upsert(enrollments, { onConflict: 'user_id,course_id' });
 
-      if (enrollmentError) {
-        console.error('Error creating enrollments:', enrollmentError)
-        // Continue even if enrollment fails - payment was successful
+        if (enrollmentError) {
+          console.error('Error creating enrollments:', enrollmentError);
+        }
       }
+
+      // Create subscriptions
+      const subscriptionItems = cartItems.filter((item: any) => item.subscription_id);
+      for (const item of subscriptionItems) {
+        const { data: plan } = await supabase
+          .from('plans')
+          .select('duration_months')
+          .eq('id', item.subscription_id)
+          .single();
+
+        if (plan) {
+          const endDate = new Date();
+          endDate.setMonth(endDate.getMonth() + plan.duration_months);
+
+          await supabase.from('user_subscriptions').insert({
+            user_id: user.id,
+            plan_id: item.subscription_id,
+            start_date: new Date().toISOString(),
+            end_date: endDate.toISOString(),
+            status: 'active',
+            payment_id: `googlepay_${Date.now()}`,
+          });
+        }
+      }
+
+      // Record payment
+      await supabase.from('payments').insert({
+        user_id: user.id,
+        order_id: order.id,
+        amount: totalAmount,
+        currency: 'USD',
+        payment_method: 'googlepay',
+        payment_provider: 'google',
+        payment_provider_id: `googlepay_${Date.now()}`,
+      });
+
+      // Record in Google Sheets
+      await supabase.functions.invoke('record-payment-sheets', {
+        body: { orderId: order.id, transactionId: `googlepay_${Date.now()}` }
+      });
 
       // Clear user's cart (assuming you have a cart table)
       const { error: cartError } = await supabase

@@ -42,11 +42,14 @@ async function getPayPalAccessToken() {
 }
 
 interface CartItem {
-  id: string; // course id
+  id: string;
+  course_id?: string;
+  subscription_id?: string;
   title: string;
   price: number;
   instructor_name?: string;
   thumbnail_url?: string;
+  type?: 'course' | 'subscription';
 }
 
 serve(async (req) => {
@@ -94,7 +97,12 @@ serve(async (req) => {
 
       if (orderErr || !order) throw new Error(`DB order error: ${orderErr?.message}`);
 
-      const orderItems = cartItems.map(ci => ({ order_id: order.id, course_id: ci.id, price: ci.price }));
+      const orderItems = cartItems.map(ci => ({ 
+        order_id: order.id, 
+        course_id: ci.course_id || null,
+        subscription_id: ci.subscription_id || null,
+        price: ci.price 
+      }));
       const { error: itemsErr } = await svc.from('order_items').insert(orderItems);
       if (itemsErr) throw new Error(`DB order_items error: ${itemsErr.message}`);
 
@@ -162,10 +170,10 @@ serve(async (req) => {
         return new Response(JSON.stringify({ success: false, message: 'Payment not completed' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 });
       }
 
-      // Update order and create enrollments
+      // Update order and create enrollments/subscriptions
       const { data: orderWithItems, error: fetchErr } = await svc
         .from('orders')
-        .select(`id, user_id, order_items (course_id)`)
+        .select(`id, user_id, total_amount, currency, payment_method, order_items (course_id, subscription_id)`)
         .eq('id', dbOrderId)
         .eq('user_id', user.id)
         .maybeSingle();
@@ -177,16 +185,60 @@ serve(async (req) => {
         .eq('id', dbOrderId);
       if (updErr) console.error('Order update error:', updErr);
 
+      // Create enrollments for courses
       if (orderWithItems?.order_items?.length) {
-        const enrollments = orderWithItems.order_items.map((it: any) => ({
-          user_id: user.id,
-          course_id: it.course_id,
-          enrolled_at: new Date().toISOString(),
-          progress_percentage: 0
-        }));
-        const { error: enrErr } = await svc.from('enrollments').insert(enrollments);
-        if (enrErr) console.error('Enrollments insert error:', enrErr);
+        const courseItems = orderWithItems.order_items.filter((it: any) => it.course_id);
+        if (courseItems.length > 0) {
+          const enrollments = courseItems.map((it: any) => ({
+            user_id: user.id,
+            course_id: it.course_id,
+            enrolled_at: new Date().toISOString(),
+            progress_percentage: 0
+          }));
+          const { error: enrErr } = await svc.from('enrollments').upsert(enrollments, { onConflict: 'user_id,course_id' });
+          if (enrErr) console.error('Enrollments insert error:', enrErr);
+        }
+
+        // Create subscriptions
+        const subscriptionItems = orderWithItems.order_items.filter((it: any) => it.subscription_id);
+        for (const item of subscriptionItems) {
+          const { data: plan } = await svc
+            .from('plans')
+            .select('duration_months')
+            .eq('id', item.subscription_id)
+            .single();
+
+          if (plan) {
+            const endDate = new Date();
+            endDate.setMonth(endDate.getMonth() + plan.duration_months);
+
+            await svc.from('user_subscriptions').insert({
+              user_id: user.id,
+              plan_id: item.subscription_id,
+              start_date: new Date().toISOString(),
+              end_date: endDate.toISOString(),
+              status: 'active',
+              payment_id: paypalOrderId,
+            });
+          }
+        }
       }
+
+      // Record payment
+      await svc.from('payments').insert({
+        user_id: user.id,
+        order_id: dbOrderId,
+        amount: orderWithItems.total_amount,
+        currency: orderWithItems.currency,
+        payment_method: 'paypal',
+        payment_provider: 'paypal',
+        payment_provider_id: paypalOrderId,
+      });
+
+      // Record in Google Sheets
+      await svc.functions.invoke('record-payment-sheets', {
+        body: { orderId: dbOrderId, transactionId: paypalOrderId }
+      });
 
       return new Response(JSON.stringify({ success: true, orderId: dbOrderId, paypalOrderId }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
     }
