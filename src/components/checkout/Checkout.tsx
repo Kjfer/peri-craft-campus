@@ -50,10 +50,12 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
     intent: "capture" as const
   };
 
-  // Persistir y recuperar estado de Yape QR
+  // Persistir y recuperar estado de Yape QR con archivos
   useEffect(() => {
     // Recuperar estado guardado al montar
     const savedState = sessionStorage.getItem('yape_checkout_state');
+    const savedFileData = sessionStorage.getItem('yape_receipt_file');
+    
     if (savedState) {
       try {
         const parsed = JSON.parse(savedState);
@@ -63,6 +65,20 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
           setTransactionId(parsed.transactionId || '');
           setSelectedPaymentMethod(parsed.paymentMethod || 'yape_qr');
           console.log('✅ Estado de Yape QR recuperado desde sessionStorage');
+          
+          // Recuperar archivo si existe en sessionStorage
+          if (savedFileData) {
+            try {
+              const fileInfo = JSON.parse(savedFileData);
+              console.log('📁 Archivo previamente guardado:', fileInfo.name);
+              
+              // Crear mensaje de estado del archivo
+              const fileStateMessage = `Archivo previamente seleccionado: ${fileInfo.name} (${fileInfo.size} bytes). Por favor, vuelve a seleccionar el archivo si deseas continuar.`;
+              setError(fileStateMessage);
+            } catch (e) {
+              console.error('Error recuperando info de archivo:', e);
+            }
+          }
         }
       } catch (e) {
         console.error('Error recuperando estado:', e);
@@ -82,13 +98,26 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
       };
       sessionStorage.setItem('yape_checkout_state', JSON.stringify(stateToSave));
       console.log('💾 Estado de Yape QR guardado en sessionStorage');
+      
+      // Guardar info del archivo (no el archivo completo)
+      if (receiptFile) {
+        const fileInfo = {
+          name: receiptFile.name,
+          size: receiptFile.size,
+          type: receiptFile.type,
+          timestamp: Date.now()
+        };
+        sessionStorage.setItem('yape_receipt_file', JSON.stringify(fileInfo));
+        console.log('📁 Info de archivo guardada:', fileInfo);
+      }
     }
     
     // Limpiar cuando se complete o se vuelva a selección
     if (step === 'completed' || step === 'select_payment') {
       sessionStorage.removeItem('yape_checkout_state');
+      sessionStorage.removeItem('yape_receipt_file');
     }
-  }, [step, currentOrder, transactionId, selectedPaymentMethod]);
+  }, [step, currentOrder, transactionId, selectedPaymentMethod, receiptFile]);
 
   useEffect(() => {
     if (!user) {
@@ -721,16 +750,16 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
                  {/* Instructions */}
                  <div className="bg-blue-50 p-4 rounded-lg">
                    <h4 className="font-medium mb-2">Instrucciones para pagar:</h4>
-                   <ol className="text-sm space-y-1 list-decimal list-inside">
-                     <li>Escanea el QR con tu aplicación de Yape</li>
-                     <li>Ingresa el monto exacto: <strong>{checkoutService.formatPrice(total.amount, total.currency)}</strong></li>
-                     <li>Realiza el pago y copia el código de operación</li>
-                     <li>Toma una foto del comprobante y súbela aquí</li>
-                     <li>Escribe el código de operación en el formulario</li>
-                   </ol>
-                   <p className="text-xs text-blue-700 mt-2">
-                     💡 Tu progreso se guarda automáticamente. Puedes cambiar de pestaña y volver sin perder tu información.
-                   </p>
+                    <ol className="text-sm space-y-1 list-decimal list-inside">
+                      <li>Escanea el QR con tu aplicación de Yape</li>
+                      <li>Ingresa el monto exacto: <strong>{checkoutService.formatPrice(total.amount, total.currency)}</strong></li>
+                      <li>Realiza el pago y copia el código de operación</li>
+                      <li>Toma una foto del comprobante y súbela aquí</li>
+                      <li>Escribe el código de operación en el formulario</li>
+                    </ol>
+                    <p className="text-xs text-blue-700 mt-2 font-medium">
+                      ⚠️ Importante: El archivo del comprobante NO se guarda al cambiar de pestaña. Asegúrate de tener el archivo listo antes de enviar el formulario.
+                    </p>
                  </div>
 
                 {/* Upload Form */}
@@ -741,40 +770,36 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
                        id="receipt"
                        type="file"
                        accept="image/jpeg,image/png,image/jpg,application/pdf"
-                       onChange={(e) => {
-                         const file = e.target.files?.[0];
-                         if (file) {
-                           // Validate file size (5MB limit)
-                           if (file.size > 5 * 1024 * 1024) {
-                             setError('El archivo es muy grande. Máximo 5MB permitido.');
-                             return;
-                           }
-                           
-                           // Validate file type
-                           const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
-                           if (!validTypes.includes(file.type)) {
-                             setError('Tipo de archivo no válido. Solo JPG, PNG o PDF.');
-                             return;
-                           }
-                           
-                           setReceiptFile(file);
-                           setError(''); // Clear any previous errors
-                           
-                           // Guardar en sessionStorage que se seleccionó archivo
-                           if (step === 'yape_qr' && currentOrder) {
-                             const stateToSave = {
-                               step,
-                               currentOrder,
-                               transactionId,
-                               paymentMethod: selectedPaymentMethod,
-                               hasFile: true,
-                               fileName: file.name,
-                               timestamp: Date.now()
-                             };
-                             sessionStorage.setItem('yape_checkout_state', JSON.stringify(stateToSave));
-                           }
-                         }
-                       }}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            // Validate file size (5MB limit)
+                            if (file.size > 5 * 1024 * 1024) {
+                              setError('El archivo es muy grande. Máximo 5MB permitido.');
+                              return;
+                            }
+                            
+                            // Validate file type
+                            const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
+                            if (!validTypes.includes(file.type)) {
+                              setError('Tipo de archivo no válido. Solo JPG, PNG o PDF.');
+                              return;
+                            }
+                            
+                            setReceiptFile(file);
+                            setError(''); // Clear any previous errors
+                            console.log('✅ Archivo seleccionado:', file.name);
+                            
+                            // Guardar info del archivo
+                            const fileInfo = {
+                              name: file.name,
+                              size: file.size,
+                              type: file.type,
+                              timestamp: Date.now()
+                            };
+                            sessionStorage.setItem('yape_receipt_file', JSON.stringify(fileInfo));
+                          }
+                        }}
                        className="mt-1"
                      />
                      {receiptFile && (

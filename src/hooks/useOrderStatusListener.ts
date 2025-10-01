@@ -17,9 +17,16 @@ export function useOrderStatusListener(orderId: string, onError?: (msg: string) 
     }
     
     console.log('🔄 Setting up realtime listener for order:', orderId);
+    console.log('🎯 Listening for status changes to:', successStatus);
     
+    // Subscribe to realtime changes
     const channel = supabase
-      .channel(`order-status-${orderId}`)
+      .channel(`order-status-${orderId}`, {
+        config: {
+          broadcast: { self: true },
+          presence: { key: orderId }
+        }
+      })
       .on(
         'postgres_changes',
         {
@@ -32,16 +39,20 @@ export function useOrderStatusListener(orderId: string, onError?: (msg: string) 
           const newStatus = payload.new.payment_status;
           const rejectionReason = payload.new.rejection_reason;
           
-          console.log('🔄 Payment status changed:', { 
+          console.log('🔔 Payment status UPDATE received:', { 
             orderId, 
             newStatus, 
             rejectionReason,
             oldStatus: payload.old?.payment_status,
-            fullPayload: payload.new 
+            timestamp: new Date().toISOString()
           });
           
           if (newStatus === successStatus) {
-            console.log('✅ Payment successful, redirecting to success page');
+            console.log('✅ Payment successful! Redirecting to success page...');
+            // Clear session storage
+            sessionStorage.removeItem('checkout_order_id');
+            sessionStorage.removeItem('yape_checkout_state');
+            sessionStorage.removeItem('yape_receipt_file');
             navigate(`/checkout/success/${orderId}`);
           } else if (newStatus === 'rejected' || newStatus === 'failed' || newStatus === 'error') {
             console.log('❌ Payment rejected/failed:', { newStatus, rejectionReason });
@@ -63,18 +74,34 @@ export function useOrderStatusListener(orderId: string, onError?: (msg: string) 
             } else {
               console.log('⚠️ No onError callback provided');
             }
+          } else {
+            console.log('ℹ️ Status changed but not to terminal state:', newStatus);
           }
         }
       )
       .subscribe((status) => {
-        console.log('📡 Realtime subscription status:', { orderId, status });
+        console.log('📡 Realtime subscription status:', { 
+          orderId, 
+          status, 
+          timestamp: new Date().toISOString() 
+        });
+        
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Successfully subscribed to realtime updates for order:', orderId);
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Realtime channel error for order:', orderId);
+        } else if (status === 'TIMED_OUT') {
+          console.error('⏱️ Realtime subscription timed out for order:', orderId);
+        } else if (status === 'CLOSED') {
+          console.log('🔒 Realtime channel closed for order:', orderId);
+        }
       });
       
     // Log initial connection
-    console.log('🎯 Realtime channel created for order:', orderId);
+    console.log('🎯 Realtime channel created and subscribing for order:', orderId);
     
     return () => {
-      console.log('🔌 Removing realtime channel for order:', orderId);
+      console.log('🔌 Cleaning up realtime channel for order:', orderId);
       supabase.removeChannel(channel);
     };
   }, [orderId, navigate, onError, successStatus]);
