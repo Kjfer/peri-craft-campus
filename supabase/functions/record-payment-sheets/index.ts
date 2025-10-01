@@ -6,6 +6,62 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Función para obtener el access token de OAuth2
+async function getAccessToken() {
+  const clientId = Deno.env.get('GOOGLE_SHEETS_CLIENT_ID');
+  const clientSecret = Deno.env.get('GOOGLE_SHEETS_CLIENT_SECRET');
+  const refreshToken = Deno.env.get('GOOGLE_SHEETS_REFRESH_TOKEN');
+
+  if (!clientId || !clientSecret || !refreshToken) {
+    throw new Error('Missing Google OAuth2 credentials');
+  }
+
+  const response = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      refresh_token: refreshToken,
+      grant_type: 'refresh_token',
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Failed to get access token: ${error}`);
+  }
+
+  const data = await response.json();
+  return data.access_token;
+}
+
+// Función para agregar fila a Google Sheets
+async function appendToSheet(accessToken: string, spreadsheetId: string, sheetName: string, values: any[]) {
+  const range = `${sheetName}!A:J`;
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      values: [values],
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Failed to append to sheet: ${error}`);
+  }
+
+  return await response.json();
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -16,6 +72,23 @@ serve(async (req) => {
 
     if (!orderId) {
       throw new Error('Order ID is required');
+    }
+
+    // Verificar configuración de Google Sheets
+    const spreadsheetId = Deno.env.get('GOOGLE_SHEETS_SPREADSHEET_ID');
+    const sheetName = Deno.env.get('GOOGLE_SHEETS_SHEET_NAME') || 'Pagos';
+
+    if (!spreadsheetId) {
+      console.warn('Google Sheets not configured, skipping recording');
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: 'Payment processed (Google Sheets not configured)',
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
     }
 
     // Create Supabase client
@@ -57,41 +130,38 @@ serve(async (req) => {
     const date = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
     const hour = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
-    // Prepare data for Google Sheets
-    const sheetData = {
-      ID_USUARIO: order.user_id,
-      NOMBRE: profile?.full_name || 'N/A',
-      CORREO: profile?.email || 'N/A',
-      MONTO: order.total_amount,
-      MONEDA: order.currency,
-      TIPO_PAGO: paymentType,
-      ID_TRANSACCION: transactionId || order.payment_id || order.id,
-      METODO_PAGO: order.payment_method,
-      FECHA_PAGO: date,
-      HORA_PAGO: hour,
-    };
+    console.log('Recording payment in Google Sheets:', {
+      orderId,
+      userId: order.user_id,
+      amount: order.total_amount,
+      paymentType,
+    });
 
-    console.log('Recording payment in Google Sheets:', sheetData);
+    try {
+      // Obtener access token
+      const accessToken = await getAccessToken();
 
-    // Send to Google Sheets via webhook (configured in external service)
-    const webhookUrl = Deno.env.get('GOOGLE_SHEETS_WEBHOOK_URL');
-    
-    if (webhookUrl) {
-      const webhookResponse = await fetch(webhookUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(sheetData),
-      });
+      // Preparar datos para la fila
+      const rowValues = [
+        order.user_id,
+        profile?.full_name || 'N/A',
+        profile?.email || 'N/A',
+        order.total_amount,
+        order.currency,
+        paymentType,
+        transactionId || order.payment_id || order.id,
+        order.payment_method,
+        date,
+        hour,
+      ];
 
-      if (!webhookResponse.ok) {
-        console.error('Failed to send to Google Sheets webhook');
-      } else {
-        console.log('Successfully recorded payment in Google Sheets');
-      }
-    } else {
-      console.warn('Google Sheets webhook URL not configured');
+      // Agregar a Google Sheets
+      await appendToSheet(accessToken, spreadsheetId, sheetName, rowValues);
+
+      console.log('✅ Successfully recorded payment in Google Sheets');
+    } catch (sheetError) {
+      console.error('❌ Error recording to Google Sheets:', sheetError);
+      // No lanzar error para no interrumpir el flujo de pago
     }
 
     return new Response(
