@@ -19,6 +19,7 @@ import { debugPayPalConfiguration, testPayPalConnection } from '@/lib/debugPayPa
 import { savePayPalState, loadPayPalState, clearPayPalState, checkPayPalOrderStatus, generatePayPalDirectUrl, isPayPalEnvironmentSandbox } from '@/lib/paypalStateManager';
 import { supabase } from '@/integrations/supabase/client';
 import { ExchangeRateDisplay } from '@/components/payment/ExchangeRateDisplay';
+import { SimplePayPal } from './SimplePayPal';
 import yapeQRImage from '@/assets/yape-qr-placeholder.jpeg';
 
 interface CheckoutProps {
@@ -50,9 +51,7 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
   const paypalOptions = {
     clientId: import.meta.env.VITE_PAYPAL_CLIENT_ID || "AbZNoNeWaqleDpPT-rXspcyQNKaBTd4_axIpRhIHPqM_Kl-97REvIfkU2BXJIWsImgE5FwBhc2vcFEgG",
     currency: "USD",
-    intent: "capture" as const,
-    "data-client-token": undefined, // Para evitar conflictos de merchant ID
-    "merchant-id": undefined // Dejar que PayPal determine automáticamente
+    intent: "capture" as const
   };
 
   // Debug: Log PayPal configuration
@@ -63,6 +62,12 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
       console.log(`   Currency: ${paypalOptions.currency}`);
       console.log(`   Intent: ${paypalOptions.intent}`);
       console.log(`   Environment: ${paypalOptions.clientId.includes('sandbox') ? 'sandbox' : 'production'}`);
+      
+      // Verificar que el Client ID no esté vacío
+      if (!paypalOptions.clientId || paypalOptions.clientId.length < 10) {
+        console.error('❌ PayPal Client ID parece inválido:', paypalOptions.clientId);
+        setError('Error de configuración: PayPal Client ID no válido');
+      }
     }
   }, [selectedPaymentMethod]);
 
@@ -93,6 +98,9 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
 
   // Persistir y recuperar estado de Yape QR y PayPal
   useEffect(() => {
+    // Solo recuperar estado si llegamos directamente a esta página, no si ya estamos en el flujo
+    if (step !== 'select_payment') return;
+    
     // Recuperar estado guardado al montar
     const savedState = loadPayPalState();
     
@@ -148,7 +156,7 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
         }
       }
     }
-  }, []);
+  }, []); // Solo ejecutar una vez al montar
 
   // Guardar estado cuando cambie el paso a yape_qr o paypal
   useEffect(() => {
@@ -752,6 +760,17 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
                   </Alert>
                 )}
                 
+                {/* Debug: Mostrar información de estado */}
+                {paypalOptions.clientId && (
+                  <div className="mb-4 p-2 bg-gray-50 border rounded text-xs">
+                    <strong>Debug PayPal:</strong><br/>
+                    Client ID: {paypalOptions.clientId.slice(0, 15)}...<br/>
+                    Step: {step}<br/>
+                    PayPal Order ID: {paypalOrderId || 'None'}<br/>
+                    DB Order ID: {paypalDbOrderId || 'None'}
+                  </div>
+                )}
+                
                 <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
                     <Smartphone className="w-4 h-4 text-blue-600" />
@@ -798,126 +817,100 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
                   </div>
                 )}
                 
-                <PayPalScriptProvider options={paypalOptions}>
-                  <PayPalButtons
-                    style={{ layout: 'vertical', color: 'blue', shape: 'rect', label: 'paypal' }}
-                    forceReRender={[paypalOrderId]} // Forzar re-render cuando cambie el order ID
-                    createOrder={async () => {
-                      try {
-                        setError(''); // Limpiar errores previos
-                        
-                        // Si ya tenemos un PayPal Order ID, reutilizarlo
-                        if (paypalOrderId) {
-                          console.log('♻️ Reutilizando orden PayPal existente:', paypalOrderId);
-                          return paypalOrderId;
-                        }
-                        
-                        console.log('🔄 Creando nueva orden de PayPal...');
-                        
-                        const { data, error } = await supabase.functions.invoke('paypal', {
-                          body: {
-                            action: 'create',
-                            cartItems: items.map(i => ({
-                              id: i.course_id || i.subscription_id,
-                              course_id: i.course_id || null,
-                              subscription_id: i.subscription_id || null,
-                              title: i.course?.title,
-                              price: i.course?.price,
-                              instructor_name: i.course?.instructor_name,
-                              thumbnail_url: i.course?.thumbnail_url,
-                              type: i.subscription_id ? 'subscription' : 'course'
-                            })),
-                            totalAmount: items.reduce((sum, i) => sum + (i.course?.price || 0), 0)
-                          }
-                        });
-                        
-                        if (error || !data?.paypalOrderId) {
-                          const errorMsg = error?.message || 'No se pudo crear la orden de PayPal';
-                          console.error('❌ Error creando orden:', errorMsg);
-                          setError(errorMsg);
-                          throw new Error(errorMsg);
-                        }
-                        
-                        console.log('✅ Orden PayPal creada:', data.paypalOrderId);
-                        setPaypalDbOrderId(data.dbOrderId);
-                        setPaypalOrderId(data.paypalOrderId);
-                        
-                        return data.paypalOrderId as string;
-                      } catch (e: any) {
-                        console.error('PayPal createOrder error:', e);
-                        const errorMsg = e.message || 'No se pudo crear la orden.';
-                        setError(errorMsg);
-                        toast({ 
-                          title: 'Error de PayPal', 
-                          description: errorMsg, 
-                          variant: 'destructive' 
-                        });
-                        throw e;
+                <SimplePayPal 
+                  clientId={paypalOptions.clientId}
+                  onCreateOrder={async () => {
+                    setError(''); // Limpiar errores previos
+                    
+                    // Si ya tenemos un PayPal Order ID, reutilizarlo
+                    if (paypalOrderId) {
+                      console.log('♻️ Reutilizando orden PayPal existente:', paypalOrderId);
+                      return paypalOrderId;
+                    }
+                    
+                    console.log('🔄 Creando nueva orden de PayPal...');
+                    
+                    const { data, error } = await supabase.functions.invoke('paypal', {
+                      body: {
+                        action: 'create',
+                        cartItems: items.map(i => ({
+                          id: i.course_id || i.subscription_id,
+                          course_id: i.course_id || null,
+                          subscription_id: i.subscription_id || null,
+                          title: i.course?.title,
+                          price: i.course?.price,
+                          instructor_name: i.course?.instructor_name,
+                          thumbnail_url: i.course?.thumbnail_url,
+                          type: i.subscription_id ? 'subscription' : 'course'
+                        })),
+                        totalAmount: items.reduce((sum, i) => sum + (i.course?.price || 0), 0)
                       }
-                    }}
-                    onApprove={async (data) => {
-                      try {
-                        setError(''); // Limpiar errores previos
-                        console.log('🔄 Capturando pago de PayPal...');
-                        
-                        const { data: cap, error } = await supabase.functions.invoke('paypal', {
-                          body: {
-                            action: 'capture',
-                            orderID: data.orderID,
-                            dbOrderId: paypalDbOrderId
-                          }
-                        });
-                        
-                        if (error || !cap?.success) {
-                          const errorMsg = error?.message || cap?.error || 'No se pudo completar el pago con PayPal';
-                          console.error('❌ Error capturando pago:', errorMsg);
-                          setError(errorMsg);
-                          throw new Error(errorMsg);
-                        }
-                        
-                        console.log('✅ Pago PayPal completado:', cap.orderId);
-                        toast({ 
-                          title: '¡Pago exitoso!', 
-                          description: 'Tu pago con PayPal se procesó correctamente.' 
-                        });
-                        
-                        // Limpiar estado guardado
-                        clearPayPalState();
-                        
-                        if (mode === 'cart') await clearCart();
-                        navigate(`/checkout/success/${cap.orderId}`);
-                      } catch (e: any) {
-                        console.error('PayPal capture error:', e);
-                        const errorMsg = e.message || 'No se pudo completar el pago con PayPal.';
-                        setError(errorMsg);
-                        toast({ 
-                          title: 'Error en el pago', 
-                          description: errorMsg, 
-                          variant: 'destructive' 
-                        });
-                      }
-                    }}
-                    onError={(err) => {
-                      console.error('PayPal Error:', err);
-                      const errorMsg = 'Ocurrió un error con PayPal. Verifica tu configuración e intenta nuevamente.';
+                    });
+                    
+                    if (error || !data?.paypalOrderId) {
+                      const errorMsg = error?.message || 'No se pudo crear la orden de PayPal';
+                      console.error('❌ Error creando orden:', errorMsg);
                       setError(errorMsg);
-                      toast({ 
-                        title: 'Error de PayPal', 
-                        description: errorMsg, 
-                        variant: 'destructive' 
-                      });
-                    }}
-                    onCancel={() => {
-                      console.log('PayPal payment cancelled by user');
-                      toast({ 
-                        title: 'Pago cancelado', 
-                        description: 'El pago con PayPal fue cancelado. Puedes intentar nuevamente.', 
-                        variant: 'default' 
-                      });
-                      // No limpiar el estado aquí para permitir reintentos
-                    }}
-                  />
-                </PayPalScriptProvider>
+                      throw new Error(errorMsg);
+                    }
+                    
+                    console.log('✅ Orden PayPal creada:', data.paypalOrderId);
+                    setPaypalDbOrderId(data.dbOrderId);
+                    setPaypalOrderId(data.paypalOrderId);
+                    
+                    return data.paypalOrderId as string;
+                  }}
+                  onApprove={async (data) => {
+                    setError(''); // Limpiar errores previos
+                    console.log('🔄 Capturando pago de PayPal...');
+                    
+                    const { data: cap, error } = await supabase.functions.invoke('paypal', {
+                      body: {
+                        action: 'capture',
+                        orderID: data.orderID,
+                        dbOrderId: paypalDbOrderId
+                      }
+                    });
+                    
+                    if (error || !cap?.success) {
+                      const errorMsg = error?.message || cap?.error || 'No se pudo completar el pago con PayPal';
+                      console.error('❌ Error capturando pago:', errorMsg);
+                      setError(errorMsg);
+                      throw new Error(errorMsg);
+                    }
+                    
+                    console.log('✅ Pago PayPal completado:', cap.orderId);
+                    toast({ 
+                      title: '¡Pago exitoso!', 
+                      description: 'Tu pago con PayPal se procesó correctamente.' 
+                    });
+                    
+                    // Limpiar estado guardado
+                    clearPayPalState();
+                    
+                    if (mode === 'cart') await clearCart();
+                    navigate(`/checkout/success/${cap.orderId}`);
+                  }}
+                  onError={(err) => {
+                    console.error('PayPal Error:', err);
+                    const errorMsg = 'Ocurrió un error con PayPal. Verifica tu configuración e intenta nuevamente.';
+                    setError(errorMsg);
+                    toast({ 
+                      title: 'Error de PayPal', 
+                      description: errorMsg, 
+                      variant: 'destructive' 
+                    });
+                  }}
+                  onCancel={() => {
+                    console.log('PayPal payment cancelled by user');
+                    toast({ 
+                      title: 'Pago cancelado', 
+                      description: 'El pago con PayPal fue cancelado. Puedes intentar nuevamente.', 
+                      variant: 'default' 
+                    });
+                    // No limpiar el estado aquí para permitir reintentos
+                  }}
+                />
                 
                 {/* Botón de verificación manual */}
                 {paypalOrderId && (

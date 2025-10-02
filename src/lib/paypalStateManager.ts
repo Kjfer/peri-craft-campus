@@ -8,6 +8,7 @@ export interface PayPalCheckoutState {
   paypalDbOrderId: string | null;
   paypalOrderId: string | null;
   selectedPaymentMethod: string;
+  transactionId?: string; // Para Yape QR
   timestamp: number;
 }
 
