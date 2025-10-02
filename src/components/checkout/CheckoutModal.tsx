@@ -369,9 +369,39 @@ export default function CheckoutModal({
     }
   };
 
+  // Persist selected method in sessionStorage to prevent loss on tab changes
+  useEffect(() => {
+    if (selectedMethod) {
+      sessionStorage.setItem('checkout-selected-method', selectedMethod);
+    }
+  }, [selectedMethod]);
+
+  // Restore selected method on mount
+  useEffect(() => {
+    const saved = sessionStorage.getItem('checkout-selected-method');
+    if (saved && !selectedMethod) {
+      setSelectedMethod(saved);
+    }
+  }, []);
+
+  // Clear on close
+  useEffect(() => {
+    if (!isOpen) {
+      sessionStorage.removeItem('checkout-selected-method');
+    }
+  }, [isOpen]);
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      if (!open && !isProcessing) {
+        onClose();
+      }
+    }}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" onInteractOutside={(e) => {
+        if (isProcessing) {
+          e.preventDefault();
+        }
+      }}>
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <Shield className="w-5 h-5 mr-2" />
@@ -630,10 +660,13 @@ export default function CheckoutModal({
                                 action: 'create',
                                 cartItems: cartItems.map(item => ({
                                   id: item.course_id ?? item.id,
+                                  course_id: item.course_id ?? item.id,
+                                  subscription_id: item.subscription_id || null,
                                   title: item.course?.title ?? item.title,
                                   price: item.course?.price ?? item.price,
                                   instructor_name: item.course?.instructor_name ?? item.instructor_name,
-                                  thumbnail_url: item.course?.thumbnail_url ?? item.thumbnail_url
+                                  thumbnail_url: item.course?.thumbnail_url ?? item.thumbnail_url,
+                                  type: item.subscription_id ? 'subscription' : 'course'
                                 })),
                                 totalAmount
                               }

@@ -97,12 +97,16 @@ serve(async (req) => {
 
       if (orderErr || !order) throw new Error(`DB order error: ${orderErr?.message}`);
 
-      const orderItems = cartItems.map(ci => ({ 
-        order_id: order.id, 
-        course_id: ci.course_id || null,
-        subscription_id: ci.subscription_id || null,
-        price: ci.price 
-      }));
+      // Map items correctly - ensure each has either course_id OR subscription_id, not both
+      const orderItems = cartItems.map(ci => {
+        const isSubscription = ci.type === 'subscription' || ci.subscription_id;
+        return {
+          order_id: order.id,
+          course_id: isSubscription ? null : (ci.course_id || ci.id),
+          subscription_id: isSubscription ? (ci.subscription_id || ci.id) : null,
+          price: ci.price
+        };
+      });
       const { error: itemsErr } = await svc.from('order_items').insert(orderItems);
       if (itemsErr) throw new Error(`DB order_items error: ${itemsErr.message}`);
 
