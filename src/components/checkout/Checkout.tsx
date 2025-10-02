@@ -14,8 +14,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/hooks/use-toast';
 import { checkoutService, CheckoutItem } from '@/lib/checkoutService';
-import { debugReceiptUpload, testFileUpload, testN8nWebhook } from '@/lib/debugReceiptUpload';
-import { debugPayPalConfiguration, testPayPalConnection } from '@/lib/debugPayPal';
+
 import { savePayPalState, loadPayPalState, clearPayPalState, checkPayPalOrderStatus, generatePayPalDirectUrl, isPayPalEnvironmentSandbox } from '@/lib/paypalStateManager';
 import { supabase } from '@/integrations/supabase/client';
 import { ExchangeRateDisplay } from '@/components/payment/ExchangeRateDisplay';
@@ -44,8 +43,7 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
   const [error, setError] = useState<string>('');
   const [paypalDbOrderId, setPaypalDbOrderId] = useState<string | null>(null);
   const [paypalOrderId, setPaypalOrderId] = useState<string | null>(null);
-  const [debugMode, setDebugMode] = useState(false);
-  const [debugResults, setDebugResults] = useState<any>(null);
+
 
   // PayPal configuration
   const paypalOptions = {
@@ -54,19 +52,15 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
     intent: "capture" as const
   };
 
-  // Debug: Log PayPal configuration
+  // Debug: Log PayPal configuration (solo en consola)
   useEffect(() => {
     if (selectedPaymentMethod === 'paypal') {
-      console.log('🔧 PayPal Configuration:');
-      console.log(`   Client ID: ${paypalOptions.clientId.slice(0, 10)}...${paypalOptions.clientId.slice(-10)}`);
-      console.log(`   Currency: ${paypalOptions.currency}`);
-      console.log(`   Intent: ${paypalOptions.intent}`);
-      console.log(`   Environment: ${paypalOptions.clientId.includes('sandbox') ? 'sandbox' : 'production'}`);
+      console.log('🔧 PayPal Configuration loaded');
       
       // Verificar que el Client ID no esté vacío
       if (!paypalOptions.clientId || paypalOptions.clientId.length < 10) {
-        console.error('❌ PayPal Client ID parece inválido:', paypalOptions.clientId);
-        setError('Error de configuración: PayPal Client ID no válido');
+        console.error('❌ PayPal Client ID appears invalid');
+        setError('Error de configuración de PayPal. Por favor contacta al soporte.');
       }
     }
   }, [selectedPaymentMethod]);
@@ -760,60 +754,44 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
                   </Alert>
                 )}
                 
-                {/* Debug: Mostrar información de estado */}
-                {paypalOptions.clientId && (
-                  <div className="mb-4 p-2 bg-gray-50 border rounded text-xs">
-                    <strong>Debug PayPal:</strong><br/>
-                    Client ID: {paypalOptions.clientId.slice(0, 15)}...<br/>
-                    Step: {step}<br/>
-                    PayPal Order ID: {paypalOrderId || 'None'}<br/>
-                    DB Order ID: {paypalDbOrderId || 'None'}
-                  </div>
-                )}
-                
-                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                {/* Advertencia importante para el usuario */}
+                <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
                   <div className="flex items-center gap-2 mb-2">
-                    <Smartphone className="w-4 h-4 text-blue-600" />
-                    <span className="text-sm font-medium text-blue-800">Estado de la sesión</span>
+                    <AlertTriangle className="w-5 h-5 text-amber-600" />
+                    <span className="text-sm font-semibold text-amber-800">Instrucciones Importantes</span>
                   </div>
-                  <p className="text-xs text-blue-700">
-                    ⚠️ <strong>Importante:</strong> No cierres esta pestaña hasta completar el pago. 
-                    El estado se guarda automáticamente por 2 horas.
-                  </p>
-                  {paypalDbOrderId && (
-                    <p className="text-xs text-blue-600 mt-1">
-                      💾 Orden guardada: {paypalDbOrderId.slice(0, 8)}...
-                    </p>
-                  )}
-                  {paypalOrderId && (
-                    <p className="text-xs text-green-600 mt-1">
-                      🎯 PayPal Order ID: {paypalOrderId.slice(0, 8)}...
-                    </p>
-                  )}
+                  <ul className="text-sm text-amber-700 space-y-1 list-disc list-inside">
+                    <li><strong>No cierres</strong> la ventana emergente de PayPal hasta completar el pago</li>
+                    <li><strong>No cambies de pestaña</strong> durante el proceso de pago</li>
+                    <li>Si la ventana se cierra accidentalmente, usa los botones de recuperación que aparecerán</li>
+                    <li>El proceso de pago es seguro y está protegido por PayPal</li>
+                  </ul>
                 </div>
                 
                 {/* Opción de recuperación si se perdió la ventana */}
                 {paypalOrderId && (
-                  <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <AlertTriangle className="w-4 h-4 text-orange-600" />
-                      <span className="text-sm font-medium text-orange-800">¿Se cerró la ventana de PayPal?</span>
+                  <div className="mb-4 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                    <div className="flex items-center gap-2 mb-3">
+                      <AlertTriangle className="w-5 h-5 text-orange-600" />
+                      <span className="text-sm font-semibold text-orange-800">¿Se cerró la ventana de PayPal?</span>
                     </div>
-                    <p className="text-xs text-orange-700 mb-2">
-                      Si se cerró la ventana de PayPal o perdiste el progreso, puedes continuar el pago haciendo clic en el enlace directo:
+                    <p className="text-sm text-orange-700 mb-3">
+                      Si se cerró accidentalmente la ventana de pago, puedes continuar usando una de estas opciones:
                     </p>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => {
-                        const isSandbox = isPayPalEnvironmentSandbox(paypalOptions.clientId);
-                        const paypalUrl = generatePayPalDirectUrl(paypalOrderId, isSandbox);
-                        window.open(paypalUrl, '_blank', 'width=400,height=600');
-                      }}
-                      className="w-full"
-                    >
-                      🔗 Abrir PayPal en Nueva Ventana
-                    </Button>
+                    <div className="space-y-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => {
+                          const isSandbox = isPayPalEnvironmentSandbox(paypalOptions.clientId);
+                          const paypalUrl = generatePayPalDirectUrl(paypalOrderId, isSandbox);
+                          window.open(paypalUrl, '_blank', 'width=500,height=700,scrollbars=yes,resizable=yes');
+                        }}
+                        className="w-full"
+                      >
+                        🔗 Continuar Pago en Nueva Ventana
+                      </Button>
+                    </div>
                   </div>
                 )}
                 
@@ -914,13 +892,16 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
                 
                 {/* Botón de verificación manual */}
                 {paypalOrderId && (
-                  <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <h4 className="font-medium mb-2 text-blue-800">¿Completaste el pago en PayPal?</h4>
-                    <p className="text-xs text-blue-700 mb-3">
-                      Si completaste el pago en otra ventana, haz clic aquí para verificar el estado:
+                  <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <h4 className="font-semibold mb-2 text-green-800 flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4" />
+                      ¿Ya completaste el pago?
+                    </h4>
+                    <p className="text-sm text-green-700 mb-3">
+                      Si ya realizaste el pago en PayPal, haz clic aquí para verificar y finalizar tu compra:
                     </p>
                     <Button 
-                      variant="outline" 
+                      variant="default" 
                       size="sm"
                       onClick={async () => {
                         setLoading(true);
@@ -937,15 +918,15 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
                             navigate(`/checkout/success/${result.orderId}`);
                           } else {
                             toast({
-                              title: 'Pago no completado',
-                              description: result.error || 'El pago aún no se ha completado en PayPal',
-                              variant: 'destructive'
+                              title: 'Pago pendiente',
+                              description: 'El pago aún no se ha completado. Asegúrate de finalizar el proceso en PayPal.',
+                              variant: 'default'
                             });
                           }
                         } catch (error: any) {
                           toast({
                             title: 'Error de verificación',
-                            description: 'No se pudo verificar el estado del pago',
+                            description: 'No se pudo verificar el estado del pago. Intenta nuevamente.',
                             variant: 'destructive'
                           });
                         } finally {
@@ -953,10 +934,10 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
                         }
                       }}
                       disabled={loading}
-                      className="w-full"
+                      className="w-full bg-green-600 hover:bg-green-700"
                     >
                       {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                      🔍 Verificar Estado del Pago
+                      ✅ Verificar y Finalizar Compra
                     </Button>
                   </div>
                 )}
@@ -1000,7 +981,9 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
                 )}
                 
                 <div className="mt-4 flex gap-2">
-                  <Button variant="outline" onClick={() => setStep('select_payment')} className="flex-1">Volver</Button>
+                  <Button variant="outline" onClick={() => setStep('select_payment')} className="flex-1">
+                    ← Cambiar Método de Pago
+                  </Button>
                   {paypalOrderId && (
                     <Button 
                       variant="destructive" 
@@ -1011,14 +994,14 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
                         clearPayPalState();
                         setStep('select_payment');
                         toast({
-                          title: "Estado reiniciado",
-                          description: "Puedes empezar el proceso de pago de nuevo",
+                          title: "Proceso reiniciado",
+                          description: "Puedes seleccionar un método de pago nuevamente",
                           variant: "default"
                         });
                       }}
                       className="flex-1"
                     >
-                      🔄 Reiniciar
+                      🔄 Empezar de Nuevo
                     </Button>
                   )}
                 </div>

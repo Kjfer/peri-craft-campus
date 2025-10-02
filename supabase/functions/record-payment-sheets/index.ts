@@ -68,7 +68,10 @@ serve(async (req) => {
   }
 
   try {
+    console.log('🔄 Función record-payment-sheets ejecutándose...');
+    
     const { orderId, transactionId } = await req.json();
+    console.log('📝 Datos recibidos:', { orderId, transactionId });
 
     if (!orderId) {
       throw new Error('Order ID is required');
@@ -77,9 +80,19 @@ serve(async (req) => {
     // Verificar configuración de Google Sheets
     const spreadsheetId = Deno.env.get('GOOGLE_SHEETS_SPREADSHEET_ID');
     const sheetName = Deno.env.get('GOOGLE_SHEETS_SHEET_NAME') || 'Pagos';
+    const clientId = Deno.env.get('GOOGLE_SHEETS_CLIENT_ID');
+    const clientSecret = Deno.env.get('GOOGLE_SHEETS_CLIENT_SECRET');
+    const refreshToken = Deno.env.get('GOOGLE_SHEETS_REFRESH_TOKEN');
+
+    console.log('🔧 Verificando configuración de Google Sheets:');
+    console.log(`   SPREADSHEET_ID: ${spreadsheetId ? '✅ Configurado' : '❌ Faltante'}`);
+    console.log(`   CLIENT_ID: ${clientId ? '✅ Configurado' : '❌ Faltante'}`);
+    console.log(`   CLIENT_SECRET: ${clientSecret ? '✅ Configurado' : '❌ Faltante'}`);
+    console.log(`   REFRESH_TOKEN: ${refreshToken ? '✅ Configurado' : '❌ Faltante'}`);
+    console.log(`   SHEET_NAME: ${sheetName}`);
 
     if (!spreadsheetId) {
-      console.warn('Google Sheets not configured, skipping recording');
+      console.warn('⚠️ Google Sheets SPREADSHEET_ID no configurado, saltando registro');
       return new Response(
         JSON.stringify({
           success: true,
@@ -91,12 +104,27 @@ serve(async (req) => {
       );
     }
 
+    if (!clientId || !clientSecret || !refreshToken) {
+      console.warn('⚠️ Credenciales OAuth2 de Google no configuradas, saltando registro');
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: 'Payment processed (Google OAuth2 not configured)',
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
     // Create Supabase client
+    console.log('🔗 Conectando a Supabase...');
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Get order details
+    console.log(`🔍 Buscando orden: ${orderId}`);
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .select(`
@@ -110,15 +138,27 @@ serve(async (req) => {
       .single();
 
     if (orderError || !order) {
+      console.error('❌ Error buscando orden:', orderError);
       throw new Error('Order not found');
     }
+    
+    console.log('✅ Orden encontrada:', { 
+      id: order.id, 
+      user_id: order.user_id, 
+      total_amount: order.total_amount,
+      status: order.status,
+      payment_method: order.payment_method
+    });
 
     // Get user details
+    console.log(`👤 Buscando perfil de usuario: ${order.user_id}`);
     const { data: profile } = await supabase
       .from('profiles')
       .select('full_name, email')
       .eq('user_id', order.user_id)
       .single();
+      
+    console.log('👤 Perfil encontrado:', profile);
 
     // Determine payment type
     const hasCourses = order.order_items.some((item: any) => item.course_id);
@@ -130,16 +170,20 @@ serve(async (req) => {
     const date = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
     const hour = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
-    console.log('Recording payment in Google Sheets:', {
+    console.log('📊 Preparando datos para Google Sheets:', {
       orderId,
       userId: order.user_id,
       amount: order.total_amount,
       paymentType,
+      date,
+      hour,
     });
 
     try {
       // Obtener access token
+      console.log('🔑 Obteniendo access token de Google...');
       const accessToken = await getAccessToken();
+      console.log('✅ Access token obtenido exitosamente');
 
       // Preparar datos para la fila
       const rowValues = [
@@ -155,12 +199,15 @@ serve(async (req) => {
         hour,
       ];
 
-      // Agregar a Google Sheets
-      await appendToSheet(accessToken, spreadsheetId, sheetName, rowValues);
+      console.log('📋 Datos de la fila a insertar:', rowValues);
 
-      console.log('✅ Successfully recorded payment in Google Sheets');
+      // Agregar a Google Sheets
+      console.log('📤 Enviando datos a Google Sheets...');
+      const sheetResult = await appendToSheet(accessToken, spreadsheetId, sheetName, rowValues);
+      console.log('✅ Datos enviados exitosamente a Google Sheets:', sheetResult);
+
     } catch (sheetError) {
-      console.error('❌ Error recording to Google Sheets:', sheetError);
+      console.error('❌ Error registrando en Google Sheets:', sheetError);
       // No lanzar error para no interrumpir el flujo de pago
     }
 
@@ -175,7 +222,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error recording payment:', error);
+    console.error('❌ Error general en record-payment-sheets:', error);
     return new Response(
       JSON.stringify({
         success: false,
