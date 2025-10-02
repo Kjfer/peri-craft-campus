@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
@@ -10,7 +10,11 @@ export interface CheckoutOptions {
 }
 
 export function useCheckout(options: CheckoutOptions = {}) {
-  const [isOpen, setIsOpen] = useState(false);
+  // Restore checkout state from sessionStorage on mount
+  const [isOpen, setIsOpen] = useState(() => {
+    const saved = sessionStorage.getItem('checkout-modal-open');
+    return saved === 'true';
+  });
   const [isProcessing, setIsProcessing] = useState(false);
   
   const navigate = useNavigate();
@@ -51,8 +55,28 @@ export function useCheckout(options: CheckoutOptions = {}) {
   const closeCheckout = () => {
     if (!isProcessing) {
       setIsOpen(false);
+      sessionStorage.removeItem('checkout-modal-open');
+      sessionStorage.removeItem('checkout-selected-method');
     }
   };
+
+  // Persist modal state to prevent loss on tab changes
+  useEffect(() => {
+    if (isOpen) {
+      sessionStorage.setItem('checkout-modal-open', 'true');
+    } else {
+      sessionStorage.removeItem('checkout-modal-open');
+    }
+  }, [isOpen]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (!isProcessing) {
+        sessionStorage.removeItem('checkout-modal-open');
+      }
+    };
+  }, [isProcessing]);
 
   const handlePaymentSuccess = async (orderId: string) => {
     try {

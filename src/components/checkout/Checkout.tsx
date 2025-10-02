@@ -50,24 +50,27 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
     intent: "capture" as const
   };
 
-  // Persistir y recuperar estado de Yape QR con archivos
+  // Persistir y recuperar estado de Yape QR y PayPal
   useEffect(() => {
     // Recuperar estado guardado al montar
-    const savedState = sessionStorage.getItem('yape_checkout_state');
+    const savedState = sessionStorage.getItem('checkout_state');
     const savedFileData = sessionStorage.getItem('yape_receipt_file');
     
     if (savedState) {
       try {
         const parsed = JSON.parse(savedState);
-        if (parsed.step === 'yape_qr') {
+        if (parsed.step === 'yape_qr' || parsed.step === 'paypal') {
           setStep(parsed.step);
           setCurrentOrder(parsed.currentOrder);
           setTransactionId(parsed.transactionId || '');
-          setSelectedPaymentMethod(parsed.paymentMethod || 'yape_qr');
-          console.log('✅ Estado de Yape QR recuperado desde sessionStorage');
+          setSelectedPaymentMethod(parsed.paymentMethod || '');
+          if (parsed.paypalDbOrderId) {
+            setPaypalDbOrderId(parsed.paypalDbOrderId);
+          }
+          console.log(`✅ Estado de ${parsed.step} recuperado desde sessionStorage`);
           
-          // Recuperar archivo si existe en sessionStorage
-          if (savedFileData) {
+          // Recuperar archivo si existe en sessionStorage (solo para Yape QR)
+          if (parsed.step === 'yape_qr' && savedFileData) {
             try {
               const fileInfo = JSON.parse(savedFileData);
               console.log('📁 Archivo previamente guardado:', fileInfo.name);
@@ -86,21 +89,22 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
     }
   }, []);
 
-  // Guardar estado cuando cambie el paso a yape_qr
+  // Guardar estado cuando cambie el paso a yape_qr o paypal
   useEffect(() => {
-    if (step === 'yape_qr' && currentOrder) {
+    if ((step === 'yape_qr' || step === 'paypal') && currentOrder) {
       const stateToSave = {
         step,
         currentOrder,
         transactionId,
         paymentMethod: selectedPaymentMethod,
+        paypalDbOrderId: step === 'paypal' ? paypalDbOrderId : undefined,
         timestamp: Date.now()
       };
-      sessionStorage.setItem('yape_checkout_state', JSON.stringify(stateToSave));
-      console.log('💾 Estado de Yape QR guardado en sessionStorage');
+      sessionStorage.setItem('checkout_state', JSON.stringify(stateToSave));
+      console.log(`💾 Estado de ${step} guardado en sessionStorage`);
       
-      // Guardar info del archivo (no el archivo completo)
-      if (receiptFile) {
+      // Guardar info del archivo (solo para Yape QR)
+      if (step === 'yape_qr' && receiptFile) {
         const fileInfo = {
           name: receiptFile.name,
           size: receiptFile.size,
@@ -114,10 +118,10 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
     
     // Limpiar cuando se complete o se vuelva a selección
     if (step === 'completed' || step === 'select_payment') {
-      sessionStorage.removeItem('yape_checkout_state');
+      sessionStorage.removeItem('checkout_state');
       sessionStorage.removeItem('yape_receipt_file');
     }
-  }, [step, currentOrder, transactionId, selectedPaymentMethod, receiptFile]);
+  }, [step, currentOrder, transactionId, selectedPaymentMethod, receiptFile, paypalDbOrderId]);
 
   useEffect(() => {
     if (!user) {
@@ -660,11 +664,14 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
                           body: {
                             action: 'create',
                             cartItems: items.map(i => ({
-                              id: i.course_id,
+                              id: i.course_id || i.subscription_id,
+                              course_id: i.course_id || null,
+                              subscription_id: i.subscription_id || null,
                               title: i.course?.title,
                               price: i.course?.price,
                               instructor_name: i.course?.instructor_name,
-                              thumbnail_url: i.course?.thumbnail_url
+                              thumbnail_url: i.course?.thumbnail_url,
+                              type: i.subscription_id ? 'subscription' : 'course'
                             })),
                             totalAmount: items.reduce((sum, i) => sum + (i.course?.price || 0), 0)
                           }
