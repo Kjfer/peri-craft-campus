@@ -19,14 +19,9 @@ export function useOrderStatusListener(orderId: string, onError?: (msg: string) 
     console.log('🔄 Setting up realtime listener for order:', orderId);
     console.log('🎯 Listening for status changes to:', successStatus);
     
-    // Subscribe to realtime changes
+    // Subscribe to realtime changes with optimized config
     const channel = supabase
-      .channel(`order-status-${orderId}`, {
-        config: {
-          broadcast: { self: true },
-          presence: { key: orderId }
-        }
-      })
+      .channel(`order-status-${orderId}`)
       .on(
         'postgres_changes',
         {
@@ -44,6 +39,7 @@ export function useOrderStatusListener(orderId: string, onError?: (msg: string) 
             newStatus, 
             rejectionReason,
             oldStatus: payload.old?.payment_status,
+            fullPayload: payload.new,
             timestamp: new Date().toISOString()
           });
           
@@ -55,7 +51,12 @@ export function useOrderStatusListener(orderId: string, onError?: (msg: string) 
             sessionStorage.removeItem('yape_receipt_file');
             navigate(`/checkout/success/${orderId}`);
           } else if (newStatus === 'rejected' || newStatus === 'failed' || newStatus === 'error') {
-            console.log('❌ Payment rejected/failed:', { newStatus, rejectionReason });
+            console.log('❌ Payment rejected/failed! Calling onError callback...', { 
+              newStatus, 
+              rejectionReason,
+              hasOnError: !!onError 
+            });
+            
             if (onError) {
               let errorMessage = 'No pudimos validar tu pago. Por favor revisa tu comprobante o contacta a soporte.';
               
@@ -69,10 +70,12 @@ export function useOrderStatusListener(orderId: string, onError?: (msg: string) 
                 errorMessage = `Error: ${rejectionReason}`;
               }
               
-              console.log('📝 Calling onError with message:', errorMessage);
+              console.log('📝 Executing onError callback with message:', errorMessage);
+              // Execute callback immediately
               onError(errorMessage);
+              console.log('✅ onError callback executed successfully');
             } else {
-              console.log('⚠️ No onError callback provided');
+              console.error('⚠️ CRITICAL: No onError callback provided but payment was rejected!');
             }
           } else {
             console.log('ℹ️ Status changed but not to terminal state:', newStatus);
