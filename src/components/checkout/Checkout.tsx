@@ -15,6 +15,7 @@ import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/hooks/use-toast';
 import { checkoutService, CheckoutItem } from '@/lib/checkoutService';
 import { debugReceiptUpload, testFileUpload, testN8nWebhook } from '@/lib/debugReceiptUpload';
+import { debugPayPalConfiguration, testPayPalConnection } from '@/lib/debugPayPal';
 import { supabase } from '@/integrations/supabase/client';
 import { ExchangeRateDisplay } from '@/components/payment/ExchangeRateDisplay';
 import yapeQRImage from '@/assets/yape-qr-placeholder.jpeg';
@@ -45,10 +46,23 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
 
   // PayPal configuration
   const paypalOptions = {
-    clientId: "AZDxjDScFpQtjWTOUtWKbyN_bDt4OgqaF4eYXlewfBP4-8aqX3PiV8e1GWU6liB2CUXlkA59kJXE7M6R",
+    clientId: import.meta.env.VITE_PAYPAL_CLIENT_ID || "AbZNoNeWaqleDpPT-rXspcyQNKaBTd4_axIpRhIHPqM_Kl-97REvIfkU2BXJIWsImgE5FwBhc2vcFEgG",
     currency: "USD",
-    intent: "capture" as const
+    intent: "capture" as const,
+    "data-client-token": undefined, // Para evitar conflictos de merchant ID
+    "merchant-id": undefined // Dejar que PayPal determine automáticamente
   };
+
+  // Debug: Log PayPal configuration
+  useEffect(() => {
+    if (selectedPaymentMethod === 'paypal') {
+      console.log('🔧 PayPal Configuration:');
+      console.log(`   Client ID: ${paypalOptions.clientId.slice(0, 10)}...${paypalOptions.clientId.slice(-10)}`);
+      console.log(`   Currency: ${paypalOptions.currency}`);
+      console.log(`   Intent: ${paypalOptions.intent}`);
+      console.log(`   Environment: ${paypalOptions.clientId.includes('sandbox') ? 'sandbox' : 'production'}`);
+    }
+  }, [selectedPaymentMethod]);
 
   // Persistir y recuperar estado de Yape QR y PayPal
   useEffect(() => {
@@ -59,15 +73,29 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
     if (savedState) {
       try {
         const parsed = JSON.parse(savedState);
-        if (parsed.step === 'yape_qr' || parsed.step === 'paypal') {
+        
+        // Verificar que el estado no sea muy antiguo (2 horas)
+        const stateAge = Date.now() - (parsed.timestamp || 0);
+        const maxAge = 2 * 60 * 60 * 1000; // 2 horas
+        
+        if (stateAge < maxAge && (parsed.step === 'yape_qr' || parsed.step === 'paypal')) {
           setStep(parsed.step);
           setCurrentOrder(parsed.currentOrder);
           setTransactionId(parsed.transactionId || '');
           setSelectedPaymentMethod(parsed.paymentMethod || '');
+          
           if (parsed.paypalDbOrderId) {
             setPaypalDbOrderId(parsed.paypalDbOrderId);
           }
-          console.log(`✅ Estado de ${parsed.step} recuperado desde sessionStorage`);
+          
+          console.log(`✅ Estado de ${parsed.step} recuperado desde sessionStorage (hace ${Math.round(stateAge/1000/60)} minutos)`);
+          
+          // Mostrar notificación informativa
+          toast({
+            title: "Sesión Recuperada",
+            description: `Continuando con tu pago de ${parsed.step === 'paypal' ? 'PayPal' : 'Yape QR'}`,
+            variant: "default"
+          });
           
           // Recuperar archivo si existe en sessionStorage (solo para Yape QR)
           if (parsed.step === 'yape_qr' && savedFileData) {
@@ -82,9 +110,16 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
               console.error('Error recuperando info de archivo:', e);
             }
           }
+        } else {
+          // Estado muy antiguo, limpiar
+          console.log('🗑️ Estado anterior muy antiguo, limpiando...');
+          sessionStorage.removeItem('checkout_state');
+          sessionStorage.removeItem('yape_receipt_file');
         }
       } catch (e) {
         console.error('Error recuperando estado:', e);
+        sessionStorage.removeItem('checkout_state');
+        sessionStorage.removeItem('yape_receipt_file');
       }
     }
   }, []);
@@ -396,6 +431,38 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
     }
   };
 
+  // Test PayPal configuration
+  const handlePayPalTest = async () => {
+    setLoading(true);
+    try {
+      console.log('🧪 Testing PayPal configuration...');
+      const result = await testPayPalConnection();
+      setDebugResults(result);
+      
+      if (result.success) {
+        toast({
+          title: "PayPal Test Passed",
+          description: "PayPal configuration is valid",
+        });
+      } else {
+        toast({
+          title: "PayPal Test Failed", 
+          description: result.error,
+          variant: "destructive"
+        });
+      }
+    } catch (error: any) {
+      setDebugResults({ success: false, error: error.message });
+      toast({
+        title: "PayPal Test Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Test n8n webhook connection
   const handleWebhookTest = async () => {
     setLoading(true);
@@ -655,11 +722,37 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
                 </CardDescription>
               </CardHeader>
               <CardContent>
+                {error && (
+                  <Alert variant="destructive" className="mb-4">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
+                
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Smartphone className="w-4 h-4 text-blue-600" />
+                    <span className="text-sm font-medium text-blue-800">Estado de la sesión</span>
+                  </div>
+                  <p className="text-xs text-blue-700">
+                    ⚠️ <strong>Importante:</strong> No cierres esta pestaña hasta completar el pago. 
+                    El estado se guarda automáticamente por 2 horas.
+                  </p>
+                  {paypalDbOrderId && (
+                    <p className="text-xs text-blue-600 mt-1">
+                      💾 Orden guardada: {paypalDbOrderId.slice(0, 8)}...
+                    </p>
+                  )}
+                </div>
+                
                 <PayPalScriptProvider options={paypalOptions}>
                   <PayPalButtons
                     style={{ layout: 'vertical', color: 'blue', shape: 'rect', label: 'paypal' }}
                     createOrder={async () => {
                       try {
+                        setError(''); // Limpiar errores previos
+                        console.log('🔄 Creando orden de PayPal...');
+                        
                         const { data, error } = await supabase.functions.invoke('paypal', {
                           body: {
                             action: 'create',
@@ -676,17 +769,35 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
                             totalAmount: items.reduce((sum, i) => sum + (i.course?.price || 0), 0)
                           }
                         });
-                        if (error || !data?.paypalOrderId) throw new Error(error?.message || 'No se pudo crear la orden de PayPal');
+                        
+                        if (error || !data?.paypalOrderId) {
+                          const errorMsg = error?.message || 'No se pudo crear la orden de PayPal';
+                          console.error('❌ Error creando orden:', errorMsg);
+                          setError(errorMsg);
+                          throw new Error(errorMsg);
+                        }
+                        
+                        console.log('✅ Orden PayPal creada:', data.paypalOrderId);
                         setPaypalDbOrderId(data.dbOrderId);
+                        
                         return data.paypalOrderId as string;
                       } catch (e: any) {
                         console.error('PayPal createOrder error:', e);
-                        toast({ title: 'Error de PayPal', description: e.message || 'No se pudo crear la orden.', variant: 'destructive' });
+                        const errorMsg = e.message || 'No se pudo crear la orden.';
+                        setError(errorMsg);
+                        toast({ 
+                          title: 'Error de PayPal', 
+                          description: errorMsg, 
+                          variant: 'destructive' 
+                        });
                         throw e;
                       }
                     }}
                     onApprove={async (data) => {
                       try {
+                        setError(''); // Limpiar errores previos
+                        console.log('🔄 Capturando pago de PayPal...');
+                        
                         const { data: cap, error } = await supabase.functions.invoke('paypal', {
                           body: {
                             action: 'capture',
@@ -694,21 +805,95 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
                             dbOrderId: paypalDbOrderId
                           }
                         });
-                        if (error || !cap?.success) throw new Error(error?.message || cap?.error || 'No se pudo completar el pago con PayPal');
-                        toast({ title: '¡Pago exitoso!', description: 'Tu pago con PayPal se procesó correctamente.' });
+                        
+                        if (error || !cap?.success) {
+                          const errorMsg = error?.message || cap?.error || 'No se pudo completar el pago con PayPal';
+                          console.error('❌ Error capturando pago:', errorMsg);
+                          setError(errorMsg);
+                          throw new Error(errorMsg);
+                        }
+                        
+                        console.log('✅ Pago PayPal completado:', cap.orderId);
+                        toast({ 
+                          title: '¡Pago exitoso!', 
+                          description: 'Tu pago con PayPal se procesó correctamente.' 
+                        });
+                        
+                        // Limpiar estado guardado
+                        sessionStorage.removeItem('checkout_state');
+                        
                         if (mode === 'cart') await clearCart();
                         navigate(`/checkout/success/${cap.orderId}`);
                       } catch (e: any) {
                         console.error('PayPal capture error:', e);
-                        toast({ title: 'Error en el pago', description: e.message || 'No se pudo completar el pago con PayPal.', variant: 'destructive' });
+                        const errorMsg = e.message || 'No se pudo completar el pago con PayPal.';
+                        setError(errorMsg);
+                        toast({ 
+                          title: 'Error en el pago', 
+                          description: errorMsg, 
+                          variant: 'destructive' 
+                        });
                       }
                     }}
                     onError={(err) => {
                       console.error('PayPal Error:', err);
-                      toast({ title: 'Error de PayPal', description: 'Ocurrió un error con PayPal. Intenta nuevamente.', variant: 'destructive' });
+                      const errorMsg = 'Ocurrió un error con PayPal. Verifica tu configuración e intenta nuevamente.';
+                      setError(errorMsg);
+                      toast({ 
+                        title: 'Error de PayPal', 
+                        description: errorMsg, 
+                        variant: 'destructive' 
+                      });
+                    }}
+                    onCancel={() => {
+                      console.log('PayPal payment cancelled by user');
+                      toast({ 
+                        title: 'Pago cancelado', 
+                        description: 'El pago con PayPal fue cancelado.', 
+                        variant: 'default' 
+                      });
                     }}
                   />
                 </PayPalScriptProvider>
+                
+                {/* Debug Controls for PayPal */}
+                {user?.email?.includes('admin') && (
+                  <div className="mt-4 p-3 border rounded-lg bg-yellow-50">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Bug className="w-4 h-4" />
+                      <span className="text-sm font-medium">Herramientas de Debug PayPal</span>
+                    </div>
+                    <div className="flex gap-2 mb-2">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={handlePayPalTest}
+                        disabled={loading}
+                      >
+                        Test Config
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => {
+                          const debug = debugPayPalConfiguration();
+                          setDebugResults(debug);
+                          console.log('PayPal Debug Info:', debug);
+                        }}
+                      >
+                        Debug Info
+                      </Button>
+                    </div>
+                    {debugResults && (
+                      <div className="mt-2 text-xs">
+                        <pre className="bg-gray-100 p-2 rounded overflow-auto max-h-32">
+                          {JSON.stringify(debugResults, null, 2)}
+                        </pre>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
                 <div className="mt-4 flex gap-2">
                   <Button variant="outline" onClick={() => setStep('select_payment')} className="flex-1">Volver</Button>
                 </div>
