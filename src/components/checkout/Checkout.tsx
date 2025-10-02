@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { checkoutService, CheckoutItem } from '@/lib/checkoutService';
 import { debugReceiptUpload, testFileUpload, testN8nWebhook } from '@/lib/debugReceiptUpload';
 import { debugPayPalConfiguration, testPayPalConnection } from '@/lib/debugPayPal';
+import { savePayPalState, loadPayPalState, clearPayPalState, checkPayPalOrderStatus, generatePayPalDirectUrl, isPayPalEnvironmentSandbox } from '@/lib/paypalStateManager';
 import { supabase } from '@/integrations/supabase/client';
 import { ExchangeRateDisplay } from '@/components/payment/ExchangeRateDisplay';
 import yapeQRImage from '@/assets/yape-qr-placeholder.jpeg';
@@ -41,6 +42,7 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [error, setError] = useState<string>('');
   const [paypalDbOrderId, setPaypalDbOrderId] = useState<string | null>(null);
+  const [paypalOrderId, setPaypalOrderId] = useState<string | null>(null);
   const [debugMode, setDebugMode] = useState(false);
   const [debugResults, setDebugResults] = useState<any>(null);
 
@@ -64,62 +66,86 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
     }
   }, [selectedPaymentMethod]);
 
+  // Detector de foco de ventana para PayPal
+  useEffect(() => {
+    if (step !== 'paypal') return;
+
+    const handleFocus = () => {
+      if (paypalOrderId && !loading) {
+        console.log('🔍 Ventana recuperó el foco - verificando estado de PayPal...');
+        // Dar un pequeño delay para que PayPal termine sus procesos
+        setTimeout(() => {
+          if (paypalOrderId) {
+            console.log('💡 Sugerencia: Si completaste el pago, usa el botón "Verificar Estado del Pago"');
+            toast({
+              title: "¿Completaste el pago?",
+              description: "Si ya pagaste en PayPal, usa el botón 'Verificar Estado del Pago'",
+              variant: "default"
+            });
+          }
+        }, 2000);
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [step, paypalOrderId, loading]);
+
   // Persistir y recuperar estado de Yape QR y PayPal
   useEffect(() => {
     // Recuperar estado guardado al montar
-    const savedState = sessionStorage.getItem('checkout_state');
-    const savedFileData = sessionStorage.getItem('yape_receipt_file');
+    const savedState = loadPayPalState();
     
-    if (savedState) {
-      try {
-        const parsed = JSON.parse(savedState);
-        
-        // Verificar que el estado no sea muy antiguo (2 horas)
-        const stateAge = Date.now() - (parsed.timestamp || 0);
-        const maxAge = 2 * 60 * 60 * 1000; // 2 horas
-        
-        if (stateAge < maxAge && (parsed.step === 'yape_qr' || parsed.step === 'paypal')) {
-          setStep(parsed.step);
-          setCurrentOrder(parsed.currentOrder);
-          setTransactionId(parsed.transactionId || '');
-          setSelectedPaymentMethod(parsed.paymentMethod || '');
-          
-          if (parsed.paypalDbOrderId) {
-            setPaypalDbOrderId(parsed.paypalDbOrderId);
-          }
-          
-          console.log(`✅ Estado de ${parsed.step} recuperado desde sessionStorage (hace ${Math.round(stateAge/1000/60)} minutos)`);
-          
-          // Mostrar notificación informativa
+    if (savedState && (savedState.step === 'yape_qr' || savedState.step === 'paypal')) {
+      setStep(savedState.step);
+      setCurrentOrder(savedState.currentOrder);
+      setTransactionId(savedState.transactionId || '');
+      setSelectedPaymentMethod(savedState.selectedPaymentMethod || '');
+      
+      if (savedState.paypalDbOrderId) {
+        setPaypalDbOrderId(savedState.paypalDbOrderId);
+      }
+      
+      if (savedState.paypalOrderId) {
+        setPaypalOrderId(savedState.paypalOrderId);
+      }
+      
+      const stateAge = Date.now() - (savedState.timestamp || 0);
+      console.log(`✅ Estado de ${savedState.step} recuperado (hace ${Math.round(stateAge/1000/60)} minutos)`);
+      
+      // Mostrar notificación informativa
+      toast({
+        title: "Sesión Recuperada",
+        description: `Continuando con tu pago de ${savedState.step === 'paypal' ? 'PayPal' : 'Yape QR'}`,
+        variant: "default"
+      });
+      
+      // Si es PayPal y hay order ID, mostrar opción de continuar
+      if (savedState.step === 'paypal' && savedState.paypalOrderId) {
+        setTimeout(() => {
           toast({
-            title: "Sesión Recuperada",
-            description: `Continuando con tu pago de ${parsed.step === 'paypal' ? 'PayPal' : 'Yape QR'}`,
+            title: "Pago de PayPal en progreso",
+            description: "¿Ya completaste el pago? Usa el botón 'Verificar Estado del Pago'",
             variant: "default"
           });
-          
-          // Recuperar archivo si existe en sessionStorage (solo para Yape QR)
-          if (parsed.step === 'yape_qr' && savedFileData) {
-            try {
-              const fileInfo = JSON.parse(savedFileData);
-              console.log('📁 Archivo previamente guardado:', fileInfo.name);
-              
-              // Crear mensaje de estado del archivo
-              const fileStateMessage = `Archivo previamente seleccionado: ${fileInfo.name} (${fileInfo.size} bytes). Por favor, vuelve a seleccionar el archivo si deseas continuar.`;
-              setError(fileStateMessage);
-            } catch (e) {
-              console.error('Error recuperando info de archivo:', e);
-            }
+        }, 3000);
+      }
+      
+      // Recuperar archivo si existe en sessionStorage (solo para Yape QR)
+      if (savedState.step === 'yape_qr') {
+        const savedFileData = sessionStorage.getItem('yape_receipt_file');
+        if (savedFileData) {
+          try {
+            const fileInfo = JSON.parse(savedFileData);
+            console.log('📁 Archivo previamente guardado:', fileInfo.name);
+            
+            // Crear mensaje de estado del archivo
+            const fileStateMessage = `Archivo previamente seleccionado: ${fileInfo.name} (${fileInfo.size} bytes). Por favor, vuelve a seleccionar el archivo si deseas continuar.`;
+            setError(fileStateMessage);
+          } catch (e) {
+            console.error('Error recuperando info de archivo:', e);
           }
-        } else {
-          // Estado muy antiguo, limpiar
-          console.log('🗑️ Estado anterior muy antiguo, limpiando...');
-          sessionStorage.removeItem('checkout_state');
-          sessionStorage.removeItem('yape_receipt_file');
         }
-      } catch (e) {
-        console.error('Error recuperando estado:', e);
-        sessionStorage.removeItem('checkout_state');
-        sessionStorage.removeItem('yape_receipt_file');
       }
     }
   }, []);
@@ -127,16 +153,14 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
   // Guardar estado cuando cambie el paso a yape_qr o paypal
   useEffect(() => {
     if ((step === 'yape_qr' || step === 'paypal') && currentOrder) {
-      const stateToSave = {
+      savePayPalState({
         step,
         currentOrder,
         transactionId,
-        paymentMethod: selectedPaymentMethod,
-        paypalDbOrderId: step === 'paypal' ? paypalDbOrderId : undefined,
-        timestamp: Date.now()
-      };
-      sessionStorage.setItem('checkout_state', JSON.stringify(stateToSave));
-      console.log(`💾 Estado de ${step} guardado en sessionStorage`);
+        selectedPaymentMethod,
+        paypalDbOrderId: step === 'paypal' ? paypalDbOrderId : null,
+        paypalOrderId: step === 'paypal' ? paypalOrderId : null,
+      });
       
       // Guardar info del archivo (solo para Yape QR)
       if (step === 'yape_qr' && receiptFile) {
@@ -153,10 +177,9 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
     
     // Limpiar cuando se complete o se vuelva a selección
     if (step === 'completed' || step === 'select_payment') {
-      sessionStorage.removeItem('checkout_state');
-      sessionStorage.removeItem('yape_receipt_file');
+      clearPayPalState();
     }
-  }, [step, currentOrder, transactionId, selectedPaymentMethod, receiptFile, paypalDbOrderId]);
+  }, [step, currentOrder, transactionId, selectedPaymentMethod, receiptFile, paypalDbOrderId, paypalOrderId]);
 
   useEffect(() => {
     if (!user) {
@@ -743,15 +766,53 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
                       💾 Orden guardada: {paypalDbOrderId.slice(0, 8)}...
                     </p>
                   )}
+                  {paypalOrderId && (
+                    <p className="text-xs text-green-600 mt-1">
+                      🎯 PayPal Order ID: {paypalOrderId.slice(0, 8)}...
+                    </p>
+                  )}
                 </div>
+                
+                {/* Opción de recuperación si se perdió la ventana */}
+                {paypalOrderId && (
+                  <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <AlertTriangle className="w-4 h-4 text-orange-600" />
+                      <span className="text-sm font-medium text-orange-800">¿Se cerró la ventana de PayPal?</span>
+                    </div>
+                    <p className="text-xs text-orange-700 mb-2">
+                      Si se cerró la ventana de PayPal o perdiste el progreso, puedes continuar el pago haciendo clic en el enlace directo:
+                    </p>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        const isSandbox = isPayPalEnvironmentSandbox(paypalOptions.clientId);
+                        const paypalUrl = generatePayPalDirectUrl(paypalOrderId, isSandbox);
+                        window.open(paypalUrl, '_blank', 'width=400,height=600');
+                      }}
+                      className="w-full"
+                    >
+                      🔗 Abrir PayPal en Nueva Ventana
+                    </Button>
+                  </div>
+                )}
                 
                 <PayPalScriptProvider options={paypalOptions}>
                   <PayPalButtons
                     style={{ layout: 'vertical', color: 'blue', shape: 'rect', label: 'paypal' }}
+                    forceReRender={[paypalOrderId]} // Forzar re-render cuando cambie el order ID
                     createOrder={async () => {
                       try {
                         setError(''); // Limpiar errores previos
-                        console.log('🔄 Creando orden de PayPal...');
+                        
+                        // Si ya tenemos un PayPal Order ID, reutilizarlo
+                        if (paypalOrderId) {
+                          console.log('♻️ Reutilizando orden PayPal existente:', paypalOrderId);
+                          return paypalOrderId;
+                        }
+                        
+                        console.log('🔄 Creando nueva orden de PayPal...');
                         
                         const { data, error } = await supabase.functions.invoke('paypal', {
                           body: {
@@ -779,6 +840,7 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
                         
                         console.log('✅ Orden PayPal creada:', data.paypalOrderId);
                         setPaypalDbOrderId(data.dbOrderId);
+                        setPaypalOrderId(data.paypalOrderId);
                         
                         return data.paypalOrderId as string;
                       } catch (e: any) {
@@ -820,7 +882,7 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
                         });
                         
                         // Limpiar estado guardado
-                        sessionStorage.removeItem('checkout_state');
+                        clearPayPalState();
                         
                         if (mode === 'cart') await clearCart();
                         navigate(`/checkout/success/${cap.orderId}`);
@@ -849,12 +911,62 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
                       console.log('PayPal payment cancelled by user');
                       toast({ 
                         title: 'Pago cancelado', 
-                        description: 'El pago con PayPal fue cancelado.', 
+                        description: 'El pago con PayPal fue cancelado. Puedes intentar nuevamente.', 
                         variant: 'default' 
                       });
+                      // No limpiar el estado aquí para permitir reintentos
                     }}
                   />
                 </PayPalScriptProvider>
+                
+                {/* Botón de verificación manual */}
+                {paypalOrderId && (
+                  <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <h4 className="font-medium mb-2 text-blue-800">¿Completaste el pago en PayPal?</h4>
+                    <p className="text-xs text-blue-700 mb-3">
+                      Si completaste el pago en otra ventana, haz clic aquí para verificar el estado:
+                    </p>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={async () => {
+                        setLoading(true);
+                        try {
+                          const result = await checkPayPalOrderStatus(supabase, paypalOrderId, paypalDbOrderId!);
+                          
+                          if (result.completed && result.orderId) {
+                            toast({ 
+                              title: '¡Pago confirmado!', 
+                              description: 'Tu pago se procesó correctamente.' 
+                            });
+                            clearPayPalState();
+                            if (mode === 'cart') await clearCart();
+                            navigate(`/checkout/success/${result.orderId}`);
+                          } else {
+                            toast({
+                              title: 'Pago no completado',
+                              description: result.error || 'El pago aún no se ha completado en PayPal',
+                              variant: 'destructive'
+                            });
+                          }
+                        } catch (error: any) {
+                          toast({
+                            title: 'Error de verificación',
+                            description: 'No se pudo verificar el estado del pago',
+                            variant: 'destructive'
+                          });
+                        } finally {
+                          setLoading(false);
+                        }
+                      }}
+                      disabled={loading}
+                      className="w-full"
+                    >
+                      {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                      🔍 Verificar Estado del Pago
+                    </Button>
+                  </div>
+                )}
                 
                 {/* Debug Controls for PayPal */}
                 {user?.email?.includes('admin') && (
@@ -896,6 +1008,26 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
                 
                 <div className="mt-4 flex gap-2">
                   <Button variant="outline" onClick={() => setStep('select_payment')} className="flex-1">Volver</Button>
+                  {paypalOrderId && (
+                    <Button 
+                      variant="destructive" 
+                      onClick={() => {
+                        // Limpiar todo el estado de PayPal
+                        setPaypalDbOrderId(null);
+                        setPaypalOrderId(null);
+                        clearPayPalState();
+                        setStep('select_payment');
+                        toast({
+                          title: "Estado reiniciado",
+                          description: "Puedes empezar el proceso de pago de nuevo",
+                          variant: "default"
+                        });
+                      }}
+                      className="flex-1"
+                    >
+                      🔄 Reiniciar
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
