@@ -7,6 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import UniversalVideoPlayer from "@/components/video/UniversalVideoPlayer";
 import { 
   ArrowLeft, 
   Play, 
@@ -334,11 +335,13 @@ export default function LessonPlayer() {
               <CardContent className="p-0">
                 <div className="aspect-video bg-black rounded-lg overflow-hidden relative">
                   {currentLesson.video_url ? (
-                    <iframe
-                      src={currentLesson.video_url}
-                      className="w-full h-full"
-                      allowFullScreen
+                    <UniversalVideoPlayer
+                      videoUrl={currentLesson.video_url}
                       title={currentLesson.title}
+                      onTimeUpdate={(time) => {
+                        setVideoProgress((time / (currentLesson.duration_minutes * 60)) * 100);
+                        updateProgress(time);
+                      }}
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-gray-900 text-white">

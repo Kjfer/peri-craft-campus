@@ -9,6 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import UniversalVideoPlayer from "@/components/video/UniversalVideoPlayer";
 import { 
   Play, 
   CheckCircle, 
@@ -57,26 +58,7 @@ interface CourseProgress {
 }
 
 // YouTube URL parser with enhanced debugging
-const getYouTubeVideoId = (url: string): string | null => {
-  console.log('🎥 Processing YouTube URL:', url);
-  
-  if (!url) {
-    console.log('❌ Empty URL provided');
-    return null;
-  }
-  
-  // Enhanced regex to catch more YouTube URL patterns
-  const regExp = /^.*(youtu\.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
-  const match = url.match(regExp);
-  
-  if (match && match[2] && match[2].length === 11) {
-    console.log('✅ YouTube video ID extracted:', match[2]);
-    return match[2];
-  }
-  
-  console.log('❌ Could not extract YouTube video ID from URL:', url);
-  return null;
-};
+
 
 export default function LearningPlatform() {
   const { courseId, lessonId } = useParams();
@@ -364,43 +346,6 @@ export default function LearningPlatform() {
     return totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
   };
 
-  // YouTube iframe component
-  const YouTubePlayer = ({ videoUrl, onTimeUpdate }: { videoUrl: string; onTimeUpdate?: (time: number) => void }) => {
-    console.log('🎬 YouTubePlayer rendering with URL:', videoUrl);
-    
-    const videoId = getYouTubeVideoId(videoUrl);
-    
-    if (!videoId) {
-      console.log('❌ No valid video ID found');
-      return (
-        <div className="aspect-video bg-muted flex items-center justify-center border-2 border-dashed border-muted-foreground/25 rounded-lg">
-          <div className="text-center">
-            <p className="text-muted-foreground mb-2">URL de video inválida</p>
-            <p className="text-sm text-muted-foreground/70">URL proporcionada: {videoUrl}</p>
-          </div>
-        </div>
-      );
-    }
-
-    const embedUrl = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&modestbranding=1&rel=0&origin=${window.location.origin}`;
-    console.log('🎯 Final embed URL:', embedUrl);
-    
-    return (
-      <div className="aspect-video">
-        <iframe
-          src={embedUrl}
-          title="Video lesson"
-          className="w-full h-full rounded-lg"
-          frameBorder="0"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-          onLoad={() => console.log('✅ YouTube iframe loaded successfully')}
-          onError={(e) => console.error('❌ YouTube iframe error:', e)}
-        />
-      </div>
-    );
-  };
-
   if (accessLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -532,8 +477,9 @@ export default function LearningPlatform() {
               <Card className="mb-6">
                 <CardContent className="p-0">
                   <div className="bg-black rounded-lg overflow-hidden">
-                    <YouTubePlayer 
+                    <UniversalVideoPlayer 
                       videoUrl={currentLesson.video_url}
+                      title={currentLesson.title}
                       onTimeUpdate={setWatchTime}
                     />
                   </div>
