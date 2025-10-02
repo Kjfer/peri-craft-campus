@@ -355,8 +355,8 @@ class CheckoutService {
       console.log('💾 Payment record created successfully:', data);
       console.log('🎯 Iniciando envío de webhook a N8n...');
 
-      // Record in Google Sheets after payment record is created
-      await this.recordPaymentInSheets(orderId, transactionId);
+      // N8n handles Google Sheets registration for successful payments
+      // No need to record here - avoid duplicates
 
       // Send notification to n8n webhook for validation (from frontend)
       try {
