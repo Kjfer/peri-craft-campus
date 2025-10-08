@@ -32,7 +32,7 @@ export default function Contact() {
   };
 
   // Webhook URL para n8n (configurar con tu instancia real)
-  const N8N_WEBHOOK_URL = process.env.REACT_APP_N8N_WEBHOOK_URL || "https://peri-n8n-1-n8n.j60naj.easypanel.host/webhook-test/contact-form";
+  const N8N_WEBHOOK_URL = process.env.REACT_APP_N8N_WEBHOOK_URL || "https://peri-n8n-1-n8n.j60naj.easypanel.host/webhook/contact-form";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -164,7 +164,7 @@ export default function Contact() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
               <Button className="bg-green-500 text-white text-lg px-8 py-6" asChild>
-                <a href="https://whatsapp.com/channel/0029VbBND0PGpLHSErI7mC1iP" target="_blank" rel="noopener">
+                <a href="https://whatsapp.com/channel/0029VbBND0PGpLHSErI7mC1i" target="_blank" rel="noopener">
                   <MessageCircle className="mr-2" /> Unirse al canal de WhatsApp
                 </a>
               </Button>
@@ -285,12 +285,12 @@ export default function Contact() {
                         <SelectValue placeholder="Selecciona el tipo de consulta" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="general">Consulta general</SelectItem>
-                        <SelectItem value="technical">Soporte técnico</SelectItem>
-                        <SelectItem value="courses">Información sobre cursos</SelectItem>
-                        <SelectItem value="payment">Problemas de pago</SelectItem>
-                        <SelectItem value="certificates">Certificados</SelectItem>
-                        <SelectItem value="partnership">Alianzas</SelectItem>
+                        <SelectItem value="Consulta general">Consulta general</SelectItem>
+                        <SelectItem value="Soporte técnico">Soporte técnico</SelectItem>
+                        <SelectItem value="Información sobre cursos">Información sobre cursos</SelectItem>
+                        <SelectItem value="Problemas de pago">Problemas de pago</SelectItem>
+                        <SelectItem value="Certificados">Certificados</SelectItem>
+                        <SelectItem value="Alianzas">Alianzas</SelectItem>
                       </SelectContent>
                     </Select>
                     {/* Debug: Mostrar valor actual */}
