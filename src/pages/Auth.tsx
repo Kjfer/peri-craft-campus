@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Mail, Lock, User, Phone, Globe, Calendar } from "lucide-react";
+import { supabase } from "@/lib/supabaseClient";
 
 export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
@@ -88,10 +89,18 @@ export default function Auth() {
     setIsLoading(true);
 
     try {
-      const { error } = await signUp(signUpData.email, signUpData.password, signUpData.fullName, signUpData.phone, signUpData.country, signUpData.dateOfBirth);
-      
+      // Usar Supabase signUp con emailRedirectTo para que el email de confirmación redirija a la app
+      const redirectTo = import.meta.env.VITE_SITE_URL
+        ? `${import.meta.env.VITE_SITE_URL}/auth/confirm`
+        : window.location.origin + "/auth/confirm";
+
+      const { data, error } = await supabase.auth.signUp(
+        { email: signUpData.email, password: signUpData.password },
+        { emailRedirectTo: redirectTo }
+      );
+
       if (error) {
-        if (error.message.includes("already registered")) {
+        if (error.message && error.message.toLowerCase().includes("already registered")) {
           toast({
             title: "Usuario ya existe",
             description: "Este email ya está registrado. Intenta iniciar sesión.",
@@ -100,42 +109,18 @@ export default function Auth() {
         } else {
           toast({
             title: "Error al registrarse",
-            description: error.message,
+            description: error.message || "Error desconocido",
             variant: "destructive",
           });
         }
       } else {
+        // No hacer auto-login: esperar a que el usuario confirme por email
         toast({
-          title: "¡Registro exitoso!",
-          description: "Tu cuenta ha sido creada. Iniciando sesión...",
+          title: "¡Registro iniciado!",
+          description: "Te enviamos un correo para confirmar tu cuenta. Sigue el enlace en el email para completar el registro.",
         });
-        
-        // Wait a moment for email confirmation, then auto-login
-        console.log('🔄 Auto-login after registration...');
-        
-        // Add a small delay to allow email confirmation to process
-        setTimeout(async () => {
-          const loginResult = await signIn(signUpData.email, signUpData.password);
-          
-          if (loginResult.error) {
-            console.error('Auto-login failed:', loginResult.error);
-            toast({
-              title: "Registro exitoso",
-              description: "Por favor inicia sesión con tus credenciales.",
-            });
-          } else {
-            console.log('✅ Auto-login successful');
-            toast({
-              title: "¡Bienvenido!",
-              description: "Tu cuenta ha sido configurada correctamente.",
-            });
-            
-            // Use a slight delay before navigation to ensure auth state is updated
-            setTimeout(() => {
-              navigate("/dashboard");
-            }, 500);
-          }
-        }, 2000); // Wait 2 seconds for email confirmation to process
+        // Opcional: navegar a una página que indique "Revisa tu correo"
+        navigate("/auth/check-email");
       }
     } catch (error) {
       toast({
