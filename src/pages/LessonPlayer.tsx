@@ -26,6 +26,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import useCourseAccess from "@/hooks/useCourseAccess";
 import { supabase } from "@/integrations/supabase/client";
+import { requestCertificate } from "@/lib/certificateService";
 
 interface Lesson {
   id: string;
@@ -243,6 +244,36 @@ export default function LessonPlayer() {
 
   const canAccessLesson = (lesson: Lesson) => {
     return access?.hasAccess || lesson.is_free;
+  };
+
+  const handleFinishCourse = async () => {
+    if (!course?.id) {
+      toast({
+        title: "Error",
+        description: "No se pudo identificar el curso.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!confirm("¿Deseas finalizar el curso y recibir tu constancia de aprendizaje por correo?")) {
+      return;
+    }
+
+    try {
+      await requestCertificate(course.id);
+      toast({
+        title: "✅ Solicitud enviada",
+        description: "Te llegará la constancia de aprendizaje por correo cuando esté lista."
+      });
+    } catch (err: any) {
+      console.error("Error solicitando certificado:", err);
+      toast({
+        title: "Error",
+        description: err?.message || "No se pudo solicitar la constancia. Intenta nuevamente.",
+        variant: "destructive"
+      });
+    }
   };
 
   if (loading || accessLoading) {
@@ -520,6 +551,18 @@ export default function LessonPlayer() {
               </CardContent>
             </Card>
           </div>
+        </div>
+      </div>
+
+      {/* Finish Course Button */}
+      <div className="container mx-auto px-4 py-6">
+        <div className="flex justify-center">
+          <Button 
+            onClick={handleFinishCourse}
+            className="bg-green-600 hover:bg-green-700 text-white px-8 py-3"
+          >
+            🎓 Finalizar curso y recibir constancia
+          </Button>
         </div>
       </div>
     </div>
