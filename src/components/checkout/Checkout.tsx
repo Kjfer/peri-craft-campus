@@ -841,44 +841,6 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
                   </div>
                 )}
                 
-                {/* Debug Controls for PayPal */}
-                {user?.email?.includes('admin') && (
-                  <div className="mt-4 p-3 border rounded-lg bg-yellow-50">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Bug className="w-4 h-4" />
-                      <span className="text-sm font-medium">Herramientas de Debug PayPal</span>
-                    </div>
-                    <div className="flex gap-2 mb-2">
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        onClick={handlePayPalTest}
-                        disabled={loading}
-                      >
-                        Test Config
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        onClick={() => {
-                          const debug = debugPayPalConfiguration();
-                          setDebugResults(debug);
-                          console.log('PayPal Debug Info:', debug);
-                        }}
-                      >
-                        Debug Info
-                      </Button>
-                    </div>
-                    {debugResults && (
-                      <div className="mt-2 text-xs">
-                        <pre className="bg-gray-100 p-2 rounded overflow-auto max-h-32">
-                          {JSON.stringify(debugResults, null, 2)}
-                        </pre>
-                      </div>
-                    )}
-                  </div>
-                )}
-                
                 <div className="mt-4 flex gap-2">
                   <Button variant="outline" onClick={() => setStep('select_payment')} className="flex-1">
                     ← Cambiar Método de Pago
@@ -1034,48 +996,6 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
                       className="mt-1"
                     />
                   </div>
-
-                  {/* Debug Controls */}
-                  {user?.email?.includes('admin') && (
-                    <div className="p-3 border rounded-lg bg-yellow-50">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Bug className="w-4 h-4" />
-                        <span className="text-sm font-medium">Herramientas de Debug</span>
-                      </div>
-                      <div className="flex gap-2 mb-2">
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          onClick={handleDebugTest}
-                          disabled={loading}
-                        >
-                          Probar Upload
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          onClick={handleWebhookTest}
-                          disabled={loading}
-                        >
-                          Probar N8n
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          onClick={() => setDebugMode(!debugMode)}
-                        >
-                          Debug: {debugMode ? 'ON' : 'OFF'}
-                        </Button>
-                      </div>
-                      {debugResults && (
-                        <div className="mt-2 text-xs">
-                          <pre className="bg-gray-100 p-2 rounded overflow-auto max-h-32">
-                            {JSON.stringify(debugResults, null, 2)}
-                          </pre>
-                        </div>
-                      )}
-                    </div>
-                  )}
 
                   <div className="flex gap-2">
                     <Button 
