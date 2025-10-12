@@ -358,6 +358,7 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
     setLoading(true);
     setError('');
 
+
     try {
       console.log('🔍 Starting Yape payment confirmation process...');
       console.log('File details:', {
@@ -365,13 +366,6 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
         type: receiptFile.type,
         size: receiptFile.size
       });
-
-      // Test the file first if in debug mode
-      if (debugMode) {
-        console.log('🧪 Testing file upload in debug mode...');
-        await testFileUpload(receiptFile);
-        console.log('✅ File upload test passed');
-      }
 
       // SOLO usar checkoutService.confirmManualPayment - sin función wrapper
       const result = await checkoutService.confirmManualPayment(
@@ -424,101 +418,6 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
     }
   };
 
-  // Debug function to test receipt upload system
-  const handleDebugTest = async () => {
-    try {
-      setLoading(true);
-      console.log('🧪 Running receipt upload debug test...');
-      const result = await debugReceiptUpload();
-      setDebugResults(result);
-      
-      if (result.success) {
-        toast({
-          title: "Debug Test Passed",
-          description: "Receipt upload system is working correctly",
-        });
-      } else {
-        toast({
-          title: "Debug Test Failed",
-          description: result.error,
-          variant: "destructive"
-        });
-      }
-    } catch (error: any) {
-      setDebugResults({ success: false, error: error.message });
-      toast({
-        title: "Debug Test Error",
-        description: error.message,
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Test PayPal configuration
-  const handlePayPalTest = async () => {
-    setLoading(true);
-    try {
-      console.log('🧪 Testing PayPal configuration...');
-      const result = await testPayPalConnection();
-      setDebugResults(result);
-      
-      if (result.success) {
-        toast({
-          title: "PayPal Test Passed",
-          description: "PayPal configuration is valid",
-        });
-      } else {
-        toast({
-          title: "PayPal Test Failed", 
-          description: result.error,
-          variant: "destructive"
-        });
-      }
-    } catch (error: any) {
-      setDebugResults({ success: false, error: error.message });
-      toast({
-        title: "PayPal Test Error",
-        description: error.message,
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Test n8n webhook connection
-  const handleWebhookTest = async () => {
-    setLoading(true);
-    try {
-      console.log('🧪 Testing n8n webhook connection...');
-      const result = await testN8nWebhook();
-      setDebugResults(result);
-      
-      if (result.success) {
-        toast({
-          title: "Webhook Test Passed",
-          description: "N8n webhook is responding correctly",
-        });
-      } else {
-        toast({
-          title: "Webhook Test Failed", 
-          description: result.error,
-          variant: "destructive"
-        });
-      }
-    } catch (error: any) {
-      setDebugResults({ success: false, error: error.message });
-      toast({
-        title: "Webhook Test Error",
-        description: error.message,
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleConfirmManualPayment = async () => {
     if (!transactionId.trim()) {

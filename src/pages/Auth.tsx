@@ -89,15 +89,23 @@ export default function Auth() {
     setIsLoading(true);
 
     try {
-      // Usar Supabase signUp con emailRedirectTo para que el email de confirmación redirija a la app
       const redirectTo = import.meta.env.VITE_SITE_URL
-        ? `${import.meta.env.VITE_SITE_URL}/auth/confirm`
-        : window.location.origin + "/auth/confirm";
+        ? `${import.meta.env.VITE_SITE_URL}/`
+        : window.location.origin + "/";
 
-      const { data, error } = await supabase.auth.signUp(
-        { email: signUpData.email, password: signUpData.password },
-        { emailRedirectTo: redirectTo }
-      );
+      const { data, error } = await supabase.auth.signUp({
+        email: signUpData.email,
+        password: signUpData.password,
+        options: {
+          data: {
+            full_name: signUpData.fullName,
+            phone: signUpData.phone || null,
+            country: signUpData.country || null,
+            date_of_birth: signUpData.dateOfBirth || null
+          },
+          emailRedirectTo: redirectTo
+        }
+      });
 
       if (error) {
         if (error.message && error.message.toLowerCase().includes("already registered")) {
@@ -114,13 +122,19 @@ export default function Auth() {
           });
         }
       } else {
-        // No hacer auto-login: esperar a que el usuario confirme por email
         toast({
-          title: "¡Registro iniciado!",
-          description: "Te enviamos un correo para confirmar tu cuenta. Sigue el enlace en el email para completar el registro.",
+          title: "¡Registro exitoso!",
+          description: "Te enviamos un correo de confirmación. Por favor, verifica tu email para activar tu cuenta.",
         });
-        // Opcional: navegar a una página que indique "Revisa tu correo"
-        navigate("/auth/check-email");
+        setSignUpData({ 
+          email: "", 
+          password: "", 
+          fullName: "", 
+          confirmPassword: "",
+          phone: "",
+          country: "",
+          dateOfBirth: ""
+        });
       }
     } catch (error) {
       toast({
