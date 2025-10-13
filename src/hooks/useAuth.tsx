@@ -128,22 +128,45 @@ export function useAuth() {
       
       if (error) throw error;
       
-      // In development, auto-confirm the user's email
-      if (data.user && !data.user.email_confirmed_at) {
-        console.log('🔧 Development mode: Auto-confirming email...');
+      // Send confirmation email
+      if (data.user) {
+        console.log('📧 Sending confirmation email...');
         try {
-          // Call the edge function to confirm email in development
-          const { data: confirmData, error: confirmError } = await supabase.functions.invoke('confirm-email-dev', {
-            body: { email: data.user.email }
+          const confirmUrl = `${window.location.origin}/auth/confirm?token=${data.user.id}`;
+          
+          const { error: emailError } = await supabase.functions.invoke('send-confirmation-email', {
+            body: {
+              email: data.user.email,
+              confirmUrl: confirmUrl,
+              fullName: fullName,
+            },
           });
           
-          if (confirmError) {
-            console.warn('⚠️ Email auto-confirmation failed:', confirmError);
+          if (emailError) {
+            console.warn('⚠️ Error sending confirmation email:', emailError);
           } else {
-            console.log('✅ Email auto-confirmed in development');
+            console.log('✅ Confirmation email sent successfully');
           }
-        } catch (confirmError) {
-          console.warn('⚠️ Email auto-confirmation error:', confirmError);
+        } catch (emailError) {
+          console.warn('⚠️ Unexpected error sending confirmation email:', emailError);
+        }
+        
+        // In development, also auto-confirm the user's email
+        if (!data.user.email_confirmed_at) {
+          console.log('🔧 Development mode: Auto-confirming email...');
+          try {
+            const { error: confirmError } = await supabase.functions.invoke('confirm-email-dev', {
+              body: { email: data.user.email }
+            });
+            
+            if (confirmError) {
+              console.warn('⚠️ Email auto-confirmation failed:', confirmError);
+            } else {
+              console.log('✅ Email auto-confirmed in development');
+            }
+          } catch (confirmError) {
+            console.warn('⚠️ Email auto-confirmation error:', confirmError);
+          }
         }
       }
       
