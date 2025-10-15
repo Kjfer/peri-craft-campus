@@ -111,7 +111,7 @@ export function useAuth() {
 
   const signUp = async (email: string, password: string, fullName: string, phone?: string, country?: string, dateOfBirth?: string) => {
     try {
-      console.log('📝 Signing up user:', email);
+      console.log('📝 [SIGNUP] Starting signup for:', email);
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -126,68 +126,72 @@ export function useAuth() {
         }
       });
       
+      console.log('📝 [SIGNUP] Supabase response:', { 
+        hasData: !!data, 
+        hasUser: !!data?.user, 
+        userId: data?.user?.id,
+        hasSession: !!data?.session,
+        error: error 
+      });
+      
       if (error) throw error;
       
-      // Send confirmation email
-      if (data.user && data.user.email) {
-        console.log('📧 [SIGNUP] User created, attempting to send confirmation email');
-        console.log('📧 [SIGNUP] Email:', data.user.email);
-        console.log('📧 [SIGNUP] Full name:', fullName);
-        console.log('📧 [SIGNUP] Supabase URL:', 'https://idjmabhvzupcdygguqzm.supabase.co');
+      // Send confirmation email - works for both new signups and repeated signups
+      // For repeated signups, Supabase still returns success but user might already exist
+      if (data.user || (data && !error)) {
+        const userEmail = data.user?.email || email;
+        const userName = data.user?.user_metadata?.full_name || fullName;
+        
+        console.log('📧 [SIGNUP] Attempting to send confirmation email');
+        console.log('📧 [SIGNUP] Target email:', userEmail);
+        console.log('📧 [SIGNUP] Full name:', userName);
         
         try {
           const confirmUrl = `${window.location.origin}/`;
-          console.log('📧 [SIGNUP] Confirm URL:', confirmUrl);
-          console.log('📧 [SIGNUP] Invoking edge function send-confirmation-email...');
+          console.log('📧 [SIGNUP] Invoking send-confirmation-email function...');
           
           const response = await supabase.functions.invoke('send-confirmation-email', {
             body: {
-              email: data.user.email,
+              email: userEmail,
               confirmUrl: confirmUrl,
-              fullName: fullName,
+              fullName: userName,
             },
           });
           
-          console.log('📧 [SIGNUP] Edge function invoked, response:', JSON.stringify(response, null, 2));
+          console.log('📧 [SIGNUP] Function response:', response);
           
           if (response.error) {
-            console.error('❌ [SIGNUP] Error from edge function:', response.error);
+            console.error('❌ [SIGNUP] Edge function error:', response.error);
           } else {
-            console.log('✅ [SIGNUP] Email sent successfully:', response.data);
+            console.log('✅ [SIGNUP] Confirmation email sent successfully!');
           }
         } catch (emailError) {
-          console.error('❌ [SIGNUP] Exception during edge function call:', emailError);
-          console.error('❌ [SIGNUP] Error details:', JSON.stringify(emailError, null, 2));
+          console.error('❌ [SIGNUP] Exception invoking edge function:', emailError);
         }
-      } else {
-        console.warn('⚠️ [SIGNUP] Cannot send email - user or email missing:', { 
-          hasUser: !!data.user, 
-          hasEmail: !!data.user?.email 
-        });
       }
       
       // In development, also auto-confirm the user's email
       if (data.user && !data.user.email_confirmed_at) {
-        console.log('🔧 Development mode: Auto-confirming email...');
+        console.log('🔧 [SIGNUP] Auto-confirming email in development...');
         try {
           const { error: confirmError } = await supabase.functions.invoke('confirm-email-dev', {
             body: { email: data.user.email }
           });
           
           if (confirmError) {
-            console.warn('⚠️ Email auto-confirmation failed:', confirmError);
+            console.warn('⚠️ [SIGNUP] Auto-confirmation failed:', confirmError);
           } else {
-            console.log('✅ Email auto-confirmed in development');
+            console.log('✅ [SIGNUP] Email auto-confirmed');
           }
         } catch (confirmError) {
-          console.warn('⚠️ Email auto-confirmation error:', confirmError);
+          console.warn('⚠️ [SIGNUP] Auto-confirmation exception:', confirmError);
         }
       }
       
-      console.log('✅ Signup successful');
+      console.log('✅ [SIGNUP] Signup process completed');
       return { data, error: null };
     } catch (error: unknown) {
-      console.error('❌ SignUp error:', error);
+      console.error('❌ [SIGNUP] Signup error:', error);
       const message = error instanceof Error ? error.message : 'Error desconocido';
       return { error: { message } };
     }
