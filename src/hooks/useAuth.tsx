@@ -130,10 +130,15 @@ export function useAuth() {
       
       // Send confirmation email
       if (data.user && data.user.email) {
-        console.log('📧 Attempting to send confirmation email to:', data.user.email);
+        console.log('📧 [SIGNUP] User created, attempting to send confirmation email');
+        console.log('📧 [SIGNUP] Email:', data.user.email);
+        console.log('📧 [SIGNUP] Full name:', fullName);
+        console.log('📧 [SIGNUP] Supabase URL:', 'https://idjmabhvzupcdygguqzm.supabase.co');
+        
         try {
-          // Generate proper confirmation URL - Supabase handles the token internally
           const confirmUrl = `${window.location.origin}/`;
+          console.log('📧 [SIGNUP] Confirm URL:', confirmUrl);
+          console.log('📧 [SIGNUP] Invoking edge function send-confirmation-email...');
           
           const response = await supabase.functions.invoke('send-confirmation-email', {
             body: {
@@ -143,33 +148,39 @@ export function useAuth() {
             },
           });
           
-          console.log('📧 Email function response:', response);
+          console.log('📧 [SIGNUP] Edge function invoked, response:', JSON.stringify(response, null, 2));
           
           if (response.error) {
-            console.error('❌ Error sending confirmation email:', response.error);
+            console.error('❌ [SIGNUP] Error from edge function:', response.error);
           } else {
-            console.log('✅ Confirmation email sent successfully:', response.data);
+            console.log('✅ [SIGNUP] Email sent successfully:', response.data);
           }
         } catch (emailError) {
-          console.error('❌ Exception sending confirmation email:', emailError);
+          console.error('❌ [SIGNUP] Exception during edge function call:', emailError);
+          console.error('❌ [SIGNUP] Error details:', JSON.stringify(emailError, null, 2));
         }
-        
-        // In development, also auto-confirm the user's email
-        if (!data.user.email_confirmed_at) {
-          console.log('🔧 Development mode: Auto-confirming email...');
-          try {
-            const { error: confirmError } = await supabase.functions.invoke('confirm-email-dev', {
-              body: { email: data.user.email }
-            });
-            
-            if (confirmError) {
-              console.warn('⚠️ Email auto-confirmation failed:', confirmError);
-            } else {
-              console.log('✅ Email auto-confirmed in development');
-            }
-          } catch (confirmError) {
-            console.warn('⚠️ Email auto-confirmation error:', confirmError);
+      } else {
+        console.warn('⚠️ [SIGNUP] Cannot send email - user or email missing:', { 
+          hasUser: !!data.user, 
+          hasEmail: !!data.user?.email 
+        });
+      }
+      
+      // In development, also auto-confirm the user's email
+      if (data.user && !data.user.email_confirmed_at) {
+        console.log('🔧 Development mode: Auto-confirming email...');
+        try {
+          const { error: confirmError } = await supabase.functions.invoke('confirm-email-dev', {
+            body: { email: data.user.email }
+          });
+          
+          if (confirmError) {
+            console.warn('⚠️ Email auto-confirmation failed:', confirmError);
+          } else {
+            console.log('✅ Email auto-confirmed in development');
           }
+        } catch (confirmError) {
+          console.warn('⚠️ Email auto-confirmation error:', confirmError);
         }
       }
       
