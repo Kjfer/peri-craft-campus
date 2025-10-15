@@ -129,12 +129,13 @@ export function useAuth() {
       if (error) throw error;
       
       // Send confirmation email
-      if (data.user) {
-        console.log('📧 Sending confirmation email...');
+      if (data.user && data.user.email) {
+        console.log('📧 Attempting to send confirmation email to:', data.user.email);
         try {
-          const confirmUrl = `${window.location.origin}/auth/confirm?token=${data.user.id}`;
+          // Generate proper confirmation URL - Supabase handles the token internally
+          const confirmUrl = `${window.location.origin}/`;
           
-          const { error: emailError } = await supabase.functions.invoke('send-confirmation-email', {
+          const response = await supabase.functions.invoke('send-confirmation-email', {
             body: {
               email: data.user.email,
               confirmUrl: confirmUrl,
@@ -142,13 +143,15 @@ export function useAuth() {
             },
           });
           
-          if (emailError) {
-            console.warn('⚠️ Error sending confirmation email:', emailError);
+          console.log('📧 Email function response:', response);
+          
+          if (response.error) {
+            console.error('❌ Error sending confirmation email:', response.error);
           } else {
-            console.log('✅ Confirmation email sent successfully');
+            console.log('✅ Confirmation email sent successfully:', response.data);
           }
         } catch (emailError) {
-          console.warn('⚠️ Unexpected error sending confirmation email:', emailError);
+          console.error('❌ Exception sending confirmation email:', emailError);
         }
         
         // In development, also auto-confirm the user's email
