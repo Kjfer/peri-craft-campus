@@ -170,25 +170,7 @@ export function useAuth() {
         }
       }
       
-      // In development, also auto-confirm the user's email
-      if (data.user && !data.user.email_confirmed_at) {
-        console.log('🔧 [SIGNUP] Auto-confirming email in development...');
-        try {
-          const { error: confirmError } = await supabase.functions.invoke('confirm-email-dev', {
-            body: { email: data.user.email }
-          });
-          
-          if (confirmError) {
-            console.warn('⚠️ [SIGNUP] Auto-confirmation failed:', confirmError);
-          } else {
-            console.log('✅ [SIGNUP] Email auto-confirmed');
-          }
-        } catch (confirmError) {
-          console.warn('⚠️ [SIGNUP] Auto-confirmation exception:', confirmError);
-        }
-      }
-      
-      console.log('✅ [SIGNUP] Signup process completed');
+      console.log('✅ [SIGNUP] Signup process completed - user must confirm email from inbox');
       return { data, error: null };
     } catch (error: unknown) {
       console.error('❌ [SIGNUP] Signup error:', error);
