@@ -1,101 +1,99 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { ArrowLeft, Mail } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Loader2, CheckCircle, XCircle } from 'lucide-react';
 
 export default function ConfirmEmail() {
-  const [email, setEmail] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
+  const [message, setMessage] = useState('Verificando tu email...');
+  const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleConfirmEmail = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
+  useEffect(() => {
+    const handleEmailConfirmation = async () => {
+      try {
+        // Extraer tokens del hash de la URL
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const accessToken = hashParams.get('access_token');
+        const refreshToken = hashParams.get('refresh_token');
+        const type = hashParams.get('type');
 
-    try {
-      console.log('🔧 Confirming email for:', email);
-      
-      const { data, error } = await supabase.functions.invoke('confirm-email-dev', {
-        body: { email }
-      });
+        console.log('📧 Procesando confirmación de email...');
+        console.log('📧 Type:', type);
+        console.log('📧 Has access token:', !!accessToken);
 
-      if (error) {
-        throw error;
+        if (!accessToken || !refreshToken) {
+          throw new Error('Token de confirmación no válido');
+        }
+
+        // Establecer la sesión con los tokens recibidos
+        const { data, error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+
+        if (error) throw error;
+
+        console.log('✅ Email confirmado exitosamente');
+        
+        setStatus('success');
+        setMessage('¡Email confirmado exitosamente!');
+        
+        toast({
+          title: "✅ Email confirmado",
+          description: "Tu cuenta ha sido activada. Redirigiendo...",
+        });
+
+        // Esperar 2 segundos y redirigir a la página de inicio de sesión
+        setTimeout(() => {
+          navigate('/auth', { replace: true });
+        }, 2000);
+
+      } catch (error) {
+        console.error('❌ Error confirmando email:', error);
+        
+        setStatus('error');
+        setMessage(error instanceof Error ? error.message : 'Error al confirmar el email');
+        
+        toast({
+          title: "Error",
+          description: "No se pudo confirmar tu email. Intenta nuevamente.",
+          variant: "destructive",
+        });
+
+        // Redirigir al login después de 3 segundos incluso con error
+        setTimeout(() => {
+          navigate('/auth', { replace: true });
+        }, 3000);
       }
+    };
 
-      toast({
-        title: "✅ Email confirmado",
-        description: `El email ${email} ha sido confirmado exitosamente en modo desarrollo.`,
-      });
-      
-      setEmail('');
-    } catch (error) {
-      console.error('❌ Error confirming email:', error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Error desconocido al confirmar email",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    handleEmailConfirmation();
+  }, [navigate, toast]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/50 py-12 px-4">
-      <div className="w-full max-w-md space-y-6">
-        <div className="text-center">
+      <Card className="w-full max-w-md shadow-elegant">
+        <CardHeader className="text-center">
           <div className="w-16 h-16 gradient-primary rounded-full flex items-center justify-center mx-auto mb-4">
-            <Mail className="text-2xl text-primary-foreground" />
+            {status === 'loading' && <Loader2 className="h-8 w-8 text-primary-foreground animate-spin" />}
+            {status === 'success' && <CheckCircle className="h-8 w-8 text-primary-foreground" />}
+            {status === 'error' && <XCircle className="h-8 w-8 text-primary-foreground" />}
           </div>
-          <h1 className="text-3xl font-bold">Confirmar Email</h1>
-          <p className="text-muted-foreground mt-2">Herramienta de desarrollo</p>
-        </div>
-
-        <Card className="shadow-elegant">
-          <CardHeader className="text-center">
-            <CardTitle>Confirmación Manual de Email</CardTitle>
-            <CardDescription>
-              Usa esta herramienta para confirmar emails en modo desarrollo
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleConfirmEmail} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email a confirmar</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="usuario@ejemplo.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading && <Mail className="mr-2 h-4 w-4 animate-spin" />}
-                Confirmar Email
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-
-        <div className="text-center">
-          <Link 
-            to="/auth" 
-            className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-colors"
-          >
-            <ArrowLeft className="mr-1 h-4 w-4" />
-            Volver a Autenticación
-          </Link>
-        </div>
-      </div>
+          <CardTitle>
+            {status === 'loading' && 'Confirmando Email'}
+            {status === 'success' && '¡Email Confirmado!'}
+            {status === 'error' && 'Error de Confirmación'}
+          </CardTitle>
+          <CardDescription className="mt-2">{message}</CardDescription>
+        </CardHeader>
+        <CardContent className="text-center text-sm text-muted-foreground">
+          {status === 'success' && 'Serás redirigido al inicio de sesión en unos momentos...'}
+          {status === 'error' && 'Serás redirigido al inicio de sesión para intentar nuevamente...'}
+        </CardContent>
+      </Card>
     </div>
   );
 }
