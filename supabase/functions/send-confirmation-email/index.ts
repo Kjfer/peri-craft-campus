@@ -37,10 +37,16 @@ const handler = async (req: Request): Promise<Response> => {
       }
     );
 
-    // Generar link de confirmación
+    // Generar link de confirmación con redirect URL correcto
+    const origin = req.headers.get('origin') || 'https://peruemprende.lovable.app';
+    const redirectUrl = `${origin}/confirm-email`;
+    
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'signup',
       email: email,
+      options: {
+        redirectTo: redirectUrl
+      }
     });
 
     if (linkError) {
@@ -48,7 +54,7 @@ const handler = async (req: Request): Promise<Response> => {
       throw linkError;
     }
 
-    const confirmUrl = linkData?.properties?.action_link || `${req.headers.get('origin')}/`;
+    const confirmUrl = linkData?.properties?.action_link || redirectUrl;
     console.log('Confirmation URL generated:', confirmUrl);
 
     const emailResponse = await resend.emails.send({
