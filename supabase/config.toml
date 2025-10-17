@@ -18,6 +18,9 @@ security_update_password_require_reauthentication = false
 
 [auth.email]
 enabled = true
+double_confirm_changes_enabled = false
+enable_signup = true
+enable_confirmations = false
 
 [db]
 enabled = true

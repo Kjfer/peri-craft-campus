@@ -112,6 +112,8 @@ export function useAuth() {
   const signUp = async (email: string, password: string, fullName: string, phone?: string, country?: string, dateOfBirth?: string) => {
     try {
       console.log('📝 [SIGNUP] Starting signup for:', email);
+      
+      // Deshabilitar el email automático de Supabase y enviar nuestro propio email con Resend
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -122,7 +124,7 @@ export function useAuth() {
             country: country || null,
             date_of_birth: dateOfBirth || null
           },
-          emailRedirectTo: `${window.location.origin}/`
+          emailRedirectTo: `${window.location.origin}/confirm-email`
         }
       });
       
@@ -136,24 +138,19 @@ export function useAuth() {
       
       if (error) throw error;
       
-      // Send confirmation email - works for both new signups and repeated signups
-      // For repeated signups, Supabase still returns success but user might already exist
-      if (data.user || (data && !error)) {
-        const userEmail = data.user?.email || email;
-        const userName = data.user?.user_metadata?.full_name || fullName;
+      // Enviar correo de confirmación con Resend
+      if (data.user) {
+        const userEmail = data.user.email;
+        const userName = data.user.user_metadata?.full_name || fullName;
         
-        console.log('📧 [SIGNUP] Attempting to send confirmation email');
+        console.log('📧 [SIGNUP] Sending confirmation email via Resend');
         console.log('📧 [SIGNUP] Target email:', userEmail);
         console.log('📧 [SIGNUP] Full name:', userName);
         
         try {
-          const confirmUrl = `${window.location.origin}/`;
-          console.log('📧 [SIGNUP] Invoking send-confirmation-email function...');
-          
           const response = await supabase.functions.invoke('send-confirmation-email', {
             body: {
               email: userEmail,
-              confirmUrl: confirmUrl,
               fullName: userName,
             },
           });
@@ -163,7 +160,7 @@ export function useAuth() {
           if (response.error) {
             console.error('❌ [SIGNUP] Edge function error:', response.error);
           } else {
-            console.log('✅ [SIGNUP] Confirmation email sent successfully!');
+            console.log('✅ [SIGNUP] Confirmation email sent successfully via Resend!');
           }
         } catch (emailError) {
           console.error('❌ [SIGNUP] Exception invoking edge function:', emailError);
