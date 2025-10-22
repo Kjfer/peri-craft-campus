@@ -10,6 +10,8 @@ interface UniversalVideoPlayerProps {
   onTimeUpdate?: (time: number) => void;
   onDurationChange?: (duration: number) => void;
   className?: string;
+  lessonId?: string; // Para persistir progreso específico por lección
+  initialTime?: number; // Tiempo inicial para restaurar progreso
 }
 
 // Función para determinar el tipo de video
@@ -74,7 +76,9 @@ const NativeVideoPlayer: React.FC<{
   title?: string;
   onTimeUpdate?: (time: number) => void;
   onDurationChange?: (duration: number) => void;
-}> = ({ videoUrl, title, onTimeUpdate, onDurationChange }) => {
+  lessonId?: string;
+  initialTime?: number;
+}> = ({ videoUrl, title, onTimeUpdate, onDurationChange, lessonId, initialTime }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -83,6 +87,68 @@ const NativeVideoPlayer: React.FC<{
   const [isMuted, setIsMuted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [buffered, setBuffered] = useState(0);
+
+  // Restaurar tiempo inicial cuando el video está listo
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !initialTime || initialTime <= 0) return;
+
+    const handleLoadedMetadata = () => {
+      if (video.duration > initialTime) {
+        video.currentTime = initialTime;
+        console.log('⏰ Restaurando progreso del video:', initialTime);
+      }
+    };
+
+    if (video.readyState >= 1) {
+      handleLoadedMetadata();
+    } else {
+      video.addEventListener('loadedmetadata', handleLoadedMetadata);
+      return () => video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+    }
+  }, [initialTime]);
+
+  // Guardar progreso en localStorage periódicamente y al cambiar de pestaña
+  useEffect(() => {
+    if (!lessonId) return;
+
+    const video = videoRef.current;
+    if (!video) return;
+
+    const saveProgress = () => {
+      const time = video.currentTime;
+      if (time > 0) {
+        localStorage.setItem(`video_progress_${lessonId}`, time.toString());
+        console.log('💾 Progreso guardado en localStorage:', time);
+      }
+    };
+
+    // Guardar cada 5 segundos
+    const interval = setInterval(saveProgress, 5000);
+
+    // Guardar cuando el usuario cambia de pestaña
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        saveProgress();
+        console.log('👁️ Pestaña oculta - guardando progreso');
+      }
+    };
+
+    // Guardar antes de cerrar/recargar
+    const handleBeforeUnload = () => {
+      saveProgress();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      saveProgress(); // Guardar al desmontar
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [lessonId]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -280,7 +346,9 @@ const SupabaseVideoPlayer: React.FC<{
   title?: string;
   onTimeUpdate?: (time: number) => void;
   onDurationChange?: (duration: number) => void;
-}> = ({ videoUrl, title, onTimeUpdate, onDurationChange }) => {
+  lessonId?: string;
+  initialTime?: number;
+}> = ({ videoUrl, title, onTimeUpdate, onDurationChange, lessonId, initialTime }) => {
   const [finalUrl, setFinalUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -369,6 +437,8 @@ const SupabaseVideoPlayer: React.FC<{
       title={title}
       onTimeUpdate={onTimeUpdate}
       onDurationChange={onDurationChange}
+      lessonId={lessonId}
+      initialTime={initialTime}
     />
   );
 };
@@ -379,11 +449,13 @@ const UniversalVideoPlayer: React.FC<UniversalVideoPlayerProps> = ({
   title,
   onTimeUpdate,
   onDurationChange,
-  className = ""
+  className = "",
+  lessonId,
+  initialTime
 }) => {
   const videoType = getVideoType(videoUrl);
 
-  console.log('🎬 UniversalVideoPlayer:', { videoUrl, videoType });
+  console.log('🎬 UniversalVideoPlayer:', { videoUrl, videoType, lessonId, initialTime });
 
   switch (videoType) {
     case 'youtube':
@@ -401,6 +473,8 @@ const UniversalVideoPlayer: React.FC<UniversalVideoPlayerProps> = ({
             title={title}
             onTimeUpdate={onTimeUpdate}
             onDurationChange={onDurationChange}
+            lessonId={lessonId}
+            initialTime={initialTime}
           />
         </div>
       );
@@ -413,6 +487,8 @@ const UniversalVideoPlayer: React.FC<UniversalVideoPlayerProps> = ({
             title={title}
             onTimeUpdate={onTimeUpdate}
             onDurationChange={onDurationChange}
+            lessonId={lessonId}
+            initialTime={initialTime}
           />
         </div>
       );

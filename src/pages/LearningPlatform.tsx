@@ -75,6 +75,7 @@ export default function LearningPlatform() {
   const [openModules, setOpenModules] = useState<Set<string>>(new Set());
   const [isPlaying, setIsPlaying] = useState(false);
   const [watchTime, setWatchTime] = useState(0);
+  const [initialVideoTime, setInitialVideoTime] = useState<number>(0);
 
   useEffect(() => {
     if (!user) {
@@ -208,6 +209,23 @@ export default function LearningPlatform() {
         console.log('✅ Found lesson:', lesson);
         setCurrentLesson(lesson);
         setOpenModules(prev => new Set(prev).add(module.id));
+        
+        // Restaurar progreso desde localStorage o base de datos
+        const savedTime = localStorage.getItem(`video_progress_${lessonId}`);
+        if (savedTime) {
+          setInitialVideoTime(parseFloat(savedTime));
+          console.log('⏰ Restaurando progreso guardado:', savedTime);
+        } else {
+          // Buscar en la base de datos
+          const progress = courseProgress.find(p => p.lesson_id === lessonId);
+          if (progress?.watch_time_seconds) {
+            setInitialVideoTime(progress.watch_time_seconds);
+            console.log('⏰ Restaurando progreso desde DB:', progress.watch_time_seconds);
+          } else {
+            setInitialVideoTime(0);
+          }
+        }
+        
         break;
       }
     }
@@ -481,6 +499,8 @@ export default function LearningPlatform() {
                       videoUrl={currentLesson.video_url}
                       title={currentLesson.title}
                       onTimeUpdate={setWatchTime}
+                      lessonId={currentLesson.id}
+                      initialTime={initialVideoTime}
                     />
                   </div>
                 </CardContent>

@@ -76,6 +76,7 @@ export default function LessonPlayer() {
   const [loading, setLoading] = useState(true);
   const [videoProgress, setVideoProgress] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [initialVideoTime, setInitialVideoTime] = useState<number>(0);
 
   // Use course access hook
   const { access, loading: accessLoading } = useCourseAccess(courseId || '');
@@ -152,6 +153,9 @@ export default function LessonPlayer() {
     if (!user || !lessonId) return;
 
     try {
+      // Primero intentar desde localStorage
+      const savedTime = localStorage.getItem(`video_progress_${lessonId}`);
+      
       const { data, error } = await supabase
         .from('course_progress')
         .select('*')
@@ -162,9 +166,26 @@ export default function LessonPlayer() {
       if (!error && data) {
         setLessonProgress(data);
         setVideoProgress((data.watch_time_seconds / (currentLesson?.duration_minutes * 60 || 1)) * 100);
+        
+        // Usar el tiempo guardado más reciente (localStorage vs DB)
+        if (savedTime) {
+          const localTime = parseFloat(savedTime);
+          setInitialVideoTime(localTime > data.watch_time_seconds ? localTime : data.watch_time_seconds);
+        } else {
+          setInitialVideoTime(data.watch_time_seconds);
+        }
+      } else if (savedTime) {
+        // Si no hay datos en DB pero sí en localStorage
+        setInitialVideoTime(parseFloat(savedTime));
       }
     } catch (error) {
       console.error('Error fetching lesson progress:', error);
+      
+      // Intentar desde localStorage como fallback
+      const savedTime = localStorage.getItem(`video_progress_${lessonId}`);
+      if (savedTime) {
+        setInitialVideoTime(parseFloat(savedTime));
+      }
     }
   };
 
@@ -373,6 +394,8 @@ export default function LessonPlayer() {
                         setVideoProgress((time / (currentLesson.duration_minutes * 60)) * 100);
                         updateProgress(time);
                       }}
+                      lessonId={currentLesson.id}
+                      initialTime={initialVideoTime}
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-gray-900 text-white">
