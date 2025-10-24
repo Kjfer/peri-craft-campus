@@ -185,7 +185,7 @@ export type Database = {
           attempted_at: string | null
           course_id: string
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           success: boolean | null
           user_id: string
         }
@@ -193,7 +193,7 @@ export type Database = {
           attempted_at?: string | null
           course_id: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           success?: boolean | null
           user_id: string
         }
@@ -201,7 +201,7 @@ export type Database = {
           attempted_at?: string | null
           course_id?: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           success?: boolean | null
           user_id?: string
         }
@@ -398,6 +398,7 @@ export type Database = {
           payment_id: string | null
           payment_method: string | null
           payment_status: string
+          receipt_url: string | null
           rejection_reason: string | null
           total_amount: number
           updated_at: string
@@ -411,6 +412,7 @@ export type Database = {
           payment_id?: string | null
           payment_method?: string | null
           payment_status?: string
+          receipt_url?: string | null
           rejection_reason?: string | null
           total_amount: number
           updated_at?: string
@@ -424,6 +426,7 @@ export type Database = {
           payment_id?: string | null
           payment_method?: string | null
           payment_status?: string
+          receipt_url?: string | null
           rejection_reason?: string | null
           total_amount?: number
           updated_at?: string
@@ -711,7 +714,7 @@ export type Database = {
           event_data: Json | null
           event_type: string
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           target_user_id: string | null
           user_agent: string | null
           user_id: string | null
@@ -721,7 +724,7 @@ export type Database = {
           event_data?: Json | null
           event_type: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           target_user_id?: string | null
           user_agent?: string | null
           user_id?: string | null
@@ -731,7 +734,7 @@ export type Database = {
           event_data?: Json | null
           event_type?: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           target_user_id?: string | null
           user_agent?: string | null
           user_id?: string | null
@@ -835,14 +838,8 @@ export type Database = {
         }
         Returns: boolean
       }
-      generate_certificate_code: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      get_current_user_role: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      generate_certificate_code: { Args: never; Returns: string }
+      get_current_user_role: { Args: never; Returns: string }
       get_user_active_subscriptions: {
         Args: { user_uuid: string }
         Returns: {

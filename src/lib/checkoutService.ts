@@ -306,75 +306,28 @@ class CheckoutService {
       const hasSubscription = orderData.order_items.some((item: any) => item.subscription_id);
       const paymentType = hasSubscription ? 'subscription' : 'course';
 
-      console.log('Creating payment record for order:', orderId, 'type:', paymentType);
-
-      // Update existing payment record instead of creating a new one
-      console.log('🔍 Looking for existing payment for order:', orderId);
+      console.log('📝 Guardando información del comprobante en la orden:', orderId);
       
-      // Find existing payment record
-      const { data: existingPayment, error: findError } = await supabase
-        .from('payments')
-        .select('*')
-        .eq('order_id', orderId)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
-
-      if (findError && findError.code !== 'PGRST116') {
-        console.error('Error finding payment:', findError);
-        throw new Error(`Error al buscar el registro de pago: ${findError.message}`);
-      }
-
-      let data;
-      if (existingPayment) {
-        // Update existing payment
-        console.log('📝 Updating existing payment:', existingPayment.id);
-        const { data: updatedPayment, error } = await supabase
-          .from('payments')
-          .update({
-            payment_provider_id: transactionId,
-            receipt_url: receiptPublicUrl,
-            payment_provider: 'yape',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', existingPayment.id)
-          .select()
-          .single();
-
-        if (error) {
-          console.error('Payment update error:', error);
-          throw new Error(`Error al actualizar el registro de pago: ${error.message}`);
-        }
-        data = updatedPayment;
-      } else {
-        // Create new payment if none exists (fallback)
-        console.log('➕ Creating new payment record');
-        const paymentData = {
-          order_id: orderId,
-          payment_method: 'yape_qr',
-          payment_provider: 'yape',
-          payment_provider_id: transactionId,
+      // CAMBIO CRÍTICO: Ya NO creamos el registro en payments aquí
+      // Solo guardamos la info del comprobante en la orden
+      // El registro de payments se creará automáticamente cuando n8n apruebe el pago
+      // (cuando payment_status cambie a 'completed' via trigger)
+      
+      const { error: updateOrderError } = await supabase
+        .from('orders')
+        .update({
+          payment_id: transactionId,
           receipt_url: receiptPublicUrl,
-          user_id: user.data.user.id,
-          amount: orderData.total_amount || 0,
-          currency: 'PEN'
-        };
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', orderId);
 
-        const { data: newPayment, error } = await supabase
-          .from('payments')
-          .insert(paymentData)
-          .select()
-          .single();
-
-        if (error) {
-          console.error('Payment insert error:', error);
-          throw new Error(`Error al crear el registro de pago: ${error.message}`);
-        }
-        data = newPayment;
+      if (updateOrderError) {
+        console.error('Order update error:', updateOrderError);
+        throw new Error(`Error al actualizar la orden: ${updateOrderError.message}`);
       }
 
-
-      console.log('💾 Payment record created successfully:', data);
+      console.log('✅ Comprobante guardado en la orden');
       console.log('🎯 Iniciando envío de webhook a N8n...');
 
       // N8n handles Google Sheets registration for successful payments
@@ -389,7 +342,6 @@ class CheckoutService {
           user_id: user.data.user.id,
           user_name: user.data.user.user_metadata?.full_name || '',
           user_email: user.data.user.email || '',
-          payment_id: data.id,
           order_id: orderId,
           transaction_id: transactionId,
           receipt_url: receiptPublicUrl,
@@ -440,7 +392,6 @@ class CheckoutService {
 
       return {
         success: true,
-        payment: data,
         paymentType,
         message: 'Comprobante subido exitosamente. Estamos procesando tu pago.'
       };
