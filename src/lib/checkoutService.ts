@@ -335,7 +335,7 @@ class CheckoutService {
 
       // Send notification to n8n webhook for validation (from frontend)
       try {
-        const n8nWebhookUrl = 'https://peri-n8n-1-n8n.j60naj.easypanel.host/webhook-test/cd9a61b2-d84c-4517-9e0a-13f898148204';
+        const n8nWebhookUrl = 'https://peri-n8n-1-n8n.j60naj.easypanel.host/webhook/cd9a61b2-d84c-4517-9e0a-13f898148204';
         
         // Crear parámetros para GET request
         const n8nParams = new URLSearchParams({
@@ -656,7 +656,7 @@ class CheckoutService {
   // Test n8n webhook connection
   async testN8nWebhook() {
     try {
-      const n8nWebhookUrl = 'https://peri-n8n-1-n8n.j60naj.easypanel.host/webhook-test/cd9a61b2-d84c-4517-9e0a-13f898148204';
+      const n8nWebhookUrl = 'https://peri-n8n-1-n8n.j60naj.easypanel.host/webhook/cd9a61b2-d84c-4517-9e0a-13f898148204';
       
       console.log('🧪 Testing N8n webhook connection...');
       console.log('🔗 Testing URL:', n8nWebhookUrl);
@@ -712,7 +712,7 @@ class CheckoutService {
         get_type: 'error' as ResponseType,
         post_status: 0,
         post_type: 'error' as ResponseType,
-        url: 'https://peri-n8n-1-n8n.j60naj.easypanel.host/webhook-test/cd9a61b2-d84c-4517-9e0a-13f898148204'
+        url: 'https://peri-n8n-1-n8n.j60naj.easypanel.host/webhook/cd9a61b2-d84c-4517-9e0a-13f898148204'
       };
     }
   }
