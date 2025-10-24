@@ -58,40 +58,6 @@ serve(async (req) => {
           console.log('N8n response was not JSON');
         }
 
-        // Actualizar la orden según la respuesta de n8n
-        if (responseData && payload.orderId) {
-          const updateData: any = {
-            updated_at: new Date().toISOString()
-          };
-
-          // Si n8n aprueba el pago
-          if (responseData.approved === true || responseData.status === 'approved') {
-            updateData.payment_status = 'completed';
-            updateData.rejection_reason = null;
-            console.log('✅ N8n approved payment, updating order to completed');
-          } 
-          // Si n8n rechaza el pago
-          else if (responseData.approved === false || responseData.status === 'rejected') {
-            updateData.payment_status = 'rejected';
-            updateData.rejection_reason = responseData.rejection_reason || responseData.reason || 'comprobante_invalido';
-            console.log('❌ N8n rejected payment:', updateData.rejection_reason);
-          }
-
-          // Solo actualizar si hay un cambio de estado
-          if (updateData.payment_status) {
-            const { error: updateError } = await supabaseClient
-              .from('orders')
-              .update(updateData)
-              .eq('id', payload.orderId);
-
-            if (updateError) {
-              console.error('Error updating order status:', updateError);
-            } else {
-              console.log('✅ Order status updated successfully:', updateData.payment_status);
-            }
-          }
-        }
-
         return new Response(JSON.stringify({ 
           success: true, 
           message: 'Payment validation sent to N8n',
