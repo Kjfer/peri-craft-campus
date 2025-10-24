@@ -92,13 +92,32 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
 
   // Persistir y recuperar estado de Yape QR y PayPal
   useEffect(() => {
-    // Solo recuperar estado si llegamos directamente a esta página, no si ya estamos en el flujo
-    if (step !== 'select_payment') return;
+    // Verificar si es una recuperación real (recarga de página o navegación de retorno)
+    const isPageReload = !window.performance || performance.navigation.type === 1;
+    const hasNavigatedBack = sessionStorage.getItem('checkout_in_progress') === 'true';
     
-    // Recuperar estado guardado al montar
+    // Solo recuperar estado si es recarga o navegación de retorno Y estamos en select_payment
+    if (step !== 'select_payment') return;
+    if (!isPageReload && !hasNavigatedBack) {
+      // Marcar que estamos en checkout
+      sessionStorage.setItem('checkout_in_progress', 'true');
+      return;
+    }
+    
+    // Recuperar estado guardado
     const savedState = loadPayPalState();
     
     if (savedState && (savedState.step === 'yape_qr' || savedState.step === 'paypal')) {
+      const stateAge = Date.now() - (savedState.timestamp || 0);
+      
+      // Solo recuperar si tiene menos de 30 minutos (más restrictivo)
+      if (stateAge > 30 * 60 * 1000) {
+        console.log('🗑️ Estado muy antiguo, limpiando...');
+        clearPayPalState();
+        sessionStorage.removeItem('checkout_in_progress');
+        return;
+      }
+      
       setStep(savedState.step);
       setCurrentOrder(savedState.currentOrder);
       setTransactionId(savedState.transactionId || '');
@@ -112,18 +131,19 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
         setPaypalOrderId(savedState.paypalOrderId);
       }
       
-      const stateAge = Date.now() - (savedState.timestamp || 0);
       console.log(`✅ Estado de ${savedState.step} recuperado (hace ${Math.round(stateAge/1000/60)} minutos)`);
       
-      // Mostrar notificación informativa
-      toast({
-        title: "Sesión Recuperada",
-        description: `Continuando con tu pago de ${savedState.step === 'paypal' ? 'PayPal' : 'Yape QR'}`,
-        variant: "default"
-      });
+      // Solo mostrar toast si realmente fue una recarga
+      if (isPageReload) {
+        toast({
+          title: "Sesión Recuperada",
+          description: `Continuando con tu pago de ${savedState.step === 'paypal' ? 'PayPal' : 'Yape QR'}`,
+          variant: "default"
+        });
+      }
       
       // Si es PayPal y hay order ID, mostrar opción de continuar
-      if (savedState.step === 'paypal' && savedState.paypalOrderId) {
+      if (savedState.step === 'paypal' && savedState.paypalOrderId && isPageReload) {
         setTimeout(() => {
           toast({
             title: "Pago de PayPal en progreso",
@@ -133,17 +153,14 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
         }, 3000);
       }
       
-      // Recuperar archivo si existe en sessionStorage (solo para Yape QR)
+      // Recuperar archivo si existe (solo para Yape QR)
       if (savedState.step === 'yape_qr') {
         const savedFileData = sessionStorage.getItem('yape_receipt_file');
         if (savedFileData) {
           try {
             const fileInfo = JSON.parse(savedFileData);
             console.log('📁 Archivo previamente guardado:', fileInfo.name);
-            
-            // Crear mensaje de estado del archivo
-            const fileStateMessage = `Archivo previamente seleccionado: ${fileInfo.name} (${fileInfo.size} bytes). Por favor, vuelve a seleccionar el archivo si deseas continuar.`;
-            setError(fileStateMessage);
+            setError(`Archivo: ${fileInfo.name} - Vuelve a seleccionarlo para continuar`);
           } catch (e) {
             console.error('Error recuperando info de archivo:', e);
           }
@@ -177,9 +194,15 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
       }
     }
     
-    // Limpiar cuando se complete o se vuelva a selección
-    if (step === 'completed' || step === 'select_payment') {
+    // Limpiar cuando se complete
+    if (step === 'completed') {
       clearPayPalState();
+      sessionStorage.removeItem('checkout_in_progress');
+    }
+    
+    // Marcar que hay checkout en progreso
+    if (step === 'yape_qr' || step === 'paypal') {
+      sessionStorage.setItem('checkout_in_progress', 'true');
     }
   }, [step, currentOrder, transactionId, selectedPaymentMethod, receiptFile, paypalDbOrderId, paypalOrderId]);
 
