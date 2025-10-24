@@ -45,6 +45,7 @@ interface PaymentRequest {
     duration_months?: number;
   }[];
   totalAmount: number;
+  currency?: string;
   paymentMethod: string;
   paymentData?: any;
 }
@@ -83,11 +84,12 @@ serve(async (req) => {
     const user = userData.user;
     // Parse and validate request body
     const body = await req.json() as PaymentRequest;
-    const { items = [], totalAmount, paymentMethod, paymentData } = body;
+    const { items = [], totalAmount, currency: requestCurrency, paymentMethod, paymentData } = body;
 
     console.log("Processing payment:", { 
       userId: user.id, 
-      totalAmount, 
+      totalAmount,
+      currency: requestCurrency,
       paymentMethod, 
       itemCount: Array.isArray(items) ? items.length : 0,
       items: items.map(item => ({ id: item.id, type: item.type, title: item.title }))
@@ -99,9 +101,9 @@ serve(async (req) => {
       getEnv("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    // Create order
-    const currency = (paymentMethod === 'mercadopago' || paymentMethod === 'yape_qr') ? 'PEN' : 'USD';
-    const finalAmount = (paymentMethod === 'mercadopago' || paymentMethod === 'yape_qr') ? totalAmount * 3.75 : totalAmount;
+    // Create order - use currency and amount from request if provided
+    const currency = requestCurrency || ((paymentMethod === 'mercadopago' || paymentMethod === 'yape_qr') ? 'PEN' : 'USD');
+    const finalAmount = totalAmount; // Use amount as provided by frontend (already converted if needed)
 
     const { data: order, error: orderError } = await supabaseService
       .from('orders')
@@ -119,12 +121,12 @@ serve(async (req) => {
       throw new Error(`Failed to create order: ${orderError?.message}`);
     }
 
-    // Create order items
+    // Create order items - use prices as provided (already converted if needed)
     const orderItems = items.map(item => ({
       order_id: order.id,
       course_id: item.type === 'course' ? item.id : null,
       subscription_id: item.type === 'subscription' ? item.id : null,
-      price: (paymentMethod === 'mercadopago' || paymentMethod === 'yape_qr') ? item.price * 3.75 : item.price
+      price: item.price // Use price as provided by frontend
     }));
 
     console.log("Creating order items:", orderItems);

@@ -66,18 +66,39 @@ class CheckoutService {
       const courseItems = cartItems.filter(item => item.course_id);
       const subscriptionItems = cartItems.filter(item => item.subscription_id);
 
-      // Calcular total
+      // Calcular total en USD
       const courseTotal = courseItems.reduce((sum, item) => sum + (item.course?.price || 0), 0);
       const subscriptionTotal = subscriptionItems.reduce((sum, item) => sum + (item.subscription?.price || 0), 0);
-      const totalAmount = courseTotal + subscriptionTotal;
+      const totalAmountUSD = courseTotal + subscriptionTotal;
 
-      // Preparar items para el backend
+      // Convertir a PEN si es necesario
+      let finalAmount = totalAmountUSD;
+      let finalCurrency = 'USD';
+      let convertedItemPrices = new Map<string, number>();
+
+      if (paymentMethod === 'mercadopago' || paymentMethod === 'yape_qr') {
+        // Obtener tasa de cambio actual
+        const rate = await exchangeRateService.getUSDToPENRate();
+        finalAmount = Math.round((totalAmountUSD * rate) * 100) / 100;
+        finalCurrency = 'PEN';
+        
+        // Convertir precios individuales de items
+        [...courseItems, ...subscriptionItems].forEach(item => {
+          const id = item.course_id || item.subscription_id;
+          const price = item.course?.price || item.subscription?.price || 0;
+          if (id) {
+            convertedItemPrices.set(id, Math.round((price * rate) * 100) / 100);
+          }
+        });
+      }
+
+      // Preparar items para el backend con precios convertidos
       const items = [
         ...courseItems.map(item => ({
           id: item.course_id!,
           type: 'course',
           title: item.course?.title || '',
-          price: item.course?.price || 0,
+          price: convertedItemPrices.get(item.course_id!) || item.course?.price || 0,
           instructor_name: item.course?.instructor_name || '',
           thumbnail_url: item.course?.thumbnail_url || ''
         })),
@@ -85,7 +106,7 @@ class CheckoutService {
           id: item.subscription_id!,
           type: 'subscription',
           title: item.subscription?.name || '',
-          price: item.subscription?.price || 0,
+          price: convertedItemPrices.get(item.subscription_id!) || item.subscription?.price || 0,
           description: item.subscription?.description || '',
           duration_months: item.subscription?.duration_months || 1
         }))
@@ -94,7 +115,8 @@ class CheckoutService {
       const { data, error } = await supabase.functions.invoke('create-payment', {
         body: {
           items: items,
-          totalAmount: totalAmount,
+          totalAmount: finalAmount,
+          currency: finalCurrency,
           paymentMethod: paymentMethod,
           paymentData: {
             user: {
