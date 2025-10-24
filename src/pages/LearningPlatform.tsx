@@ -233,22 +233,6 @@ export default function LearningPlatform() {
     }
   };
 
-  // Restaurar progreso cuando la página vuelve a ser visible
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (!document.hidden && currentLesson?.id) {
-        // Recargar progreso desde localStorage cuando vuelve a la pestaña
-        loadLessonProgress(currentLesson.id);
-        console.log('👁️ Página visible - restaurando progreso');
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [currentLesson?.id, courseProgress]);
-
   const toggleModule = (moduleId: string) => {
     setOpenModules(prev => {
       const newSet = new Set(prev);
@@ -514,7 +498,6 @@ export default function LearningPlatform() {
                 <CardContent className="p-0">
                   <div className="bg-black rounded-lg overflow-hidden">
                     <UniversalVideoPlayer 
-                      key={`${currentLesson.id}-${initialVideoTime}`}
                       videoUrl={currentLesson.video_url}
                       title={currentLesson.title}
                       onTimeUpdate={setWatchTime}
