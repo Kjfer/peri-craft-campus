@@ -13,7 +13,7 @@ export interface PayPalCheckoutState {
 }
 
 export const PAYPAL_STATE_KEY = 'checkout_state';
-export const PAYPAL_MAX_AGE = 4 * 60 * 60 * 1000; // 4 horas
+export const PAYPAL_MAX_AGE = 15 * 60 * 1000; // 15 minutos
 
 export const savePayPalState = (state: Partial<PayPalCheckoutState>) => {
   try {

@@ -110,9 +110,9 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
     if (savedState && (savedState.step === 'yape_qr' || savedState.step === 'paypal')) {
       const stateAge = Date.now() - (savedState.timestamp || 0);
       
-      // Solo recuperar si tiene menos de 30 minutos (más restrictivo)
-      if (stateAge > 30 * 60 * 1000) {
-        console.log('🗑️ Estado muy antiguo, limpiando...');
+      // Solo recuperar si tiene menos de 15 minutos
+      if (stateAge > 15 * 60 * 1000) {
+        console.log('🗑️ Estado expirado (>15min), limpiando...');
         clearPayPalState();
         sessionStorage.removeItem('checkout_in_progress');
         return;
@@ -398,6 +398,12 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
       );
       
       if (result.success) {
+        // Limpiar estado de Yape QR inmediatamente para evitar confusiones en futuros pagos
+        clearPayPalState();
+        sessionStorage.removeItem('checkout_in_progress');
+        sessionStorage.removeItem('yape_receipt_file');
+        console.log('🧹 Estado de Yape QR limpiado después de confirmar pago');
+        
         toast({
           title: "Comprobante enviado",
           description: result.message || "Estamos procesando tu pago.",
