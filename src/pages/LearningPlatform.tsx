@@ -209,27 +209,45 @@ export default function LearningPlatform() {
         console.log('✅ Found lesson:', lesson);
         setCurrentLesson(lesson);
         setOpenModules(prev => new Set(prev).add(module.id));
-        
-        // Restaurar progreso desde localStorage o base de datos
-        const savedTime = localStorage.getItem(`video_progress_${lessonId}`);
-        if (savedTime) {
-          setInitialVideoTime(parseFloat(savedTime));
-          console.log('⏰ Restaurando progreso guardado:', savedTime);
-        } else {
-          // Buscar en la base de datos
-          const progress = courseProgress.find(p => p.lesson_id === lessonId);
-          if (progress?.watch_time_seconds) {
-            setInitialVideoTime(progress.watch_time_seconds);
-            console.log('⏰ Restaurando progreso desde DB:', progress.watch_time_seconds);
-          } else {
-            setInitialVideoTime(0);
-          }
-        }
-        
+        loadLessonProgress(lessonId);
         break;
       }
     }
   };
+
+  const loadLessonProgress = (lessonId: string) => {
+    // Restaurar progreso desde localStorage o base de datos
+    const savedTime = localStorage.getItem(`video_progress_${lessonId}`);
+    if (savedTime) {
+      setInitialVideoTime(parseFloat(savedTime));
+      console.log('⏰ Restaurando progreso guardado:', savedTime);
+    } else {
+      // Buscar en la base de datos
+      const progress = courseProgress.find(p => p.lesson_id === lessonId);
+      if (progress?.watch_time_seconds) {
+        setInitialVideoTime(progress.watch_time_seconds);
+        console.log('⏰ Restaurando progreso desde DB:', progress.watch_time_seconds);
+      } else {
+        setInitialVideoTime(0);
+      }
+    }
+  };
+
+  // Restaurar progreso cuando la página vuelve a ser visible
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && currentLesson?.id) {
+        // Recargar progreso desde localStorage cuando vuelve a la pestaña
+        loadLessonProgress(currentLesson.id);
+        console.log('👁️ Página visible - restaurando progreso');
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [currentLesson?.id, courseProgress]);
 
   const toggleModule = (moduleId: string) => {
     setOpenModules(prev => {
@@ -496,6 +514,7 @@ export default function LearningPlatform() {
                 <CardContent className="p-0">
                   <div className="bg-black rounded-lg overflow-hidden">
                     <UniversalVideoPlayer 
+                      key={`${currentLesson.id}-${initialVideoTime}`}
                       videoUrl={currentLesson.video_url}
                       title={currentLesson.title}
                       onTimeUpdate={setWatchTime}
