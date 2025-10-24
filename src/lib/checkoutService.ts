@@ -776,28 +776,6 @@ class CheckoutService {
     }
   }
 
-  /**
-   * Records payment in Google Sheets via edge function
-   */
-  private async recordPaymentInSheets(orderId: string, transactionId?: string): Promise<void> {
-    try {
-      const { error } = await supabase.functions.invoke('record-payment-sheets', {
-        body: {
-          orderId,
-          transactionId,
-        },
-      });
-
-      if (error) {
-        console.error('Error recording payment in sheets:', error);
-      } else {
-        console.log('✅ Payment recorded in Google Sheets');
-      }
-    } catch (error) {
-      console.error('Error calling record-payment-sheets function:', error);
-      // Don't throw error, just log it
-    }
-  }
 }
 
 

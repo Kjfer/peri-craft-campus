@@ -239,25 +239,7 @@ serve(async (req) => {
         payment_provider_id: paypalOrderId,
       });
 
-      // Record in Google Sheets
-      console.log('🔄 Intentando registrar pago en Google Sheets...', { 
-        orderId: dbOrderId, 
-        transactionId: paypalOrderId 
-      });
-      
-      try {
-        const { data: sheetResult, error: sheetError } = await svc.functions.invoke('record-payment-sheets', {
-          body: { orderId: dbOrderId, transactionId: paypalOrderId }
-        });
-        
-        if (sheetError) {
-          console.error('❌ Error invocando record-payment-sheets:', sheetError);
-        } else {
-          console.log('✅ Función record-payment-sheets invocada exitosamente:', sheetResult);
-        }
-      } catch (error) {
-        console.error('❌ Excepción llamando record-payment-sheets:', error);
-      }
+      console.log('✅ Pago de PayPal procesado exitosamente');
 
       return new Response(JSON.stringify({ success: true, orderId: dbOrderId, paypalOrderId }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 });
     }

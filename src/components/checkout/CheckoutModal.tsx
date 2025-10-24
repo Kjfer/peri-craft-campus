@@ -115,13 +115,6 @@ export default function CheckoutModal({
 
   const paymentMethods: PaymentMethod[] = [
     {
-      id: "mercadopago",
-      name: "MercadoPago",
-      icon: <Wallet className="w-6 h-6" />,
-      description: "Yape y tarjetas de crédito o débito",
-      available: true
-    },
-    {
       id: "paypal",
       name: "PayPal",
       icon: <Smartphone className="w-6 h-6" />,
@@ -131,9 +124,9 @@ export default function CheckoutModal({
     {
       id: "googlepay",
       name: "Google Pay",
-      icon: <Smartphone className="w-6 h-6" />,
-      description: "Pago rápido con Google Pay",
-      available: true
+      icon: <CreditCard className="w-6 h-6" />,
+      description: "Próximamente",
+      available: false
     }
   ];
 
@@ -513,122 +506,6 @@ export default function CheckoutModal({
                 </Card>
               </TabsContent>
 
-              {/* MercadoPago Tab */}
-              <TabsContent value="mercadopago" className="space-y-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <Wallet className="w-5 h-5 mr-2" />
-                      MercadoPago - Métodos Peruanos
-                    </CardTitle>
-                    <CardDescription>
-                      Métodos de pago populares en Perú y Sudamérica
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {/* Yape Button */}
-                    <Card className="border-2 border-purple-200 hover:border-purple-300 transition-colors">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-3">
-                            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                              <Smartphone className="w-6 h-6 text-purple-600" />
-                            </div>
-                            <div>
-                              <h3 className="font-semibold text-purple-900">Yape</h3>
-                              <p className="text-sm text-muted-foreground">Pago instantáneo con Yape</p>
-                            </div>
-                          </div>
-                          <Button
-                            onClick={handleMercadoPagoYape}
-                            disabled={isProcessing}
-                            className="bg-purple-600 hover:bg-purple-700"
-                          >
-                            {isProcessing ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                              "Pagar"
-                            )}
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    {/* Plin Button */}
-                    <Card className="border-2 border-blue-200 hover:border-blue-300 transition-colors">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-3">
-                            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                              <Smartphone className="w-6 h-6 text-blue-600" />
-                            </div>
-                            <div>
-                              <h3 className="font-semibold text-blue-900">Plin</h3>
-                              <p className="text-sm text-muted-foreground">Pago rápido con Plin</p>
-                            </div>
-                          </div>
-                          <Button
-                            onClick={handleMercadoPagoPlin}
-                            disabled={isProcessing}
-                            className="bg-blue-600 hover:bg-blue-700"
-                          >
-                            {isProcessing ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                              "Pagar"
-                            )}
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    {/* Other MercadoPago Methods */}
-                    <Card>
-                      <CardContent className="p-4">
-                        <h3 className="font-semibold mb-3">Otros métodos disponibles:</h3>
-                        <div className="grid grid-cols-2 gap-2 mb-4">
-                          <Badge variant="outline" className="justify-center py-2">
-                            <CreditCard className="w-4 h-4 mr-1" />
-                            Tarjetas
-                          </Badge>
-                          <Badge variant="outline" className="justify-center py-2">
-                            <Wallet className="w-4 h-4 mr-1" />
-                            Efectivo
-                          </Badge>
-                          <Badge variant="outline" className="justify-center py-2">
-                            <User className="w-4 h-4 mr-1" />
-                            Tunki
-                          </Badge>
-                          <Badge variant="outline" className="justify-center py-2">
-                            <Calendar className="w-4 h-4 mr-1" />
-                            Cuotas
-                          </Badge>
-                        </div>
-                        
-                        <Button
-                          onClick={handleMercadoPagoPayment}
-                          disabled={isProcessing}
-                          variant="outline"
-                          className="w-full"
-                          size="lg"
-                        >
-                          {isProcessing ? (
-                            <>
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              Procesando...
-                            </>
-                          ) : (
-                            <>
-                              <Wallet className="w-4 h-4 mr-2" />
-                              Ver todos los métodos
-                            </>
-                          )}
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  </CardContent>
-                </Card>
-              </TabsContent>
 
               {/* PayPal Tab */}
               <TabsContent value="paypal" className="space-y-4">

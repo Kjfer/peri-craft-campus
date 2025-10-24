@@ -465,8 +465,6 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
 
   const getPaymentMethodIcon = (method: any) => {
     switch (method.id) {
-      case 'mercadopago':
-        return <DollarSign className="w-5 h-5" />;
       case 'googlepay':
         return <Smartphone className="w-5 h-5" />;
       case 'paypal':

@@ -157,10 +157,7 @@ serve(async (req) => {
         payment_provider_id: `googlepay_${Date.now()}`,
       });
 
-      // Record in Google Sheets
-      await supabase.functions.invoke('record-payment-sheets', {
-        body: { orderId: order.id, transactionId: `googlepay_${Date.now()}` }
-      });
+      console.log('✅ Pago de Google Pay procesado exitosamente');
 
       // Clear user's cart (assuming you have a cart table)
       const { error: cartError } = await supabase
