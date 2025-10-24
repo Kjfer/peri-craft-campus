@@ -190,7 +190,7 @@ serve(async (req) => {
         order.user_id,
         profile?.full_name || 'N/A',
         profile?.email || 'N/A',
-        order.total_amount,
+        parseFloat(order.total_amount), // Asegurar que el monto sea número
         order.currency,
         paymentType,
         transactionId || order.payment_id || order.id,
