@@ -75,6 +75,10 @@ export default function CheckoutPending() {
           rejection: order.rejection_reason 
         });
 
+        // Solo procesar si la orden actual está en pending
+        // (evita reaccionar a órdenes viejas o estados intermedios)
+        console.log('🔍 Orden en estado:', order.payment_status);
+        
         if (order.payment_status === 'completed') {
           console.log('✅ Pago completado detectado por polling!');
           clearInterval(pollInterval);
@@ -100,6 +104,8 @@ export default function CheckoutPending() {
           
           setErrorMsg(errorMessage);
           setIsProcessing(false);
+        } else if (order.payment_status === 'pending') {
+          console.log('⏳ Orden aún pendiente, continuando polling...');
         }
       } catch (error) {
         console.error('❌ Error en polling:', error);

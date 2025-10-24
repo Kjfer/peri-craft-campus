@@ -31,17 +31,25 @@ export function useOrderStatusListener(orderId: string, onError?: (msg: string) 
           filter: `id=eq.${orderId}`,
         },
         (payload) => {
+          const oldStatus = payload.old?.payment_status;
           const newStatus = payload.new.payment_status;
           const rejectionReason = payload.new.rejection_reason;
           
           console.log('🔔 Payment status UPDATE received:', { 
             orderId, 
+            oldStatus,
             newStatus, 
             rejectionReason,
-            oldStatus: payload.old?.payment_status,
             fullPayload: payload.new,
             timestamp: new Date().toISOString()
           });
+          
+          // CRITICAL: Solo reaccionar si el estado anterior era 'pending'
+          // Esto evita responder a cambios de órdenes viejas o estados intermedios
+          if (oldStatus !== 'pending') {
+            console.log('⚠️ Ignorando cambio de estado porque el estado anterior no era pending:', oldStatus);
+            return;
+          }
           
           if (newStatus === successStatus) {
             console.log('✅ Payment successful! Redirecting to success page...');
