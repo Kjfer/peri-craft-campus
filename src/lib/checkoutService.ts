@@ -76,7 +76,7 @@ class CheckoutService {
       let finalCurrency = 'USD';
       let convertedItemPrices = new Map<string, number>();
 
-      if (paymentMethod === 'mercadopago' || paymentMethod === 'yape_qr') {
+      if (paymentMethod === 'yape_qr') {
         // Obtener tasa de cambio actual
         const rate = await exchangeRateService.getUSDToPENRate();
         finalAmount = Math.round((totalAmountUSD * rate) * 100) / 100;
@@ -607,15 +607,7 @@ class CheckoutService {
 
   // Obtener precio en la moneda correcta según el método de pago - soporta cursos y suscripciones
   async getPriceForPaymentMethod(usdPrice: number, paymentMethod: string, itemType?: 'course' | 'subscription') {
-    // MercadoPago solo funciona con cursos (no suscripciones)
-    if (paymentMethod === 'mercadopago' && itemType !== 'subscription') {
-      return {
-        amount: await this.convertToPEN(usdPrice),
-        currency: 'PEN'
-      };
-    }
-    
-    // Yape QR también usa soles
+    // Yape QR usa soles (solo para Perú)
     if (paymentMethod === 'yape_qr') {
       return {
         amount: await this.convertToPEN(usdPrice),
@@ -631,15 +623,7 @@ class CheckoutService {
 
   // Versión síncrona para compatibilidad con código existente
   getPriceForPaymentMethodSync(usdPrice: number, paymentMethod: string, itemType?: 'course' | 'subscription') {
-    // MercadoPago solo funciona con cursos (no suscripciones)
-    if (paymentMethod === 'mercadopago' && itemType !== 'subscription') {
-      return {
-        amount: this.convertToPENSync(usdPrice),
-        currency: 'PEN'
-      };
-    }
-    
-    // Yape QR también usa soles
+    // Yape QR usa soles (solo para Perú)
     if (paymentMethod === 'yape_qr') {
       return {
         amount: this.convertToPENSync(usdPrice),

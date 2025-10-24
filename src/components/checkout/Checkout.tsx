@@ -261,7 +261,7 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
     const items = getCheckoutItems();
     const usdTotal = items.reduce((sum, item) => sum + (item.course?.price || 0), 0);
     
-    if (selectedPaymentMethod === 'mercadopago' || selectedPaymentMethod === 'yape_qr') {
+    if (selectedPaymentMethod === 'yape_qr') {
       return {
         amount: checkoutService.convertToPENSync(usdTotal), // Usar versión síncrona para UI
         currency: 'PEN'
@@ -573,10 +573,10 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
                    <div className="text-right">
                       <p className="font-medium">
                         {checkoutService.formatPrice(
-                          (selectedPaymentMethod === 'mercadopago' || selectedPaymentMethod === 'yape_qr')
+                          selectedPaymentMethod === 'yape_qr'
                             ? checkoutService.convertToPENSync(item.course?.price || 0)
                             : item.course?.price || 0,
-                          (selectedPaymentMethod === 'mercadopago' || selectedPaymentMethod === 'yape_qr') ? 'PEN' : 'USD'
+                          selectedPaymentMethod === 'yape_qr' ? 'PEN' : 'USD'
                         )}
                       </p>
                     </div>
@@ -645,16 +645,6 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
                       </div>
                     </div>
                   ))}
-                 {/* Hint: show help if MercadoPago not available but user profile not Peru */}
-                 {!(availablePaymentMethods.some(m => m.id === 'mercadopago')) && (
-                   <div className="mt-3 p-3 border rounded bg-yellow-50">
-                     <p className="text-sm">¿Quieres pagar con MercadoPago (Yape, tarjetas)? Este método está disponible solo para usuarios en Perú.</p>
-                     <div className="mt-2 flex gap-2">
-                       <Button variant="outline" size="sm" onClick={() => navigate('/configuracion')}>Editar perfil</Button>
-                       <Button size="sm" onClick={() => navigate('/auth')}>Ir a mi cuenta</Button>
-                     </div>
-                   </div>
-                 )}
                 </div>
               </CardContent>
               <CardFooter>
