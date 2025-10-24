@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, Save, Plus, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { VideoUpload } from "@/components/admin/VideoUpload";
 
 interface Lesson {
   id?: string;
@@ -658,13 +659,23 @@ function EditCourse() {
                                           placeholder="Descripción de la lección"
                                         />
                                       </div>
-                                      <div className="space-y-2">
-                                        <Label>URL del Video</Label>
-                                        <Input
-                                          value={lesson.video_url}
-                                          onChange={(e) => updateLesson(moduleIndex, lessonIndex, 'video_url', e.target.value)}
-                                          placeholder="https://youtube.com/watch?v=..."
+                                      <div className="md:col-span-2">
+                                        <VideoUpload
+                                          lessonId={lesson.id || `temp-${moduleIndex}-${lessonIndex}`}
+                                          currentVideoUrl={lesson.video_url}
+                                          onUploadComplete={(videoUrl) => updateLesson(moduleIndex, lessonIndex, 'video_url', videoUrl)}
                                         />
+                                        <div className="mt-2">
+                                          <Label className="text-xs text-muted-foreground">
+                                            O usa URL de YouTube/Externo
+                                          </Label>
+                                          <Input
+                                            value={lesson.video_url}
+                                            onChange={(e) => updateLesson(moduleIndex, lessonIndex, 'video_url', e.target.value)}
+                                            placeholder="https://youtube.com/watch?v=... (opcional)"
+                                            className="mt-1"
+                                          />
+                                        </div>
                                       </div>
                                       <div className="space-y-2">
                                         <Label>Duración (minutos)</Label>
