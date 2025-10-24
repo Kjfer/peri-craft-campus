@@ -610,7 +610,7 @@ class CheckoutService {
         name: 'Google Pay',
         icon: '💳',
         type: 'digital_wallet',
-        description: 'Pago rápido con Google Pay'
+        description: 'Próximamente'
       }
     ];
 
@@ -622,17 +622,6 @@ class CheckoutService {
         type: 'manual_payment',
         description: 'Escanea el QR y sube tu comprobante'
       });
-
-      // Solo agregar MercadoPago para cursos, no para suscripciones
-      if (itemType !== 'subscription') {
-        baseMethods.push({
-          id: 'mercadopago',
-          name: 'MercadoPago',
-          icon: '🏦',
-          type: 'external_payment',
-          description: 'Paga con tarjetas mediante enlace seguro'
-        });
-      }
     }
 
     return baseMethods;

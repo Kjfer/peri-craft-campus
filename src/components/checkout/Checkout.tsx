@@ -614,12 +614,18 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
                   {availablePaymentMethods.map((method) => (
                     <div
                       key={method.id}
-                      className={`border rounded-lg p-4 cursor-pointer transition-colors ${
-                        selectedPaymentMethod === method.id
-                          ? 'border-primary bg-primary/5'
-                          : 'border-gray-200 hover:border-gray-300'
+                      className={`border rounded-lg p-4 transition-colors ${
+                        method.id === 'googlepay' 
+                          ? 'border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed' 
+                          : selectedPaymentMethod === method.id
+                          ? 'border-primary bg-primary/5 cursor-pointer'
+                          : 'border-gray-200 hover:border-gray-300 cursor-pointer'
                       }`}
-                      onClick={() => setSelectedPaymentMethod(method.id)}
+                      onClick={() => {
+                        if (method.id !== 'googlepay') {
+                          setSelectedPaymentMethod(method.id);
+                        }
+                      }}
                     >
                       <div className="flex items-center space-x-3">
                         {getPaymentMethodIcon(method)}
