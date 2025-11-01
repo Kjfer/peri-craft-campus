@@ -601,7 +601,7 @@ class CheckoutService {
   // Versión síncrona con fallback (para compatibilidad)
   convertToPENSync(usdAmount: number): number {
     const cachedRate = exchangeRateService.getCacheInfo().rates['USD_TO_PEN'];
-    const rate = cachedRate ? cachedRate.rate : 3.54; // Fallback actualizado según SBS/SUNAT
+    const rate = cachedRate ? cachedRate.rate : 3.40; // Fallback basado en promedio SBS/SUNAT reciente
     return Math.round((usdAmount * rate) * 10) / 10; // Redondear a 1 decimal
   }
 

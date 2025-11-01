@@ -212,8 +212,12 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
       return;
     }
 
-    loadPaymentMethods();
-    loadExchangeRate(); // Cargar tasa de cambio al inicio
+    const initializeCheckout = async () => {
+      await loadExchangeRate(); // Cargar tasa de cambio al inicio de forma síncrona
+      loadPaymentMethods();
+    };
+    
+    initializeCheckout();
   }, [user]);
 
   const loadPaymentMethods = async () => {
