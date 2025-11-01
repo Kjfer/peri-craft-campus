@@ -19,7 +19,7 @@ class ExchangeRateService {
   private static instance: ExchangeRateService;
   private cache: Map<string, CachedRate> = new Map();
   private readonly CACHE_DURATION = 10 * 60 * 1000; // 10 minutos en milisegundos
-  private readonly DEFAULT_RATE = 3.54; // Fallback rate actualizado según SBS/SUNAT (promedio actual)
+  private readonly DEFAULT_RATE = 3.40; // Fallback rate basado en promedio SBS/SUNAT reciente
   private readonly API_KEY = 'your-api-key-here'; // Reemplazar con tu API key
 
   private constructor() {}
@@ -47,11 +47,11 @@ class ExchangeRateService {
 
     console.log('🔄 Fetching fresh exchange rate...');
 
-    // Intentar múltiples APIs en orden de preferencia
+    // Intentar múltiples APIs en orden de preferencia (SUNAT/SBS primero para Perú)
     const apis = [
+      () => this.fetchFromExchangeRateSBS(),
       () => this.fetchFromExchangeRateHost(),
       () => this.fetchFromExchangeRateApi(),
-      () => this.fetchFromExchangeRateSBS(),
     ];
 
     for (const apiCall of apis) {
@@ -137,8 +137,8 @@ class ExchangeRateService {
       
       // La API devuelve { "compra": 3.52, "venta": 3.54 }
       if (data.venta && data.compra) {
-        // Usamos el promedio de compra y venta
-        const rate = (parseFloat(data.compra) + parseFloat(data.venta)) / 2;
+        // Usamos el precio de VENTA que es el que aplica cuando se compra dólares con soles
+        const rate = parseFloat(data.venta);
         console.log(`✅ Tasa SBS/SUNAT obtenida: ${rate.toFixed(4)} (compra: ${data.compra}, venta: ${data.venta})`);
         return Math.round(rate * 10000) / 10000;
       }
