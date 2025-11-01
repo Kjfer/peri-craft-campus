@@ -79,7 +79,7 @@ class CheckoutService {
       if (paymentMethod === 'yape_qr') {
         // Obtener tasa de cambio actual
         const rate = await exchangeRateService.getUSDToPENRate();
-        finalAmount = Math.round((totalAmountUSD * rate) * 100) / 100;
+        finalAmount = Math.round((totalAmountUSD * rate) * 10) / 10; // Redondear a 1 decimal
         finalCurrency = 'PEN';
         
         // Convertir precios individuales de items
@@ -87,7 +87,7 @@ class CheckoutService {
           const id = item.course_id || item.subscription_id;
           const price = item.course?.price || item.subscription?.price || 0;
           if (id) {
-            convertedItemPrices.set(id, Math.round((price * rate) * 100) / 100);
+            convertedItemPrices.set(id, Math.round((price * rate) * 10) / 10); // Redondear a 1 decimal
           }
         });
       }
@@ -601,8 +601,8 @@ class CheckoutService {
   // Versión síncrona con fallback (para compatibilidad)
   convertToPENSync(usdAmount: number): number {
     const cachedRate = exchangeRateService.getCacheInfo().rates['USD_TO_PEN'];
-    const rate = cachedRate ? cachedRate.rate : 3.50; // Fallback actualizado
-    return Math.round((usdAmount * rate) * 100) / 100;
+    const rate = cachedRate ? cachedRate.rate : 3.54; // Fallback actualizado según SBS/SUNAT
+    return Math.round((usdAmount * rate) * 10) / 10; // Redondear a 1 decimal
   }
 
   // Obtener precio en la moneda correcta según el método de pago - soporta cursos y suscripciones

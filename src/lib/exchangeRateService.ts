@@ -19,7 +19,7 @@ class ExchangeRateService {
   private static instance: ExchangeRateService;
   private cache: Map<string, CachedRate> = new Map();
   private readonly CACHE_DURATION = 10 * 60 * 1000; // 10 minutos en milisegundos
-  private readonly DEFAULT_RATE = 3.50; // Fallback rate actualizado según BCRP/SUNAT
+  private readonly DEFAULT_RATE = 3.54; // Fallback rate actualizado según SBS/SUNAT (promedio actual)
   private readonly API_KEY = 'your-api-key-here'; // Reemplazar con tu API key
 
   private constructor() {}
@@ -49,9 +49,9 @@ class ExchangeRateService {
 
     // Intentar múltiples APIs en orden de preferencia
     const apis = [
-      () => this.fetchFromBCRPSimulated(),
+      () => this.fetchFromExchangeRateHost(),
       () => this.fetchFromExchangeRateApi(),
-      () => this.fetchFromCurrencyAPI(),
+      () => this.fetchFromExchangeRateSBS(),
     ];
 
     for (const apiCall of apis) {
@@ -74,28 +74,26 @@ class ExchangeRateService {
   }
 
   /**
-   * API simulada basada en datos del BCRP
+   * API principal - ExchangeRate.host (datos actuales y confiables)
    */
-  private async fetchFromBCRPSimulated(): Promise<number> {
-    console.log('🏛️ Consultando tasa oficial BCRP (simulada)...');
+  private async fetchFromExchangeRateHost(): Promise<number> {
+    console.log('🌐 Consultando ExchangeRate.host API...');
     
-    // Simular latencia de API
-    await new Promise(resolve => setTimeout(resolve, 200));
+    const response = await fetch('https://api.exchangerate.host/latest?base=USD&symbols=PEN');
     
-    const today = new Date();
-    const dayOfWeek = today.getDay();
+    if (!response.ok) {
+      throw new Error(`ExchangeRate.host API failed: ${response.status}`);
+    }
+
+    const data = await response.json();
     
-    // Tasa base según BCRP
-    let baseRate = 3.50;
-    
-    // Agregar variación realista
-    const weeklyVariation = Math.sin(dayOfWeek * Math.PI / 7) * 0.01;
-    const dailyNoise = (Math.random() - 0.5) * 0.01;
-    
-    const bcrpRate = baseRate + weeklyVariation + dailyNoise;
-    
-    console.log(`🏛️ Tasa BCRP obtenida: ${bcrpRate.toFixed(4)}`);
-    return Math.round(bcrpRate * 10000) / 10000;
+    if (data.success && data.rates?.PEN) {
+      const rate = data.rates.PEN;
+      console.log(`✅ Tasa ExchangeRate.host obtenida: ${rate.toFixed(4)}`);
+      return Math.round(rate * 10000) / 10000;
+    }
+
+    throw new Error('Invalid response from ExchangeRate.host API');
   }
 
   /**
@@ -118,22 +116,38 @@ class ExchangeRateService {
   }
 
   /**
-   * API alternativa gratuita - fixer.io free tier
+   * API alternativa - basada en datos SBS/SUNAT Perú
    */
-  private async fetchFromFreeAPI(): Promise<number> {
-    const response = await fetch('https://api.fixer.io/latest?base=USD&symbols=PEN');
+  private async fetchFromExchangeRateSBS(): Promise<number> {
+    console.log('🏦 Consultando API basada en SBS/SUNAT...');
     
-    if (!response.ok) {
-      throw new Error(`Fixer API failed: ${response.status}`);
-    }
+    try {
+      // API gratuita que consulta datos oficiales de Perú
+      const response = await fetch('https://api.apis.net.pe/v1/tipo-cambio-sunat', {
+        headers: {
+          'Referer': 'https://apis.net.pe/'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`SBS API failed: ${response.status}`);
+      }
 
-    const data = await response.json();
-    
-    if (data.success && data.rates?.PEN) {
-      return data.rates.PEN;
-    }
+      const data = await response.json();
+      
+      // La API devuelve { "compra": 3.52, "venta": 3.54 }
+      if (data.venta && data.compra) {
+        // Usamos el promedio de compra y venta
+        const rate = (parseFloat(data.compra) + parseFloat(data.venta)) / 2;
+        console.log(`✅ Tasa SBS/SUNAT obtenida: ${rate.toFixed(4)} (compra: ${data.compra}, venta: ${data.venta})`);
+        return Math.round(rate * 10000) / 10000;
+      }
 
-    throw new Error('Invalid response from Fixer API');
+      throw new Error('Invalid response from SBS API');
+    } catch (error) {
+      console.error('❌ Error fetching from SBS API:', error);
+      throw error;
+    }
   }
 
   /**
@@ -231,7 +245,7 @@ class ExchangeRateService {
    */
   async convertUSDToPEN(usdAmount: number): Promise<number> {
     const rate = await this.getUSDToPENRate();
-    return Math.round((usdAmount * rate) * 100) / 100; // Redondear a 2 decimales
+    return Math.round((usdAmount * rate) * 10) / 10; // Redondear a 1 decimal
   }
 
   /**
@@ -243,8 +257,8 @@ class ExchangeRateService {
     return new Intl.NumberFormat(locale, {
       style: 'currency',
       currency: currency,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1
     }).format(amount);
   }
 

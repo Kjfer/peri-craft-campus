@@ -6,7 +6,7 @@ class ExchangeRateService {
   constructor() {
     this.cache = new Map();
     this.CACHE_DURATION = 10 * 60 * 1000; // 10 minutos
-    this.DEFAULT_RATE = 3.50; // Tasa actualizada según BCRP/SUNAT
+    this.DEFAULT_RATE = 3.54; // Tasa actualizada según SBS/SUNAT (promedio actual)
   }
 
   /**
@@ -27,9 +27,9 @@ class ExchangeRateService {
 
     // Intentar múltiples APIs en orden de preferencia
     const apis = [
-      () => this.fetchFromBCRPAPI(),
-      () => this.fetchFromAlternativeAPI(),
+      () => this.fetchFromExchangeRateHost(),
       () => this.fetchFromOpenExchangeAPI(),
+      () => this.fetchFromExchangeRateSBS(),
     ];
 
     for (const apiCall of apis) {
@@ -52,38 +52,37 @@ class ExchangeRateService {
   }
 
   /**
-   * API principal - Consulta BCRP API (Banco Central de Reserva del Perú)
+   * API principal - ExchangeRate.host (datos actuales y confiables)
    */
-  async fetchFromBCRPAPI() {
+  async fetchFromExchangeRateHost() {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10000);
     
     try {
-      // El BCRP no tiene API pública directa, pero podemos simular
-      // con datos más precisos según sus publicaciones oficiales
-      console.log('🏛️ Consultando tasa oficial BCRP...');
+      console.log('🌐 Consultando ExchangeRate.host API...');
       
-      // En producción, podrías usar web scraping o APIs intermedias
-      // que consulten el BCRP, pero por ahora simulamos con datos realistas
-      await new Promise(resolve => setTimeout(resolve, 200));
-      
-      // Tasa basada en el tipo de cambio interbancario BCRP
-      const today = new Date();
-      const dayOfWeek = today.getDay();
-      
-      // Simular variación semanal realista
-      let baseRate = 3.50; // Tasa base BCRP
-      
-      // Agregar pequeña variación basada en día de la semana
-      const weeklyVariation = Math.sin(dayOfWeek * Math.PI / 7) * 0.01;
-      const dailyNoise = (Math.random() - 0.5) * 0.01;
-      
-      const bcrpRate = baseRate + weeklyVariation + dailyNoise;
+      const response = await fetch('https://api.exchangerate.host/latest?base=USD&symbols=PEN', {
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+      });
       
       clearTimeout(timeout);
-      console.log(`🏛️ Tasa BCRP obtenida: ${bcrpRate.toFixed(4)}`);
-      return Math.round(bcrpRate * 10000) / 10000;
       
+      if (!response.ok) {
+        throw new Error(`ExchangeRate.host API failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.success && data.rates?.PEN) {
+        const rate = data.rates.PEN;
+        console.log(`✅ Tasa ExchangeRate.host obtenida: ${rate.toFixed(4)}`);
+        return Math.round(rate * 10000) / 10000;
+      }
+
+      throw new Error('Invalid response from ExchangeRate.host API');
     } catch (error) {
       clearTimeout(timeout);
       throw error;
@@ -93,29 +92,46 @@ class ExchangeRateService {
   }
 
   /**
-   * API alternativa simple - usando datos más realistas según BCRP
+   * API alternativa - basada en datos SBS/SUNAT Perú
    */
-  async fetchFromAlternativeAPI() {
-    // API simulada con tasas más precisas basadas en BCRP/SUNAT
+  async fetchFromExchangeRateSBS() {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 5000);
+    const timeout = setTimeout(() => controller.abort(), 10000);
     
     try {
-      await new Promise(resolve => setTimeout(resolve, 100)); // Simular latencia
+      console.log('🏦 Consultando API basada en SBS/SUNAT...');
       
-      // Tasa basada en rangos históricos del BCRP (3.48 - 3.52)
-      const baseRate = 3.50;
-      const variation = (Math.random() - 0.5) * 0.04; // Variación de ±0.02
-      const simulatedRate = baseRate + variation;
-      
-      console.log(`📊 Tasa simulada basada en BCRP: ${simulatedRate.toFixed(4)}`);
+      // Esta es una API gratuita que consulta datos oficiales de Perú
+      const response = await fetch('https://api.apis.net.pe/v1/tipo-cambio-sunat', {
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'Mozilla/5.0',
+          'Referer': 'https://apis.net.pe/'
+        }
+      });
       
       clearTimeout(timeout);
-      return Math.round(simulatedRate * 10000) / 10000; // Redondear a 4 decimales
       
+      if (!response.ok) {
+        throw new Error(`SBS API failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      // La API devuelve { "compra": 3.52, "venta": 3.54 }
+      if (data.venta && data.compra) {
+        // Usamos el promedio de compra y venta
+        const rate = (parseFloat(data.compra) + parseFloat(data.venta)) / 2;
+        console.log(`✅ Tasa SBS/SUNAT obtenida: ${rate.toFixed(4)} (compra: ${data.compra}, venta: ${data.venta})`);
+        return Math.round(rate * 10000) / 10000;
+      }
+
+      throw new Error('Invalid response from SBS API');
     } catch (error) {
       clearTimeout(timeout);
       throw error;
+    } finally {
+      clearTimeout(timeout);
     }
   }
 
@@ -191,7 +207,7 @@ class ExchangeRateService {
    */
   async convertUSDToPEN(usdAmount) {
     const rate = await this.getUSDToPENRate();
-    return Math.round((usdAmount * rate) * 100) / 100; // Redondear a 2 decimales
+    return Math.round((usdAmount * rate) * 10) / 10; // Redondear a 1 decimal
   }
 
   /**
