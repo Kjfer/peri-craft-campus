@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, Clock, Star, User, CheckCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import AddToCartButton from "@/components/ui/AddToCartButton";
 import { useNavigate } from "react-router-dom";
 import { useEnrollments } from "@/hooks/useEnrollments";
 import { useAuth } from "@/contexts/AuthContext";
@@ -236,20 +235,22 @@ export default function Courses() {
                           {isAuthenticated && isEnrolled(course.id) ? "Ir al Curso" : "Ver Curso"}
                         </Button>
                         {course.price > 0 && !isAuthenticated && (
-                          <AddToCartButton
-                            courseId={course.id}
-                            price={course.price}
+                          <Button
+                            onClick={() => navigate(`/checkout/curso/${course.id}`)}
                             size="sm"
                             className="flex-1"
-                          />
+                          >
+                            Comprar ahora
+                          </Button>
                         )}
                         {course.price > 0 && isAuthenticated && !isEnrolled(course.id) && (
-                          <AddToCartButton
-                            courseId={course.id}
-                            price={course.price}
+                          <Button
+                            onClick={() => navigate(`/checkout/curso/${course.id}`)}
                             size="sm"
                             className="flex-1"
-                          />
+                          >
+                            Comprar ahora
+                          </Button>
                         )}
                       </div>
                     </div>

@@ -26,10 +26,8 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 
 import { useAuth } from "@/contexts/AuthContext";
-import { useCart } from "@/contexts/CartContext";
 import { useToast } from "@/hooks/use-toast";
 import useCourseAccess from "@/hooks/useCourseAccess";
-import CheckoutModal from "@/components/checkout/CheckoutModal";
 import type { Course } from "@/types/course";
 import { generateSyllabusPDF } from "@/utils/pdfGenerator";
 
@@ -57,24 +55,14 @@ export default function CourseDetail() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
-  const { addToCart, isInCart, state } = useCart();
   const { toast } = useToast();
   
   const [course, setCourse] = useState<Course | null>(null);
   const [modules, setModules] = useState<Module[]>([]);
   const [loading, setLoading] = useState(true);
-  const [addingToCart, setAddingToCart] = useState(false);
-  const [showCheckout, setShowCheckout] = useState(false);
 
   // Use course access hook to check if user has paid access
   const { access, loading: accessLoading, refreshAccess } = useCourseAccess(id || '');
-
-  // Check if checkout should be shown from URL params
-  useEffect(() => {
-    if (searchParams.get('checkout') === 'true' && course && !access?.hasAccess) {
-      setShowCheckout(true);
-    }
-  }, [searchParams, course, access]);
 
   const fetchCourseData = useCallback(async () => {
     try {
@@ -239,7 +227,6 @@ export default function CourseDetail() {
   const totalLessons = modules.reduce((total, module) => total + module.lessons.length, 0);
 
   const isPaid = access?.hasAccess;
-  const isInCartNow = isInCart(course.id);
   const isFree = course.price === 0;
 
   return (
@@ -483,16 +470,6 @@ export default function CourseDetail() {
                           <CreditCard className="w-4 h-4 mr-2" />
                           Comprar ahora
                         </Button>
-                        
-                        <Button 
-                          variant="outline" 
-                          className="w-full" 
-                          onClick={handleAddToCart}
-                          disabled={addingToCart || isInCartNow}
-                        >
-                          <ShoppingCart className="w-4 h-4 mr-2" />
-                          {isInCartNow ? 'En el carrito' : 'Agregar al carrito'}
-                        </Button>
                       </>
                     )}
                   </div>
@@ -537,16 +514,6 @@ export default function CourseDetail() {
           </div>
         </div>
       </div>
-
-      {/* Checkout Modal */}
-      {showCheckout && course && (
-        <CheckoutModal
-          isOpen={showCheckout}
-          onClose={() => setShowCheckout(false)}
-          cartItems={isInCartNow ? state.items.map(item => item.course) : [course]}
-          totalAmount={isInCartNow ? state.total : course.price}
-        />
-      )}
     </div>
   );
 }

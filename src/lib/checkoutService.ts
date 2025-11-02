@@ -338,6 +338,9 @@ class CheckoutService {
         const n8nWebhookUrl = 'https://peri-n8n-1-n8n.j60naj.easypanel.host/webhook/cd9a61b2-d84c-4517-9e0a-13f898148204';
         
         // Crear parámetros para GET request
+        // Asegurar que el monto está redondeado a 1 decimal
+        const amountToSend = Math.round((orderData.total_amount || 0) * 10) / 10;
+        
         const n8nParams = new URLSearchParams({
           user_id: user.data.user.id,
           user_name: user.data.user.user_metadata?.full_name || '',
@@ -345,8 +348,8 @@ class CheckoutService {
           order_id: orderId,
           transaction_id: transactionId,
           receipt_url: receiptPublicUrl,
-          amount: (orderData.total_amount || 0).toString(),
-          currency: 'PEN',
+          amount: amountToSend.toString(),
+          currency: orderData.currency || 'PEN',
           payment_type: paymentType,
           payment_method: 'yape_qr'
         });

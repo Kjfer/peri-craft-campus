@@ -11,7 +11,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, CreditCard, Smartphone, DollarSign, CheckCircle, AlertTriangle, Bug } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useCart } from '@/contexts/CartContext';
 import { useToast } from '@/hooks/use-toast';
 import { checkoutService, CheckoutItem } from '@/lib/checkoutService';
 
@@ -30,7 +29,6 @@ interface CheckoutProps {
 export default function Checkout({ mode = 'cart', courseId, courseData }: CheckoutProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { state: cartState, clearCart } = useCart();
   const { toast } = useToast();
 
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('');
@@ -240,7 +238,8 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
   };
 
   const getCheckoutItems = (): CheckoutItem[] => {
-    if (mode === 'single' && courseId && courseData) {
+    // Only single course mode is supported
+    if (courseId && courseData) {
       return [{
         course_id: courseId,
         course: {
@@ -255,10 +254,7 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
       }];
     }
 
-    return cartState.items.map(item => ({
-      course_id: item.course_id,
-      course: item.course
-    }));
+    return [];
   };
 
   const calculateTotal = () => {
@@ -337,7 +333,6 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
       // For immediate payment methods (Google Pay), mark as completed
       if (backendMethod === 'googlepay') {
         setStep('completed');
-        if (mode === 'cart') await clearCart();
       } else {
         // For other methods, process normally
         setStep('processing');
@@ -413,11 +408,6 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
           description: result.message || "Estamos procesando tu pago.",
         });
         
-        // Clear cart first before redirecting
-        if (mode === 'cart') {
-          await clearCart();
-        }
-        
         // Redirect to CheckoutPending instead of completed
         // The order status listener will handle the redirect to success page
         navigate(`/checkout/pending?orderId=${currentOrder.id}`);
@@ -471,10 +461,6 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
         transactionId,
         receiptFile!
       );
-
-      if (mode === 'cart') {
-        await clearCart();
-      }
 
       setStep('completed');
       
@@ -792,7 +778,6 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
                     // Limpiar estado guardado
                     clearPayPalState();
                     
-                    if (mode === 'cart') await clearCart();
                     navigate(`/checkout/success/${cap.orderId}`);
                   }}
                   onError={(err) => {
@@ -840,7 +825,6 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
                               description: 'Tu pago se procesó correctamente.' 
                             });
                             clearPayPalState();
-                            if (mode === 'cart') await clearCart();
                             navigate(`/checkout/success/${result.orderId}`);
                           } else {
                             toast({

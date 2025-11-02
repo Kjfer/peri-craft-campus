@@ -4,7 +4,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { CartProvider } from "@/contexts/CartContext";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { AuthDebug } from "@/components/AuthDebug";
@@ -25,10 +24,7 @@ import PaymentResult from "./pages/PaymentResult";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentError from "./pages/PaymentError";
 import PaymentRedirect from "./pages/PaymentRedirect";
-import Checkout from "./pages/Checkout";
 import CheckoutSuccess from "./pages/CheckoutSuccess";
-import Cart from "./pages/Cart";
-import CartCheckout from "./pages/CartCheckout";
 import CourseCheckout from "./pages/CourseCheckout";
 import OrderHistory from "./pages/OrderHistory";
 import CheckoutFailed from "./pages/CheckoutFailed";
@@ -57,10 +53,9 @@ const App = () => (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <AuthProvider>
-          <CartProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
               <div className="min-h-screen flex flex-col">
                 <Header />
                 <main className="flex-1">
@@ -97,10 +92,7 @@ const App = () => (
                       <Route path="/contacto" element={<Contact />} />
                       <Route path="/clases-en-vivo" element={<ClasesEnVivo />} />
                       <Route path="/verificar-certificado" element={<VerifyCertificate />} />
-                      <Route path="/checkout" element={<Checkout />} />
-                      <Route path="/checkout/carrito" element={<CartCheckout />} />
                       <Route path="/checkout/curso/:courseId" element={<CourseCheckout />} />
-                      <Route path="/carrito" element={<Cart />} />
                       <Route path="/ordenes" element={<OrderHistory />} />
                       <Route path="/configuracion" element={<AccountSettings />} />
                       <Route path="/checkout/success/:orderId" element={<CheckoutSuccess />} />
@@ -134,7 +126,6 @@ const App = () => (
                 <AuthDebug />
               </div>
             </BrowserRouter>
-          </CartProvider>
         </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
