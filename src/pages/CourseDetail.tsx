@@ -12,7 +12,6 @@ import {
   CheckCircle, 
   Play, 
   Star,
-  ShoppingCart,
   BookOpen,
   Lock,
   CreditCard,
@@ -108,38 +107,6 @@ export default function CourseDetail() {
       fetchCourseData();
     }
   }, [id, fetchCourseData]);
-
-  const handleAddToCart = async () => {
-    if (!user) {
-      toast({
-        title: "Inicia sesión",
-        description: "Debes iniciar sesión para agregar cursos al carrito",
-        variant: "destructive",
-      });
-      navigate('/auth');
-      return;
-    }
-
-    if (!course) return;
-
-    try {
-      setAddingToCart(true);
-      await addToCart(course.id);
-      toast({
-        title: "¡Agregado al carrito!",
-        description: `${course.title} se agregó a tu carrito`,
-      });
-    } catch (error) {
-      console.error('Error adding to cart:', error);
-      toast({
-        title: "Error",
-        description: "No se pudo agregar el curso al carrito",
-        variant: "destructive",
-      });
-    } finally {
-      setAddingToCart(false);
-    }
-  };
 
   const handleBuyNow = async () => {
     if (!user) {
