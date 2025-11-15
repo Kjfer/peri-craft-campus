@@ -137,10 +137,6 @@ export default function Contact() {
       answer: "Puedes inscribirte directamente desde la página del curso cuando hayas iniciado sesión. Si es gratuito, el acceso es inmediato. Para cursos pagos, serás dirigido al proceso de pago seguro."
     },
     {
-      question: "¿Los certificados son reconocidos oficialmente?",
-      answer: "Nuestros certificados son reconocidos por la industria y incluyen un código único de verificación que puede ser validado en nuestra plataforma."
-    },
-    {
       question: "¿Puedo acceder a los cursos desde cualquier dispositivo?",
       answer: "Sí, nuestra plataforma es completamente responsive y funciona en computadoras, tablets y móviles."
     },

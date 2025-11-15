@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Users, Play, Calendar as CalendarIcon, RefreshCw, AlertCircle } from "lucide-react";
+import { Clock, Users, Play, Calendar as CalendarIcon, RefreshCw, AlertCircle, MessageCircle } from "lucide-react";
 import { format, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
 import googleSheetsService, { type CursoEnVivo } from "@/services/googleSheetsService";
@@ -210,6 +210,20 @@ export default function ClasesEnVivo() {
                               </div>
                               
                               <p className="text-muted-foreground mb-3">{clase.description}</p>
+                              
+                              <Button 
+                                className="mt-4 bg-green-500 hover:bg-green-600 text-white"
+                                asChild
+                              >
+                                <a 
+                                  href={`https://wa.me/51920545678?text=${encodeURIComponent(`Hola, quiero información sobre el curso "${clase.title}"`)}`}
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                >
+                                  <MessageCircle className="mr-2 h-4 w-4" />
+                                  Consultar info
+                                </a>
+                              </Button>
                             </div>
                           </div>
                         </CardContent>
