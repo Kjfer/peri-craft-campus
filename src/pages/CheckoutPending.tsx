@@ -7,19 +7,34 @@ import { useOrderStatusListener } from '@/hooks/useOrderStatusListener';
 import { supabase } from '@/integrations/supabase/client';
 
 export default function CheckoutPending() {
+  console.log('🎬 CheckoutPending component mounting...');
+  
   const navigate = useNavigate();
   const location = useLocation();
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(true);
   
+  // Log location info
+  console.log('📍 Location info:', {
+    search: location.search,
+    state: location.state,
+    pathname: location.pathname
+  });
+  
   // Obtener orderId de múltiples fuentes y persistirlo en sessionStorage
   const getOrderId = (): string | null => {
+    console.log('🔍 Getting orderId from multiple sources...');
+    
     // 1. Intentar desde sessionStorage (persiste en la sesión)
     const storedOrderId = sessionStorage.getItem('checkout_order_id');
-    if (storedOrderId) return storedOrderId;
+    if (storedOrderId) {
+      console.log('✅ OrderId found in sessionStorage:', storedOrderId);
+      return storedOrderId;
+    }
     
     // 2. Desde location.state
     if (location?.state?.orderId) {
+      console.log('✅ OrderId found in location.state:', location.state.orderId);
       sessionStorage.setItem('checkout_order_id', location.state.orderId);
       return location.state.orderId;
     }
@@ -28,14 +43,17 @@ export default function CheckoutPending() {
     const params = new URLSearchParams(location.search);
     const paramOrderId = params.get('orderId');
     if (paramOrderId) {
+      console.log('✅ OrderId found in URL params:', paramOrderId);
       sessionStorage.setItem('checkout_order_id', paramOrderId);
       return paramOrderId;
     }
     
+    console.log('❌ No orderId found in any source');
     return null;
   };
   
   const orderId = getOrderId();
+  console.log('🎯 Final orderId to use:', orderId);
 
   // Limpiar sessionStorage cuando el pago sea exitoso o haya error
   useEffect(() => {

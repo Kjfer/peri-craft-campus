@@ -397,6 +397,10 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
       );
       
       if (result.success) {
+        // Guardar orderId en sessionStorage ANTES de navegar
+        sessionStorage.setItem('checkout_order_id', currentOrder.id);
+        console.log('💾 OrderId saved to sessionStorage:', currentOrder.id);
+        
         // Limpiar estado de Yape QR inmediatamente para evitar confusiones en futuros pagos
         clearPayPalState();
         sessionStorage.removeItem('checkout_in_progress');
@@ -410,7 +414,10 @@ export default function Checkout({ mode = 'cart', courseId, courseData }: Checko
         
         // Redirect to CheckoutPending instead of completed
         // The order status listener will handle the redirect to success page
-        navigate(`/checkout/pending?orderId=${currentOrder.id}`);
+        console.log('🚀 Navigating to CheckoutPending with orderId:', currentOrder.id);
+        navigate(`/checkout/pending?orderId=${currentOrder.id}`, {
+          state: { orderId: currentOrder.id }
+        });
       } else {
         throw new Error(result.message || "Error al procesar el pago");
       }

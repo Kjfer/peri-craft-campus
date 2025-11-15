@@ -10,6 +10,12 @@ import { useNavigate } from 'react-router-dom';
 export function useOrderStatusListener(orderId: string, onError?: (msg: string) => void, successStatus: string = 'completed') {
   const navigate = useNavigate();
   const hasHandledRef = useRef(false);
+  
+  console.log('🎧 useOrderStatusListener hook initialized with:', { 
+    orderId, 
+    hasOnError: !!onError, 
+    successStatus 
+  });
 
   useEffect(() => {
     if (!orderId) {
