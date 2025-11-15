@@ -21,6 +21,64 @@ export function useOrderStatusListener(orderId: string, onError?: (msg: string) 
     console.log('🔄 Setting up realtime listener for order:', orderId);
     console.log('🎯 Listening for status changes to:', successStatus);
     
+    // Verificar estado inicial inmediatamente
+    const checkInitialState = async () => {
+      try {
+        const { data: order, error } = await supabase
+          .from('orders')
+          .select('payment_status, rejection_reason')
+          .eq('id', orderId)
+          .single();
+
+        if (error) {
+          console.error('❌ Error checking initial state:', error);
+          return;
+        }
+
+        console.log('🔍 Initial order state:', order);
+
+        // Si ya está en estado final, manejar inmediatamente
+        if (order.payment_status === successStatus && !hasHandledRef.current) {
+          hasHandledRef.current = true;
+          console.log('✅ Payment already completed! Redirecting...');
+          sessionStorage.setItem('payment_handled', 'true');
+          navigate(`/checkout/success/${orderId}`);
+        } else if (['rejected', 'failed', 'error'].includes(order.payment_status) && !hasHandledRef.current) {
+          hasHandledRef.current = true;
+          console.log('❌ Payment already rejected/failed!');
+          sessionStorage.setItem('payment_handled', 'true');
+          
+          if (onError) {
+            let errorMessage = 'No pudimos validar tu pago. Por favor revisa tu comprobante o contacta a soporte.';
+            
+            if (order.rejection_reason === 'comprobante_incorrecto' || order.rejection_reason === 'comprobante_invalido') {
+              errorMessage = 'El comprobante no coincide con los datos de tu orden (monto, código de operación o número Yape). Por favor verifica la información y sube un comprobante correcto.';
+            } else if (order.rejection_reason === 'error_validacion') {
+              errorMessage = 'Hubo un problema técnico al validar tu pago. Por favor contacta a nuestro equipo de soporte para resolver este inconveniente.';
+            } else if (order.rejection_reason === 'tiempo_expirado') {
+              errorMessage = 'El tiempo para validar tu pago ha expirado. Por favor realiza una nueva compra con un comprobante válido.';
+            } else if (order.rejection_reason === 'monto_incorrecto') {
+              errorMessage = 'El monto del comprobante no coincide con el monto de la orden.';
+            } else if (order.rejection_reason === 'comprobante_usado') {
+              errorMessage = 'Este comprobante ya ha sido usado en otra orden.';
+            } else if (order.rejection_reason === 'comprobante_ilegible') {
+              errorMessage = 'No se puede leer el comprobante. Por favor, sube una imagen más clara.';
+            } else if (order.rejection_reason === 'metodo_incorrecto') {
+              errorMessage = 'El método de pago usado no coincide con el solicitado.';
+            } else if (order.rejection_reason) {
+              errorMessage = `Error: ${order.rejection_reason}`;
+            }
+            
+            onError(errorMessage);
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error in initial state check:', error);
+      }
+    };
+
+    checkInitialState();
+    
     // Subscribe to realtime changes with optimized config
     const channel = supabase
       .channel(`order-status-${orderId}`, {
@@ -43,16 +101,15 @@ export function useOrderStatusListener(orderId: string, onError?: (msg: string) 
             return;
           }
 
-          const oldStatus = payload.old?.payment_status;
           const newStatus = payload.new.payment_status;
           const rejectionReason = payload.new.rejection_reason;
           
           console.log('🔔 Payment status UPDATE received:', { 
             orderId, 
-            oldStatus,
             newStatus, 
             rejectionReason,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            fullPayload: payload
           });
           
           if (newStatus === successStatus) {

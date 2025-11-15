@@ -63,7 +63,7 @@ export default function CheckoutPending() {
     console.log('🔄 Iniciando polling de respaldo para orden:', orderId);
     let isMounted = true;
     let pollCount = 0;
-    const maxPolls = 150; // 150 polls * 4 seg = 10 minutos max
+    const maxPolls = 180; // 180 polls * 2 seg = 6 minutos max
     
     const pollInterval = setInterval(async () => {
       if (!isMounted) return;
@@ -142,7 +142,7 @@ export default function CheckoutPending() {
       } catch (error) {
         console.error('❌ Error en polling:', error);
       }
-    }, 4000);
+    }, 2000); // Reducido a 2 segundos para respuesta más rápida
 
     return () => {
       console.log('🛑 Limpiando polling interval');
