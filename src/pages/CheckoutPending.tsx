@@ -43,6 +43,11 @@ export default function CheckoutPending() {
       setIsProcessing(false);
       sessionStorage.removeItem('checkout_order_id');
     }
+    
+    // Limpiar flag de pago manejado al montar
+    return () => {
+      sessionStorage.removeItem('payment_handled');
+    };
   }, [errorMsg]);
 
   // El estado exitoso es 'completed', no 'paid'
@@ -57,9 +62,25 @@ export default function CheckoutPending() {
 
     console.log('🔄 Iniciando polling de respaldo para orden:', orderId);
     let isMounted = true;
+    let pollCount = 0;
+    const maxPolls = 150; // 150 polls * 4 seg = 10 minutos max
     
     const pollInterval = setInterval(async () => {
       if (!isMounted) return;
+      
+      // Verificar si ya se manejó el pago (por realtime)
+      if (sessionStorage.getItem('payment_handled') === 'true') {
+        console.log('⏭️ Pago ya manejado por realtime, deteniendo polling');
+        clearInterval(pollInterval);
+        return;
+      }
+
+      pollCount++;
+      if (pollCount >= maxPolls) {
+        console.log('⏱️ Polling timeout alcanzado');
+        clearInterval(pollInterval);
+        return;
+      }
       
       try {
         const { data: order, error } = await supabase
@@ -78,17 +99,22 @@ export default function CheckoutPending() {
         console.log('🔍 Polling result:', { 
           status: order.payment_status, 
           rejection: order.rejection_reason,
+          pollCount,
           timestamp: new Date().toISOString()
         });
         
         if (order.payment_status === 'completed') {
           console.log('✅ Pago completado detectado por polling!');
+          sessionStorage.setItem('payment_handled', 'true');
           sessionStorage.removeItem('checkout_order_id');
           sessionStorage.removeItem('yape_checkout_state');
           sessionStorage.removeItem('yape_receipt_file');
+          clearInterval(pollInterval);
           navigate(`/checkout/success/${orderId}`);
         } else if (['rejected', 'failed', 'error'].includes(order.payment_status)) {
           console.log('❌ Pago rechazado detectado por polling!');
+          sessionStorage.setItem('payment_handled', 'true');
+          clearInterval(pollInterval);
           
           let errorMessage = 'No pudimos validar tu pago. Por favor revisa tu comprobante o contacta a soporte.';
           
@@ -112,13 +138,11 @@ export default function CheckoutPending() {
           
           setErrorMsg(errorMessage);
           setIsProcessing(false);
-        } else {
-          console.log('⏳ Orden aún en estado:', order.payment_status);
         }
       } catch (error) {
         console.error('❌ Error en polling:', error);
       }
-    }, 2000);
+    }, 4000);
 
     return () => {
       console.log('🛑 Limpiando polling interval');
