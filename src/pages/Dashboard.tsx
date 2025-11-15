@@ -14,12 +14,10 @@ import { useToast } from "@/hooks/use-toast";
 import { 
   User, 
   BookOpen, 
-  Award, 
   TrendingUp, 
   CreditCard,
   Calendar,
   Clock,
-  Download,
   Edit,
   Save,
   X
@@ -37,19 +35,6 @@ interface UserProfile {
 }
 
 import type { Enrollment } from "@/types/enrollment";
-
-interface Certificate {
-  id: string;
-  certificate_code: string;
-  certificate_url?: string;
-  issued_at: string;
-  courses: {
-    id: string;
-    title: string;
-    instructor_name: string;
-    duration_hours: number;
-  };
-}
 
 interface ProgressStats {
   total_enrollments: number;
@@ -71,7 +56,6 @@ export default function Dashboard() {
     loading: loading
   });
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
-  const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [progressStats, setProgressStats] = useState<ProgressStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [editingProfile, setEditingProfile] = useState(false);
@@ -157,30 +141,6 @@ export default function Dashboard() {
               enrollment.courses.id
             );
             setEnrollments(validEnrollments);
-          }
-
-          // Fetch certificates
-          const { data: certificatesData, error: certificatesError } = await supabase
-            .from('certificates')
-            .select(`
-              id,
-              certificate_code,
-              certificate_url,
-              issued_at,
-              courses (
-                id,
-                title,
-                instructor_name,
-                duration_hours
-              )
-            `)
-            .eq('user_id', user.id);
-
-          if (certificatesError) {
-            console.error('❌ Error fetching certificates:', certificatesError);
-          } else {
-            console.log('✅ Certificates fetched:', certificatesData);
-            setCertificates(certificatesData || []);
           }
 
           // Calculate progress stats
@@ -315,14 +275,10 @@ export default function Dashboard() {
 
         {/* Contenido principal con tabs */}
         <Tabs defaultValue="courses" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="courses" className="flex items-center gap-2">
               <BookOpen className="h-4 w-4" />
               Mis Cursos
-            </TabsTrigger>
-            <TabsTrigger value="certificates" className="flex items-center gap-2">
-              <Award className="h-4 w-4" />
-              Certificados
             </TabsTrigger>
             <TabsTrigger value="progress" className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4" />
@@ -393,60 +349,6 @@ export default function Dashboard() {
                     <h3 className="text-lg font-semibold mb-2">No tienes cursos inscritos</h3>
                     <p className="text-muted-foreground mb-4">Explora nuestro catálogo y comienza tu aprendizaje</p>
                     <Button onClick={() => navigate('/cursos')}>Explorar Cursos</Button>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          </TabsContent>
-
-          {/* Tab: Certificados */}
-          <TabsContent value="certificates">
-            <div className="grid gap-6 md:grid-cols-2">
-              {certificates.map((certificate) => (
-                <Card key={certificate.id} className="shadow-elegant">
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <Award className="h-8 w-8 text-yellow-500" />
-                      <Badge>{certificate.certificate_code}</Badge>
-                    </div>
-                    <CardTitle className="text-lg">{certificate.courses.title}</CardTitle>
-                    <CardDescription>
-                      Instructor: {certificate.courses.instructor_name}
-                    </CardDescription>
-                  </CardHeader>
-                  
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Fecha de emisión:</span>
-                        <span>{new Date(certificate.issued_at).toLocaleDateString()}</span>
-                      </div>
-                      
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Duración del curso:</span>
-                        <span>{certificate.courses.duration_hours} horas</span>
-                      </div>
-                      
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm" className="flex-1">
-                          <Download className="h-4 w-4 mr-2" />
-                          Descargar
-                        </Button>
-                        <Button variant="outline" size="sm">
-                          Verificar
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-              
-              {certificates.length === 0 && (
-                <Card className="col-span-full">
-                  <CardContent className="text-center py-12">
-                    <Award className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">No tienes certificados</h3>
-                    <p className="text-muted-foreground">Completa tus cursos para obtener certificados</p>
                   </CardContent>
                 </Card>
               )}
