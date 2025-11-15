@@ -343,36 +343,34 @@ class CheckoutService {
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://idjmabhvzupcdygguqzm.supabase.co';
         const callbackUrl = `${supabaseUrl}/functions/v1/n8n-payment-callback`;
         
-        // Crear parámetros para GET request
         // Asegurar que el monto está redondeado a 1 decimal
         const amountToSend = Math.round((orderData.total_amount || 0) * 10) / 10;
         
-        const n8nParams = new URLSearchParams({
+        // Crear payload JSON para POST request
+        const n8nPayload = {
           user_id: user.data.user.id,
           user_name: user.data.user.user_metadata?.full_name || '',
           user_email: user.data.user.email || '',
           order_id: orderId,
           transaction_id: transactionId,
           receipt_url: receiptPublicUrl,
-          amount: amountToSend.toString(),
+          amount: amountToSend, // Enviar como número
           currency: orderData.currency || 'PEN',
           payment_type: paymentType,
           payment_method: 'yape_qr',
           callback_url: callbackUrl
-        });
+        };
 
-        const fullUrl = `${n8nWebhookUrl}?${n8nParams.toString()}`;
+        console.log('🚀 Enviando notificación a N8n webhook (POST):', n8nPayload);
 
-        console.log('🚀 Enviando notificación a N8n webhook (GET):', n8nParams.toString());
-        console.log('🔗 URL completa del webhook:', fullUrl);
-
-        // Usar GET method con parámetros de consulta para N8n
-        const n8nResponse = await fetch(fullUrl, {
-          method: 'GET',
-          mode: 'cors', // Cambiar a cors para el webhook de producción
+        // Usar POST method con JSON body para enviar amount como número
+        const n8nResponse = await fetch(n8nWebhookUrl, {
+          method: 'POST',
+          mode: 'cors',
           headers: {
             'Content-Type': 'application/json'
-          }
+          },
+          body: JSON.stringify(n8nPayload)
         });
 
         console.log('📊 Respuesta de N8n - Status:', n8nResponse.status);
