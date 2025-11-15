@@ -19,7 +19,6 @@ import {
   Download,
   Users,
   Calendar,
-  Award,
   ArrowLeft
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -455,16 +454,8 @@ export default function CourseDetail() {
                         {totalLessons} lecciones
                       </li>
                       <li className="flex items-center">
-                        <Download className="w-4 h-4 mr-2 text-muted-foreground" />
-                        Recursos descargables
-                      </li>
-                      <li className="flex items-center">
                         <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
                         Acceso de por vida
-                      </li>
-                      <li className="flex items-center">
-                        <Award className="w-4 h-4 mr-2 text-muted-foreground" />
-                        Certificado de finalización
                       </li>
                     </ul>
                   </div>
