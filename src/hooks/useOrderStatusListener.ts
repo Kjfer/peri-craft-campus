@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 
@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
  */
 export function useOrderStatusListener(orderId: string, onError?: (msg: string) => void, successStatus: string = 'completed') {
   const navigate = useNavigate();
+  const hasHandledRef = useRef(false);
 
   useEffect(() => {
     if (!orderId) {
@@ -16,12 +17,18 @@ export function useOrderStatusListener(orderId: string, onError?: (msg: string) 
       return;
     }
     
+    hasHandledRef.current = false;
     console.log('🔄 Setting up realtime listener for order:', orderId);
     console.log('🎯 Listening for status changes to:', successStatus);
     
     // Subscribe to realtime changes with optimized config
     const channel = supabase
-      .channel(`order-status-${orderId}`)
+      .channel(`order-status-${orderId}`, {
+        config: {
+          broadcast: { self: true },
+          presence: { key: orderId }
+        }
+      })
       .on(
         'postgres_changes',
         {
@@ -31,6 +38,11 @@ export function useOrderStatusListener(orderId: string, onError?: (msg: string) 
           filter: `id=eq.${orderId}`,
         },
         (payload) => {
+          if (hasHandledRef.current) {
+            console.log('⏭️ Status change already handled, skipping...');
+            return;
+          }
+
           const oldStatus = payload.old?.payment_status;
           const newStatus = payload.new.payment_status;
           const rejectionReason = payload.new.rejection_reason;
@@ -40,20 +52,19 @@ export function useOrderStatusListener(orderId: string, onError?: (msg: string) 
             oldStatus,
             newStatus, 
             rejectionReason,
-            fullPayload: payload.new,
             timestamp: new Date().toISOString()
           });
           
-          // Reaccionar a cualquier cambio a estado final (completado, rechazado, fallido, error)
-          // No limitamos solo a cambios desde 'pending' para evitar perder eventos
-          
           if (newStatus === successStatus) {
+            hasHandledRef.current = true;
             console.log('✅ Payment successful! Redirecting to success page...');
             sessionStorage.removeItem('checkout_order_id');
             sessionStorage.removeItem('yape_checkout_state');
             sessionStorage.removeItem('yape_receipt_file');
+            sessionStorage.setItem('payment_handled', 'true');
             navigate(`/checkout/success/${orderId}`);
           } else if (newStatus === 'rejected' || newStatus === 'failed' || newStatus === 'error') {
+            hasHandledRef.current = true;
             console.log('❌ Payment rejected/failed! Calling onError callback...', { 
               newStatus, 
               rejectionReason,
@@ -81,11 +92,10 @@ export function useOrderStatusListener(orderId: string, onError?: (msg: string) 
                 errorMessage = `Error: ${rejectionReason}`;
               }
               
+              sessionStorage.setItem('payment_handled', 'true');
               console.log('📝 Executing onError callback with message:', errorMessage);
               onError(errorMessage);
               console.log('✅ onError callback executed successfully');
-            } else {
-              console.error('⚠️ CRITICAL: No onError callback provided but payment was rejected!');
             }
           } else {
             console.log('ℹ️ Status changed but not to terminal state:', newStatus);
