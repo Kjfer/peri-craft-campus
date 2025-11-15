@@ -334,8 +334,14 @@ class CheckoutService {
       // No need to record here - avoid duplicates
 
       // Send notification to n8n webhook for validation (from frontend)
+      // N8n debe responder llamando al webhook: /functions/v1/n8n-payment-callback
+      // con el payload: { orderId, status: 'approved' | 'rejected', rejectionReason?: string }
       try {
         const n8nWebhookUrl = 'https://peri-n8n-1-n8n.j60naj.easypanel.host/webhook/cd9a61b2-d84c-4517-9e0a-13f898148204';
+        
+        // Get Supabase URL for callback
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://idjmabhvzupcdygguqzm.supabase.co';
+        const callbackUrl = `${supabaseUrl}/functions/v1/n8n-payment-callback`;
         
         // Crear parámetros para GET request
         // Asegurar que el monto está redondeado a 1 decimal
@@ -351,7 +357,8 @@ class CheckoutService {
           amount: amountToSend.toString(),
           currency: orderData.currency || 'PEN',
           payment_type: paymentType,
-          payment_method: 'yape_qr'
+          payment_method: 'yape_qr',
+          callback_url: callbackUrl
         });
 
         const fullUrl = `${n8nWebhookUrl}?${n8nParams.toString()}`;

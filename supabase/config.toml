@@ -55,3 +55,6 @@ verify_jwt = false
 
 [functions.record-payment-sheets]
 verify_jwt = false
+
+[functions.n8n-payment-callback]
+verify_jwt = false
