@@ -210,21 +210,6 @@ export default function ClasesEnVivo() {
                               </div>
                               
                               <p className="text-muted-foreground mb-3">{clase.description}</p>
-                              
-                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-                                <div className="flex items-center gap-2">
-                                  <Clock className="h-4 w-4 text-primary" />
-                                  <span>{clase.time} - {clase.duration}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <Users className="h-4 w-4 text-primary" />
-                                  <span>{clase.students} estudiantes</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <CalendarIcon className="h-4 w-4 text-primary" />
-                                  <span>Instructor: {clase.instructor}</span>
-                                </div>
-                              </div>
                             </div>
                           </div>
                         </CardContent>

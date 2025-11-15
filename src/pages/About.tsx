@@ -60,12 +60,6 @@ export default function About() {
       role: "Director e Instructor Principal",
       description: "Diseñador de modas reconocido internacionalmente y con amplia experiencia en la industria.",
       image: "https://idjmabhvzupcdygguqzm.supabase.co/storage/v1/object/sign/images/Captura%20de%20pantalla%202025-09-29%20100039.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV82MGYzZmU5YS1lMWI0LTQ1YzktOTJiYy1jZjU1OTljYWQ0YjIiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJpbWFnZXMvQ2FwdHVyYSBkZSBwYW50YWxsYSAyMDI1LTA5LTI5IDEwMDAzOS5wbmciLCJpYXQiOjE3NTkxNTgwOTMsImV4cCI6MTc5MDY5NDA5M30.xqMPwRVWF5vVgB5HXE6vWtd_hM_fYTIwCtDKBgYQUoY"
-    },
-    {
-      name: "Ana García",
-      role: "Coordinadora de Contenidos",
-      description: "Experta en pedagogía digital y desarrollo de cursos online.",
-      image: "/placeholder.svg"
     }
   ];
 
