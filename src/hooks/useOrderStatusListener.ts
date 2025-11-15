@@ -44,16 +44,11 @@ export function useOrderStatusListener(orderId: string, onError?: (msg: string) 
             timestamp: new Date().toISOString()
           });
           
-          // CRITICAL: Solo reaccionar si el estado anterior era 'pending'
-          // Esto evita responder a cambios de órdenes viejas o estados intermedios
-          if (oldStatus !== 'pending') {
-            console.log('⚠️ Ignorando cambio de estado porque el estado anterior no era pending:', oldStatus);
-            return;
-          }
+          // Reaccionar a cualquier cambio a estado final (completado, rechazado, fallido, error)
+          // No limitamos solo a cambios desde 'pending' para evitar perder eventos
           
           if (newStatus === successStatus) {
             console.log('✅ Payment successful! Redirecting to success page...');
-            // Clear session storage
             sessionStorage.removeItem('checkout_order_id');
             sessionStorage.removeItem('yape_checkout_state');
             sessionStorage.removeItem('yape_receipt_file');
@@ -74,12 +69,19 @@ export function useOrderStatusListener(orderId: string, onError?: (msg: string) 
                 errorMessage = 'Hubo un problema técnico al validar tu pago. Por favor contacta a nuestro equipo de soporte para resolver este inconveniente.';
               } else if (rejectionReason === 'tiempo_expirado') {
                 errorMessage = 'El tiempo para validar tu pago ha expirado. Por favor realiza una nueva compra con un comprobante válido.';
+              } else if (rejectionReason === 'monto_incorrecto') {
+                errorMessage = 'El monto del comprobante no coincide con el monto de la orden.';
+              } else if (rejectionReason === 'comprobante_usado') {
+                errorMessage = 'Este comprobante ya ha sido usado en otra orden.';
+              } else if (rejectionReason === 'comprobante_ilegible') {
+                errorMessage = 'No se puede leer el comprobante. Por favor, sube una imagen más clara.';
+              } else if (rejectionReason === 'metodo_incorrecto') {
+                errorMessage = 'El método de pago usado no coincide con el solicitado.';
               } else if (rejectionReason) {
                 errorMessage = `Error: ${rejectionReason}`;
               }
               
               console.log('📝 Executing onError callback with message:', errorMessage);
-              // Execute callback immediately
               onError(errorMessage);
               console.log('✅ onError callback executed successfully');
             } else {

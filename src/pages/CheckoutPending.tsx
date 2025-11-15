@@ -53,11 +53,14 @@ export default function CheckoutPending() {
 
   // Polling como respaldo en caso de que realtime falle
   useEffect(() => {
-    if (!orderId || !isProcessing) return;
+    if (!orderId) return;
 
     console.log('🔄 Iniciando polling de respaldo para orden:', orderId);
+    let isMounted = true;
     
     const pollInterval = setInterval(async () => {
+      if (!isMounted) return;
+      
       try {
         const { data: order, error } = await supabase
           .from('orders')
@@ -70,25 +73,22 @@ export default function CheckoutPending() {
           return;
         }
 
+        if (!isMounted) return;
+
         console.log('🔍 Polling result:', { 
           status: order.payment_status, 
-          rejection: order.rejection_reason 
+          rejection: order.rejection_reason,
+          timestamp: new Date().toISOString()
         });
-
-        // Solo procesar si la orden actual está en pending
-        // (evita reaccionar a órdenes viejas o estados intermedios)
-        console.log('🔍 Orden en estado:', order.payment_status);
         
         if (order.payment_status === 'completed') {
           console.log('✅ Pago completado detectado por polling!');
-          clearInterval(pollInterval);
           sessionStorage.removeItem('checkout_order_id');
           sessionStorage.removeItem('yape_checkout_state');
           sessionStorage.removeItem('yape_receipt_file');
           navigate(`/checkout/success/${orderId}`);
         } else if (['rejected', 'failed', 'error'].includes(order.payment_status)) {
           console.log('❌ Pago rechazado detectado por polling!');
-          clearInterval(pollInterval);
           
           let errorMessage = 'No pudimos validar tu pago. Por favor revisa tu comprobante o contacta a soporte.';
           
@@ -98,25 +98,34 @@ export default function CheckoutPending() {
             errorMessage = 'Hubo un problema técnico al validar tu pago. Por favor contacta a nuestro equipo de soporte para resolver este inconveniente.';
           } else if (order.rejection_reason === 'tiempo_expirado') {
             errorMessage = 'El tiempo para validar tu pago ha expirado. Por favor realiza una nueva compra con un comprobante válido.';
+          } else if (order.rejection_reason === 'monto_incorrecto') {
+            errorMessage = 'El monto del comprobante no coincide con el monto de la orden.';
+          } else if (order.rejection_reason === 'comprobante_usado') {
+            errorMessage = 'Este comprobante ya ha sido usado en otra orden.';
+          } else if (order.rejection_reason === 'comprobante_ilegible') {
+            errorMessage = 'No se puede leer el comprobante. Por favor, sube una imagen más clara.';
+          } else if (order.rejection_reason === 'metodo_incorrecto') {
+            errorMessage = 'El método de pago usado no coincide con el solicitado.';
           } else if (order.rejection_reason) {
             errorMessage = `Error: ${order.rejection_reason}`;
           }
           
           setErrorMsg(errorMessage);
           setIsProcessing(false);
-        } else if (order.payment_status === 'pending') {
-          console.log('⏳ Orden aún pendiente, continuando polling...');
+        } else {
+          console.log('⏳ Orden aún en estado:', order.payment_status);
         }
       } catch (error) {
         console.error('❌ Error en polling:', error);
       }
-    }, 2000); // Poll cada 2 segundos
+    }, 2000);
 
     return () => {
-      console.log('🛑 Deteniendo polling para orden:', orderId);
+      console.log('🛑 Limpiando polling interval');
+      isMounted = false;
       clearInterval(pollInterval);
     };
-  }, [orderId, navigate, isProcessing]);
+  }, [orderId, navigate]);
 
   // Si no hay orderId después de intentar obtenerlo, redirigir
   useEffect(() => {
