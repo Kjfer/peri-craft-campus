@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Play, Users, Award, Star, ArrowRight, BookOpen, Clock, TrendingUp, Calendar as CalendarIcon } from "lucide-react";
+import { Play, Users, Award, Star, ArrowRight, BookOpen, Clock, TrendingUp, Calendar as CalendarIcon, UserPlus, Mail, LogIn, ShoppingCart } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import googleSheetsService, { type CursoEnVivo } from "@/services/googleSheetsService";
 import type { Course } from "@/types/course";
@@ -197,6 +197,91 @@ export default function Home() {
                   <div className="text-sm text-gray-700 font-semibold">{stat.label}</div>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Cómo Acceder a los Cursos */}
+      <section className="py-20 bg-gradient-to-b from-background to-muted/20">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl lg:text-4xl font-bold mb-4">¿Cómo Acceder a los Cursos Grabados?</h2>
+            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+              Sigue estos simples pasos y comienza tu aprendizaje hoy mismo
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-6xl mx-auto">
+            {/* Paso 1 */}
+            <Card className="relative border-2 border-primary/20 shadow-lg hover:shadow-xl transition-all duration-300">
+              <div className="absolute -top-4 -left-4 w-12 h-12 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold text-xl shadow-lg">
+                1
+              </div>
+              <CardContent className="p-6 pt-8">
+                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <UserPlus className="h-8 w-8 text-primary" />
+                </div>
+                <h3 className="text-xl font-bold text-center mb-3">Crea tu Cuenta</h3>
+                <p className="text-muted-foreground text-center text-sm">
+                  Regístrate en nuestra plataforma de forma gratuita y rápida
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Paso 2 */}
+            <Card className="relative border-2 border-primary/20 shadow-lg hover:shadow-xl transition-all duration-300">
+              <div className="absolute -top-4 -left-4 w-12 h-12 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold text-xl shadow-lg">
+                2
+              </div>
+              <CardContent className="p-6 pt-8">
+                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Mail className="h-8 w-8 text-primary" />
+                </div>
+                <h3 className="text-xl font-bold text-center mb-3">Verifica tu Email</h3>
+                <p className="text-muted-foreground text-center text-sm">
+                  Revisa tu correo y haz clic en el enlace de verificación
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Paso 3 */}
+            <Card className="relative border-2 border-primary/20 shadow-lg hover:shadow-xl transition-all duration-300">
+              <div className="absolute -top-4 -left-4 w-12 h-12 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold text-xl shadow-lg">
+                3
+              </div>
+              <CardContent className="p-6 pt-8">
+                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <LogIn className="h-8 w-8 text-primary" />
+                </div>
+                <h3 className="text-xl font-bold text-center mb-3">Inicia Sesión</h3>
+                <p className="text-muted-foreground text-center text-sm">
+                  Accede a tu cuenta con tu email y contraseña
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Paso 4 */}
+            <Card className="relative border-2 border-primary/20 shadow-lg hover:shadow-xl transition-all duration-300">
+              <div className="absolute -top-4 -left-4 w-12 h-12 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold text-xl shadow-lg">
+                4
+              </div>
+              <CardContent className="p-6 pt-8">
+                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <ShoppingCart className="h-8 w-8 text-primary" />
+                </div>
+                <h3 className="text-xl font-bold text-center mb-3">Compra y Aprende</h3>
+                <p className="text-muted-foreground text-center text-sm">
+                  Adquiere tu curso y accede de por vida a todo el contenido
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="text-center mt-12">
+            <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-6 py-3 rounded-full font-semibold">
+              <Award className="h-5 w-5" />
+              <span>Acceso de por vida a todos tus cursos</span>
             </div>
           </div>
         </div>
