@@ -19,7 +19,9 @@ import {
   BookOpen,
   Clock,
   User,
-  MessageCircle
+  MessageCircle,
+  Award,
+  Mail
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -75,6 +77,7 @@ export default function LessonPlayer() {
   const [videoProgress, setVideoProgress] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [initialVideoTime, setInitialVideoTime] = useState<number>(0);
+  const [allLessonsCompleted, setAllLessonsCompleted] = useState(false);
 
   // Use course access hook
   const { access, loading: accessLoading } = useCourseAccess(courseId || '');
@@ -83,6 +86,7 @@ export default function LessonPlayer() {
     if (courseId && lessonId) {
       fetchCourseAndLesson();
       fetchLessonProgress();
+      checkAllLessonsCompleted();
     }
   }, [courseId, lessonId]);
 
@@ -227,6 +231,9 @@ export default function LessonPlayer() {
     const totalSeconds = currentLesson.duration_minutes * 60;
     updateProgress(totalSeconds, true);
     setVideoProgress(100);
+    
+    // Check if all lessons are now completed
+    checkAllLessonsCompleted();
   };
 
   const navigateToLesson = (lesson: Lesson) => {
@@ -263,6 +270,38 @@ export default function LessonPlayer() {
 
   const canAccessLesson = (lesson: Lesson) => {
     return access?.hasAccess || lesson.is_free;
+  };
+
+  const checkAllLessonsCompleted = async () => {
+    if (!user || !courseId) return;
+
+    try {
+      // Get all lessons for the course
+      const { data: courseLessons, error: lessonsError } = await supabase
+        .from('lessons')
+        .select('id')
+        .eq('course_id', courseId);
+
+      if (lessonsError) throw lessonsError;
+
+      // Get all completed lessons for this user
+      const { data: completedLessons, error: progressError } = await supabase
+        .from('course_progress')
+        .select('lesson_id')
+        .eq('user_id', user.id)
+        .eq('completed', true)
+        .in('lesson_id', courseLessons.map(l => l.id));
+
+      if (progressError) throw progressError;
+
+      // Check if all lessons are completed
+      const allCompleted = courseLessons.length > 0 && 
+                          completedLessons.length === courseLessons.length;
+      
+      setAllLessonsCompleted(allCompleted);
+    } catch (error) {
+      console.error('Error checking lesson completion:', error);
+    }
   };
 
 
@@ -482,6 +521,43 @@ export default function LessonPlayer() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Certificate Message - Shown when all lessons are completed */}
+            {allLessonsCompleted && (
+              <Card className="border-primary bg-primary/5">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center">
+                    <Award className="w-5 h-5 mr-2 text-primary" />
+                    ¡Felicidades! Has completado el curso
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Has completado todas las lecciones de este curso. Si deseas obtener tu certificado, contáctanos:
+                  </p>
+                  <div className="space-y-2">
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => window.open(`https://wa.me/51920545678?text=${encodeURIComponent(`Hola, me gustaría obtener el certificado del curso ${course?.title || ''} que completé`)}`, '_blank')}
+                    >
+                      <MessageCircle className="w-4 h-4 mr-2" />
+                      Consultar por WhatsApp
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => window.location.href = 'mailto:info@instituto.pericompanygroup.com?subject=Solicitud de certificado&body=Hola, me gustaría obtener el certificado del curso que completé.'}
+                    >
+                      <Mail className="w-4 h-4 mr-2" />
+                      Enviar correo
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Course Navigation */}

@@ -35,6 +35,7 @@ interface CourseFormData {
   title: string;
   description: string;
   short_description: string;
+  target_audience?: string;
   categories: string[];
   level: string;
   instructor_name: string;
@@ -60,6 +61,7 @@ function EditCourse() {
     title: "",
     description: "",
     short_description: "",
+    target_audience: "",
     categories: [],
     level: "Principiante",
     instructor_name: "",
@@ -134,6 +136,7 @@ function EditCourse() {
           title: course.title || "",
           description: course.description || "",
           short_description: course.short_description || "",
+          target_audience: course.target_audience || "",
           categories: Array.isArray(course.category) ? course.category : course.category ? [course.category] : [],
           level: course.level || "Principiante",
           instructor_name: course.instructor_name || "",
@@ -196,6 +199,7 @@ function EditCourse() {
           title: formData.title.trim(),
           description: formData.description.trim(),
           short_description: formData.short_description?.trim() || null,
+          target_audience: formData.target_audience?.trim() || null,
           category: formData.categories,
           level: formData.level,
           instructor_name: formData.instructor_name.trim(),
@@ -414,6 +418,17 @@ function EditCourse() {
                   placeholder="Descripción detallada del curso"
                   rows={4}
                   required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="target_audience">¿A quiénes va dirigido?</Label>
+                <Textarea
+                  id="target_audience"
+                  value={formData.target_audience}
+                  onChange={(e) => handleInputChange('target_audience', e.target.value)}
+                  placeholder="Describe a quién está dirigido este curso"
+                  rows={3}
                 />
               </div>
 

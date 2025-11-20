@@ -131,6 +131,7 @@ export type Database = {
           short_description: string | null
           status: Database["public"]["Enums"]["course_status"] | null
           syllabus_pdf_url: string | null
+          target_audience: string | null
           thumbnail_url: string | null
           title: string
           updated_at: string
@@ -152,6 +153,7 @@ export type Database = {
           short_description?: string | null
           status?: Database["public"]["Enums"]["course_status"] | null
           syllabus_pdf_url?: string | null
+          target_audience?: string | null
           thumbnail_url?: string | null
           title: string
           updated_at?: string
@@ -173,6 +175,7 @@ export type Database = {
           short_description?: string | null
           status?: Database["public"]["Enums"]["course_status"] | null
           syllabus_pdf_url?: string | null
+          target_audience?: string | null
           thumbnail_url?: string | null
           title?: string
           updated_at?: string

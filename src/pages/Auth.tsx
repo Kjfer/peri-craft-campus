@@ -173,6 +173,9 @@ export default function Auth() {
               </TabsList>
               
               <TabsContent value="signin">
+                <p className="text-sm text-center text-muted-foreground mb-4">
+                  Inicia sesión para poder acceder a tus cursos online
+                </p>
                 <form onSubmit={handleSignIn} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="signin-email">Email</Label>
