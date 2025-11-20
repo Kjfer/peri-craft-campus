@@ -19,7 +19,9 @@ import {
   Download,
   Users,
   Calendar,
-  ArrowLeft
+  ArrowLeft,
+  Award,
+  MessageCircle
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -265,6 +267,13 @@ export default function CourseDetail() {
                   <p className="text-muted-foreground leading-relaxed">{course.description}</p>
                 </div>
 
+                {course.target_audience && (
+                  <div>
+                    <h3 className="text-xl font-semibold mb-4">¿A quiénes va dirigido?</h3>
+                    <p className="text-muted-foreground leading-relaxed">{course.target_audience}</p>
+                  </div>
+                )}
+
                 {course.what_you_learn && course.what_you_learn.length > 0 && (
                   <div>
                     <h3 className="text-xl font-semibold mb-4">¿Qué aprenderás?</h3>
@@ -462,9 +471,23 @@ export default function CourseDetail() {
 
                   <Separator />
 
-                  <div className="flex items-center justify-center text-sm text-muted-foreground">
-                    <Shield className="w-4 h-4 mr-1" />
-                    Garantía de devolución de 30 días
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-center text-sm font-medium">
+                      <Award className="w-4 h-4 mr-2 text-primary" />
+                      Incluye opción a certificarse
+                    </div>
+                    <p className="text-xs text-muted-foreground text-center">
+                      Para más información, contáctanos vía WhatsApp
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => window.open(`https://wa.me/51920545678?text=${encodeURIComponent(`Hola, me gustaría saber más información para certificarme en el curso ${course.title} que compré online`)}`, '_blank')}
+                    >
+                      <MessageCircle className="w-4 h-4 mr-2" />
+                      Consultar sobre certificación
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
