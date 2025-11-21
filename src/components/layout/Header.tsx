@@ -37,7 +37,6 @@ export function Header() {
     { name: "Planes", href: "/planes" },
     { name: "Nosotros", href: "/nosotros" },
     { name: "Contacto", href: "/contacto" },
-    { name: "Verificar Certificado", href: "/verificar-certificado" },
   ];
 
   return (
