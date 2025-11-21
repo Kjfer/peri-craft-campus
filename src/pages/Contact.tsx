@@ -34,7 +34,7 @@ export default function Contact() {
   };
 
   // Webhook URL para n8n (configurar con tu instancia real)
-  const N8N_WEBHOOK_URL = process.env.REACT_APP_N8N_WEBHOOK_URL || "https://peri-n8n-1-n8n.j60naj.easypanel.host/webhook/contact-form";
+  const N8N_WEBHOOK_URL = import.meta.env.VITE_N8N_WEBHOOK_URL || "https://peri-n8n-1-n8n.j60naj.easypanel.host/webhook/contact-form";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
