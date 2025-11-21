@@ -210,7 +210,7 @@ export default function Contact() {
                 </div>
                 <h3 className="font-bold text-xl mb-3 text-gray-900">Correo</h3>
                 <p className="text-sm text-gray-600 font-semibold mb-3">Soporte por correo</p>
-                <div className="font-bold text-lg mb-3 text-primary bg-white/80 p-3 rounded-lg">{supportEmail}</div>
+                <div className="font-bold text-sm sm:text-base mb-3 text-primary bg-white/80 p-3 rounded-lg break-words">{supportEmail}</div>
                 <div className="text-sm text-gray-600 font-medium">{supportHours}</div>
               </CardContent>
             </Card>

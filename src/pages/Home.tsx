@@ -48,10 +48,8 @@ export default function Home() {
   }
   
   const stats: StatItem[] = [
-    { icon: Users, value: "200+", label: "Estudiantes Activos" },
-    { icon: BookOpen, value: "15+", label: "Cursos Disponibles" },
-    { icon: Award, value: "4.9/5", label: "Calificación Promedio" },
-    { icon: TrendingUp, value: "95%", label: "Tasa de Éxito" }
+    { icon: Users, value: "500+", label: "Estudiantes Activos" },
+    { icon: BookOpen, value: "15+", label: "Cursos Disponibles" }
   ];
 
   useEffect(() => {
@@ -189,7 +187,7 @@ export default function Home() {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 max-w-4xl mx-auto">
+            <div className="grid grid-cols-2 gap-6 max-w-2xl mx-auto">
               {stats.map((stat, index) => (
                 <div key={index} className="bg-white/90 backdrop-blur-sm rounded-lg p-6 shadow-lg border border-white/50">
                   <stat.icon className="h-8 w-8 text-primary mx-auto mb-2" />
