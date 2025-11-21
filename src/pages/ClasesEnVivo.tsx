@@ -123,6 +123,20 @@ export default function ClasesEnVivo() {
               </div>
             </div>
           )}
+
+          {/* Certificación Banner */}
+          <Card className="mt-6 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/30 max-w-2xl mx-auto">
+            <CardContent className="p-6 text-center">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <Badge className="bg-primary text-primary-foreground">
+                  Certificación Incluida
+                </Badge>
+              </div>
+              <p className="text-muted-foreground">
+                Todos nuestros cursos en vivo incluyen certificado. Contáctanos para más información sobre los cursos en vivo.
+              </p>
+            </CardContent>
+          </Card>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
