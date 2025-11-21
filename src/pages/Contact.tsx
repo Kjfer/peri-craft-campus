@@ -150,28 +150,12 @@ export default function Contact() {
 
   const certificationFaqItems = [
     {
-      question: "¿Qué requisitos necesito para solicitar un certificado?",
-      answer: "Para solicitar tu certificado debes haber completado el 100% del curso, incluyendo todas las lecciones y evaluaciones. Además, debes estar al día con el pago del curso."
-    },
-    {
       question: "¿Cómo puedo solicitar mi certificado?",
       answer: "Una vez completado el curso, contáctanos por WhatsApp o correo electrónico para iniciar el proceso de certificación. Nuestro equipo te guiará en los pasos necesarios."
     },
     {
-      question: "¿Cuánto tiempo tarda en llegar mi certificado?",
-      answer: "El proceso de emisión del certificado toma entre 7 a 15 días hábiles desde que completas todos los requisitos y realizas la solicitud formal. Te notificaremos por correo cuando esté listo."
-    },
-    {
-      question: "¿El certificado tiene algún costo adicional?",
-      answer: "El certificado tiene un costo adicional que varía según el tipo de curso. Contáctanos para conocer los detalles específicos del certificado que deseas obtener y las opciones de pago disponibles."
-    },
-    {
       question: "¿El certificado es digital o físico?",
       answer: "Ofrecemos ambas opciones. El certificado digital se entrega en formato PDF de alta calidad. Si prefieres un certificado físico impreso, tiene un costo adicional por impresión y envío."
-    },
-    {
-      question: "¿Qué información incluye el certificado?",
-      answer: "Tu certificado incluye: tu nombre completo, nombre del curso, fecha de finalización, duración del curso en horas, código único de verificación, y la firma del instructor o director académico."
     },
     {
       question: "¿Puedo obtener un certificado si no completé el curso al 100%?",
