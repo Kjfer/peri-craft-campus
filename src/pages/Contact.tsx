@@ -13,8 +13,10 @@ import {
   Clock,
   Send,
   MessageCircle,
-  HeadphonesIcon
+  HeadphonesIcon,
+  Award
 } from "lucide-react";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 export default function Contact() {
   const [formData, setFormData] = useState({
@@ -143,6 +145,37 @@ export default function Contact() {
     {
       question: "¿Ofrecen soporte técnico?",
       answer: "Sí, nuestro equipo de soporte está disponible para ayudarte con cualquier problema técnico que puedas tener."
+    }
+  ];
+
+  const certificationFaqItems = [
+    {
+      question: "¿Qué requisitos necesito para solicitar un certificado?",
+      answer: "Para solicitar tu certificado debes haber completado el 100% del curso, incluyendo todas las lecciones y evaluaciones. Además, debes estar al día con el pago del curso."
+    },
+    {
+      question: "¿Cómo puedo solicitar mi certificado?",
+      answer: "Una vez completado el curso, contáctanos por WhatsApp o correo electrónico para iniciar el proceso de certificación. Nuestro equipo te guiará en los pasos necesarios."
+    },
+    {
+      question: "¿Cuánto tiempo tarda en llegar mi certificado?",
+      answer: "El proceso de emisión del certificado toma entre 7 a 15 días hábiles desde que completas todos los requisitos y realizas la solicitud formal. Te notificaremos por correo cuando esté listo."
+    },
+    {
+      question: "¿El certificado tiene algún costo adicional?",
+      answer: "El certificado tiene un costo adicional que varía según el tipo de curso. Contáctanos para conocer los detalles específicos del certificado que deseas obtener y las opciones de pago disponibles."
+    },
+    {
+      question: "¿El certificado es digital o físico?",
+      answer: "Ofrecemos ambas opciones. El certificado digital se entrega en formato PDF de alta calidad. Si prefieres un certificado físico impreso, tiene un costo adicional por impresión y envío."
+    },
+    {
+      question: "¿Qué información incluye el certificado?",
+      answer: "Tu certificado incluye: tu nombre completo, nombre del curso, fecha de finalización, duración del curso en horas, código único de verificación, y la firma del instructor o director académico."
+    },
+    {
+      question: "¿Puedo obtener un certificado si no completé el curso al 100%?",
+      answer: "No, el certificado solo se emite a estudiantes que hayan completado el 100% del contenido del curso. Esto asegura que el certificado represente un aprendizaje completo y de calidad."
     }
   ];
 
@@ -350,6 +383,62 @@ export default function Contact() {
 
 
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Certification FAQ Section */}
+      <section className="py-16">
+        <div className="container mx-auto px-4">
+          <div className="max-w-5xl mx-auto">
+            <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+              <CardHeader className="text-center">
+                <div className="inline-flex items-center justify-center p-4 bg-primary/10 rounded-full mb-4 mx-auto w-fit">
+                  <Award className="w-8 h-8 text-primary" />
+                </div>
+                <CardTitle className="text-2xl md:text-3xl mb-2">Certificación de Cursos Online</CardTitle>
+                <p className="text-muted-foreground text-lg">
+                  Para certificarte en los cursos online, debes contactarte con nosotros para empezar el proceso de certificación
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="text-center mb-6">
+                  <h3 className="text-xl font-semibold mb-6">Preguntas Frecuentes sobre Certificación</h3>
+                  <Accordion type="single" collapsible className="space-y-4">
+                    {certificationFaqItems.map((item, index) => (
+                      <AccordionItem key={index} value={`cert-item-${index}`} className="bg-card border rounded-lg px-6">
+                        <AccordionTrigger className="text-left font-semibold hover:no-underline">
+                          {item.question}
+                        </AccordionTrigger>
+                        <AccordionContent className="text-muted-foreground">
+                          {item.answer}
+                        </AccordionContent>
+                      </AccordionItem>
+                    ))}
+                  </Accordion>
+                </div>
+
+                <div className="text-center pt-6 border-t">
+                  <p className="text-muted-foreground mb-4">
+                    ¿Listo para solicitar tu certificado? Contáctanos para iniciar el proceso
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                    <Button size="lg" className="bg-green-500 hover:bg-green-600 text-white" asChild>
+                      <a href={whatsappLink} target="_blank" rel="noopener">
+                        <MessageCircle className="mr-2 h-5 w-5" />
+                        Contactar por WhatsApp
+                      </a>
+                    </Button>
+                    <Button size="lg" variant="outline" asChild>
+                      <a href={`mailto:${supportEmail}`}>
+                        <Mail className="mr-2 h-5 w-5" />
+                        Enviar correo
+                      </a>
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </section>

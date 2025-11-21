@@ -19,7 +19,7 @@ import Contact from "./pages/Contact";
 import ClasesEnVivo from "./pages/ClasesEnVivo";
 import LessonPlayer from "./pages/LessonPlayer";
 import LearningPlatform from "./pages/LearningPlatform";
-import VerifyCertificate from "./pages/VerifyCertificate";
+
 import PaymentResult from "./pages/PaymentResult";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentError from "./pages/PaymentError";
@@ -91,7 +91,6 @@ const App = () => (
                       <Route path="/nosotros" element={<About />} />
                       <Route path="/contacto" element={<Contact />} />
                       <Route path="/clases-en-vivo" element={<ClasesEnVivo />} />
-                      <Route path="/verificar-certificado" element={<VerifyCertificate />} />
                       <Route path="/checkout/curso/:courseId" element={<CourseCheckout />} />
                       <Route path="/ordenes" element={<OrderHistory />} />
                       <Route path="/configuracion" element={<AccountSettings />} />
