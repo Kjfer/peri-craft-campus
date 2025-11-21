@@ -102,7 +102,7 @@ export default function Courses() {
       </section>
 
       {/* Filters Section */}
-      <section className="py-8 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-16 z-40 border-b">
+      <section className="py-4 md:py-8 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-16 z-40 border-b">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="relative flex-1">
@@ -141,7 +141,7 @@ export default function Courses() {
       </section>
 
       {/* Courses Grid */}
-      <section className="py-12">
+      <section className="py-6 md:py-12">
         <div className="container mx-auto px-4">
           {filteredCourses.length === 0 ? (
             <div className="text-center py-12">
