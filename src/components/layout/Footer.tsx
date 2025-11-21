@@ -65,11 +65,6 @@ export function Footer() {
                   Nosotros
                 </Link>
               </li>
-              <li>
-                <Link to="/verificar-certificado" className="text-sm text-secondary-foreground/80 hover:text-secondary-foreground transition-smooth">
-                  Verificar Certificado
-                </Link>
-              </li>
             </ul>
           </div>
 
