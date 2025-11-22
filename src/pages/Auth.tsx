@@ -340,15 +340,7 @@ export default function Auth() {
         </Card>
 
         <p className="text-center text-sm text-muted-foreground">
-          Al registrarte, aceptas nuestros{" "}
-          <a href="#" className="text-primary hover:underline">
-            Términos de Servicio
-          </a>{" "}
-          y{" "}
-          <a href="#" className="text-primary hover:underline">
-            Política de Privacidad
-          </a>
-          .
+          No tienes cuenta? registrate con tus datos para acceder a todos los cursos
         </p>
         
         {/* Development Tool */}
