@@ -301,13 +301,6 @@ export default function CourseDetail() {
                   </div>
                 )}
 
-                {course.teaching_method && (
-                  <div>
-                    <h3 className="text-xl font-semibold mb-4">Método de Enseñanza</h3>
-                    <p className="text-muted-foreground leading-relaxed">{course.teaching_method}</p>
-                  </div>
-                )}
-
                 {course.what_you_learn && course.what_you_learn.length > 0 && (
                   <div>
                     <h3 className="text-xl font-semibold mb-4">¿Qué aprenderás?</h3>
@@ -319,6 +312,13 @@ export default function CourseDetail() {
                         </li>
                       ))}
                     </ul>
+                  </div>
+                )}
+
+                {course.teaching_method && (
+                  <div>
+                    <h3 className="text-xl font-semibold mb-4">Método de Enseñanza</h3>
+                    <p className="text-muted-foreground leading-relaxed">{course.teaching_method}</p>
                   </div>
                 )}
               </TabsContent>
