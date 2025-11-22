@@ -3,7 +3,8 @@ export interface Course {
   title: string;
   description: string;
   short_description?: string;
-  target_audience?: string;
+  target_audience?: string[];
+  teaching_method?: string;
   category: string[];
   level: string;
   instructor_name: string;
