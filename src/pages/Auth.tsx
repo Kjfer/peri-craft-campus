@@ -340,7 +340,7 @@ export default function Auth() {
         </Card>
 
         <p className="text-center text-sm text-muted-foreground">
-          No tienes cuenta? registrate con tus datos para acceder a todos los cursos
+          ¿Aún no tienes cuenta? Regístrate con tus datos para acceder a todos los cursos online.
         </p>
         
         {/* Development Tool */}
