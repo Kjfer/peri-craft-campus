@@ -35,7 +35,10 @@ interface CourseFormData {
   title: string;
   description: string;
   short_description: string;
-  target_audience?: string;
+  target_audience?: string[];
+  teaching_method?: string;
+  what_you_learn?: string[];
+  requirements?: string[];
   categories: string[];
   level: string;
   instructor_name: string;
@@ -61,7 +64,10 @@ function EditCourse() {
     title: "",
     description: "",
     short_description: "",
-    target_audience: "",
+    target_audience: [],
+    teaching_method: "",
+    what_you_learn: [],
+    requirements: [],
     categories: [],
     level: "Principiante",
     instructor_name: "",
@@ -136,7 +142,10 @@ function EditCourse() {
           title: course.title || "",
           description: course.description || "",
           short_description: course.short_description || "",
-          target_audience: course.target_audience || "",
+          target_audience: Array.isArray(course.target_audience) ? course.target_audience : course.target_audience ? [course.target_audience] : [],
+          teaching_method: course.teaching_method || "",
+          what_you_learn: Array.isArray(course.what_you_learn) ? course.what_you_learn : [],
+          requirements: Array.isArray(course.requirements) ? course.requirements : [],
           categories: Array.isArray(course.category) ? course.category : course.category ? [course.category] : [],
           level: course.level || "Principiante",
           instructor_name: course.instructor_name || "",
@@ -199,7 +208,10 @@ function EditCourse() {
           title: formData.title.trim(),
           description: formData.description.trim(),
           short_description: formData.short_description?.trim() || null,
-          target_audience: formData.target_audience?.trim() || null,
+          target_audience: formData.target_audience || null,
+          teaching_method: formData.teaching_method?.trim() || null,
+          what_you_learn: formData.what_you_learn || null,
+          requirements: formData.requirements || null,
           category: formData.categories,
           level: formData.level,
           instructor_name: formData.instructor_name.trim(),
@@ -422,14 +434,56 @@ function EditCourse() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="target_audience">¿A quiénes va dirigido?</Label>
+                <Label htmlFor="target_audience">¿A quiénes va dirigido? (una línea por ítem)</Label>
                 <Textarea
                   id="target_audience"
-                  value={formData.target_audience}
-                  onChange={(e) => handleInputChange('target_audience', e.target.value)}
-                  placeholder="Describe a quién está dirigido este curso"
+                  value={formData.target_audience?.join('\n') || ''}
+                  onChange={(e) => handleInputChange('target_audience', e.target.value.split('\n').filter(line => line.trim()))}
+                  placeholder="Escribe cada ítem en una nueva línea&#10;Ejemplo:&#10;Estudiantes de moda&#10;Diseñadores principiantes&#10;Profesionales del textil"
+                  rows={4}
+                />
+                <p className="text-sm text-muted-foreground">
+                  Cada línea se mostrará como un ítem con viñeta
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="teaching_method">Método de Enseñanza</Label>
+                <Textarea
+                  id="teaching_method"
+                  value={formData.teaching_method}
+                  onChange={(e) => handleInputChange('teaching_method', e.target.value)}
+                  placeholder="Describe el método de enseñanza utilizado en este curso"
                   rows={3}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="what_you_learn">Objetivos (¿Qué aprenderás?) - una línea por objetivo</Label>
+                <Textarea
+                  id="what_you_learn"
+                  value={formData.what_you_learn?.join('\n') || ''}
+                  onChange={(e) => handleInputChange('what_you_learn', e.target.value.split('\n').filter(line => line.trim()))}
+                  placeholder="Escribe cada objetivo en una nueva línea&#10;Ejemplo:&#10;Dominar las técnicas de patronaje&#10;Crear diseños profesionales&#10;Aplicar conceptos avanzados"
+                  rows={5}
+                />
+                <p className="text-sm text-muted-foreground">
+                  Cada línea se mostrará como un objetivo con viñeta
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="requirements">Requisitos (una línea por requisito)</Label>
+                <Textarea
+                  id="requirements"
+                  value={formData.requirements?.join('\n') || ''}
+                  onChange={(e) => handleInputChange('requirements', e.target.value.split('\n').filter(line => line.trim()))}
+                  placeholder="Escribe cada requisito en una nueva línea&#10;Ejemplo:&#10;Conocimientos básicos de costura&#10;Computadora con internet&#10;Ganas de aprender"
+                  rows={4}
+                />
+                <p className="text-sm text-muted-foreground">
+                  Cada línea se mostrará como un requisito con viñeta
+                </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

@@ -156,12 +156,28 @@ export default function CourseDetail() {
   };
 
   const handleDownloadSyllabus = () => {
-    if (course && modules.length > 0) {
-      generateSyllabusPDF(course, modules);
-      toast({
-        title: "Descarga iniciada",
-        description: "El syllabus se está descargando como PDF",
-      });
+    if (course) {
+      if (course.syllabus_pdf_url) {
+        // Si hay un PDF en el enlace, descargarlo directamente
+        window.open(course.syllabus_pdf_url, '_blank');
+        toast({
+          title: "Descarga iniciada",
+          description: "El syllabus se está descargando",
+        });
+      } else if (modules.length > 0) {
+        // Si no hay PDF en el enlace, generar uno
+        generateSyllabusPDF(course, modules);
+        toast({
+          title: "Descarga iniciada",
+          description: "El syllabus se está descargando como PDF",
+        });
+      } else {
+        toast({
+          title: "Sin contenido",
+          description: "No hay syllabus disponible para descargar",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -267,10 +283,28 @@ export default function CourseDetail() {
                   <p className="text-muted-foreground leading-relaxed">{course.description}</p>
                 </div>
 
-                {course.target_audience && (
+                {course.target_audience && (Array.isArray(course.target_audience) ? course.target_audience.length > 0 : true) && (
                   <div>
                     <h3 className="text-xl font-semibold mb-4">¿A quiénes va dirigido?</h3>
-                    <p className="text-muted-foreground leading-relaxed">{course.target_audience}</p>
+                    {Array.isArray(course.target_audience) ? (
+                      <ul className="space-y-2">
+                        {course.target_audience.map((item, index) => (
+                          <li key={index} className="flex items-start">
+                            <CheckCircle className="w-5 h-5 text-blue-500 mr-3 mt-0.5 flex-shrink-0" />
+                            <span className="text-muted-foreground">{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-muted-foreground leading-relaxed">{course.target_audience}</p>
+                    )}
+                  </div>
+                )}
+
+                {course.teaching_method && (
+                  <div>
+                    <h3 className="text-xl font-semibold mb-4">Método de Enseñanza</h3>
+                    <p className="text-muted-foreground leading-relaxed">{course.teaching_method}</p>
                   </div>
                 )}
 
