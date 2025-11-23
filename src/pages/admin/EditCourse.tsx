@@ -201,40 +201,66 @@ function EditCourse() {
     try {
       setSaving(true);
       
-      // Actualizar datos básicos del curso
-      const { error: courseError } = await supabase
-        .from('courses')
-        .update({
-          title: formData.title.trim(),
-          description: formData.description.trim(),
-          short_description: formData.short_description?.trim() || null,
-          target_audience: formData.target_audience || null,
-          teaching_method: formData.teaching_method?.trim() || null,
-          what_you_learn: formData.what_you_learn || null,
-          requirements: formData.requirements || null,
-          category: formData.categories,
-          level: formData.level,
-          instructor_name: formData.instructor_name.trim(),
-          duration_hours: formData.duration_hours,
-          price: formData.price,
-          discounted_price: formData.discounted_price || null,
-          thumbnail_url: formData.thumbnail_url?.trim() || null,
-          syllabus_pdf_url: formData.syllabus_pdf_url?.trim() || null,
-          featured: formData.featured,
-          status: formData.status
-        })
-        .eq('id', id!);
+      // Preparar datos del curso incluyendo módulos
+      const courseUpdateData = {
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        short_description: formData.short_description?.trim() || null,
+        target_audience: formData.target_audience || null,
+        teaching_method: formData.teaching_method?.trim() || null,
+        what_you_learn: formData.what_you_learn || null,
+        requirements: formData.requirements || null,
+        category: formData.categories,
+        level: formData.level,
+        instructor_name: formData.instructor_name.trim(),
+        duration_hours: formData.duration_hours,
+        price: formData.price,
+        discounted_price: formData.discounted_price || null,
+        thumbnail_url: formData.thumbnail_url?.trim() || null,
+        syllabus_pdf_url: formData.syllabus_pdf_url?.trim() || null,
+        featured: formData.featured,
+        status: formData.status,
+        modules: formData.modules.map((module, index) => ({
+          title: module.title,
+          description: module.description,
+          order_number: index + 1,
+          lessons: module.lessons.map((lesson, lessonIndex) => ({
+            title: lesson.title,
+            description: lesson.description,
+            content: lesson.content,
+            video_url: lesson.video_url,
+            duration_minutes: lesson.duration_minutes,
+            order_number: lessonIndex + 1,
+            is_free: lesson.is_free
+          }))
+        }))
+      };
       
-      if (courseError) {
-        throw courseError;
+      // Obtener el token de autenticación
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('No hay sesión activa');
       }
-      
-      // Actualizar módulos y lecciones (implementación básica)
-      // Por ahora solo actualizamos el curso principal
+
+      // Actualizar curso usando la API del backend
+      const response = await fetch(`/api/courses/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify(courseUpdateData)
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Error al actualizar el curso');
+      }
       
       toast({
         title: "Éxito",
-        description: "Curso actualizado correctamente"
+        description: "Curso actualizado correctamente con todos sus módulos y lecciones"
       });
       navigate("/admin/cursos");
     } catch (error: unknown) {
