@@ -9,6 +9,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { ArrowLeft, Save, Plus, Trash2, ChevronDown, ChevronUp, GripVertical } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -76,10 +86,10 @@ interface SortableModuleCardProps {
   expandedModules: { [key: string]: boolean };
   toggleModuleExpansion: (index: string) => void;
   updateModule: (index: number, field: keyof Module, value: string) => void;
-  removeModule: (index: number) => void;
+  confirmRemoveModule: (index: number) => void;
   addLesson: (moduleIndex: number) => void;
   updateLesson: (moduleIndex: number, lessonIndex: number, field: keyof Lesson, value: string | number | boolean) => void;
-  removeLesson: (moduleIndex: number, lessonIndex: number) => void;
+  confirmRemoveLesson: (moduleIndex: number, lessonIndex: number) => void;
   handleLessonDragEnd: (moduleIndex: number) => (event: DragEndEvent) => void;
   sensors: ReturnType<typeof useSensors>;
 }
@@ -90,10 +100,10 @@ function SortableModuleCard({
   expandedModules,
   toggleModuleExpansion,
   updateModule,
-  removeModule,
+  confirmRemoveModule,
   addLesson,
   updateLesson,
-  removeLesson,
+  confirmRemoveLesson,
   handleLessonDragEnd,
   sensors
 }: SortableModuleCardProps) {
@@ -156,7 +166,7 @@ function SortableModuleCard({
             <Button
               type="button"
               variant="outline"
-              onClick={() => removeModule(moduleIndex)}
+              onClick={() => confirmRemoveModule(moduleIndex)}
             >
               <Trash2 className="h-4 w-4" />
             </Button>
@@ -201,7 +211,7 @@ function SortableModuleCard({
                         moduleIndex={moduleIndex}
                         lessonIndex={lessonIndex}
                         updateLesson={updateLesson}
-                        removeLesson={removeLesson}
+                        confirmRemoveLesson={confirmRemoveLesson}
                       />
                     ))}
                   </div>
@@ -221,7 +231,7 @@ interface SortableLessonCardProps {
   moduleIndex: number;
   lessonIndex: number;
   updateLesson: (moduleIndex: number, lessonIndex: number, field: keyof Lesson, value: string | number | boolean) => void;
-  removeLesson: (moduleIndex: number, lessonIndex: number) => void;
+  confirmRemoveLesson: (moduleIndex: number, lessonIndex: number) => void;
 }
 
 function SortableLessonCard({
@@ -229,7 +239,7 @@ function SortableLessonCard({
   moduleIndex,
   lessonIndex,
   updateLesson,
-  removeLesson
+  confirmRemoveLesson
 }: SortableLessonCardProps) {
   const {
     attributes,
@@ -322,7 +332,7 @@ function SortableLessonCard({
               <Button
                 type="button"
                 variant="destructive"
-                onClick={() => removeLesson(moduleIndex, lessonIndex)}
+                onClick={() => confirmRemoveLesson(moduleIndex, lessonIndex)}
               >
                 <Trash2 className="h-4 w-4 mr-2" />
                 Eliminar Lección
@@ -343,6 +353,12 @@ function EditCourse() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [expandedModules, setExpandedModules] = useState<{ [key: string]: boolean }>({});
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    type: 'module' | 'lesson';
+    moduleIndex?: number;
+    lessonIndex?: number;
+    title?: string;
+  } | null>(null);
   const [formData, setFormData] = useState<CourseFormData>({
     title: "",
     description: "",
@@ -587,11 +603,21 @@ function EditCourse() {
     }));
   };
 
+  const confirmRemoveModule = (index: number) => {
+    const moduleName = formData.modules[index]?.title || "este módulo";
+    setDeleteConfirmation({
+      type: 'module',
+      moduleIndex: index,
+      title: moduleName
+    });
+  };
+
   const removeModule = (index: number) => {
     setFormData(prev => ({
       ...prev,
       modules: prev.modules.filter((_, i) => i !== index)
     }));
+    setDeleteConfirmation(null);
   };
 
   const addLesson = (moduleIndex: number) => {
@@ -629,6 +655,16 @@ function EditCourse() {
     }));
   };
 
+  const confirmRemoveLesson = (moduleIndex: number, lessonIndex: number) => {
+    const lessonTitle = formData.modules[moduleIndex]?.lessons[lessonIndex]?.title || "esta lección";
+    setDeleteConfirmation({
+      type: 'lesson',
+      moduleIndex,
+      lessonIndex,
+      title: lessonTitle
+    });
+  };
+
   const removeLesson = (moduleIndex: number, lessonIndex: number) => {
     setFormData(prev => ({
       ...prev,
@@ -638,6 +674,19 @@ function EditCourse() {
           : module
       )
     }));
+    setDeleteConfirmation(null);
+  };
+
+  const handleConfirmDelete = () => {
+    if (!deleteConfirmation) return;
+    
+    if (deleteConfirmation.type === 'module' && deleteConfirmation.moduleIndex !== undefined) {
+      removeModule(deleteConfirmation.moduleIndex);
+    } else if (deleteConfirmation.type === 'lesson' && 
+               deleteConfirmation.moduleIndex !== undefined && 
+               deleteConfirmation.lessonIndex !== undefined) {
+      removeLesson(deleteConfirmation.moduleIndex, deleteConfirmation.lessonIndex);
+    }
   };
 
   const toggleModuleExpansion = (index: string) => {
@@ -1010,10 +1059,10 @@ function EditCourse() {
                         expandedModules={expandedModules}
                         toggleModuleExpansion={toggleModuleExpansion}
                         updateModule={updateModule}
-                        removeModule={removeModule}
+                        confirmRemoveModule={confirmRemoveModule}
                         addLesson={addLesson}
                         updateLesson={updateLesson}
-                        removeLesson={removeLesson}
+                        confirmRemoveLesson={confirmRemoveLesson}
                         handleLessonDragEnd={handleLessonDragEnd}
                         sensors={sensors}
                       />
@@ -1077,6 +1126,36 @@ function EditCourse() {
             </Button>
           </div>
         </form>
+
+        <AlertDialog open={!!deleteConfirmation} onOpenChange={() => setDeleteConfirmation(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+              <AlertDialogDescription>
+                {deleteConfirmation?.type === 'module' ? (
+                  <>
+                    Estás a punto de eliminar el módulo <strong>"{deleteConfirmation.title}"</strong> y todas sus lecciones.
+                    Esta acción no se puede deshacer.
+                  </>
+                ) : (
+                  <>
+                    Estás a punto de eliminar la lección <strong>"{deleteConfirmation?.title}"</strong>.
+                    Esta acción no se puede deshacer.
+                  </>
+                )}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleConfirmDelete} 
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Eliminar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </AdminLayout>
   );
