@@ -23,7 +23,6 @@ import { ArrowLeft, Save, Plus, Trash2, ChevronDown, ChevronUp, GripVertical } f
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { VideoUpload } from "@/components/admin/VideoUpload";
-import { API_CONFIG } from "@/lib/api";
 import {
   DndContext,
   closestCenter,
@@ -501,61 +500,98 @@ function EditCourse() {
     try {
       setSaving(true);
       
-      // Preparar datos del curso incluyendo módulos
-      const courseUpdateData = {
-        title: formData.title.trim(),
-        description: formData.description.trim(),
-        short_description: formData.short_description?.trim() || null,
-        target_audience: formData.target_audience || null,
-        teaching_method: formData.teaching_method?.trim() || null,
-        what_you_learn: formData.what_you_learn || null,
-        requirements: formData.requirements || null,
-        category: formData.categories,
-        level: formData.level,
-        instructor_name: formData.instructor_name.trim(),
-        duration_hours: formData.duration_hours,
-        price: formData.price,
-        discounted_price: formData.discounted_price || null,
-        thumbnail_url: formData.thumbnail_url?.trim() || null,
-        syllabus_pdf_url: formData.syllabus_pdf_url?.trim() || null,
-        featured: formData.featured,
-        status: formData.status,
-        modules: formData.modules.map((module, index) => ({
-          title: module.title,
-          description: module.description,
-          order_number: index + 1,
-          lessons: module.lessons.map((lesson, lessonIndex) => ({
-            title: lesson.title,
-            description: lesson.description,
-            content: lesson.content,
-            video_url: lesson.video_url,
-            duration_minutes: lesson.duration_minutes,
-            order_number: lessonIndex + 1,
-            is_free: lesson.is_free
-          }))
-        }))
-      };
-      
-      // Obtener el token de autenticación
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error('No hay sesión activa');
+      // 1. Actualizar el curso
+      const { error: courseError } = await supabase
+        .from('courses')
+        .update({
+          title: formData.title.trim(),
+          description: formData.description.trim(),
+          short_description: formData.short_description?.trim() || null,
+          target_audience: formData.target_audience || null,
+          teaching_method: formData.teaching_method?.trim() || null,
+          what_you_learn: formData.what_you_learn || null,
+          requirements: formData.requirements || null,
+          category: formData.categories,
+          level: formData.level,
+          instructor_name: formData.instructor_name.trim(),
+          duration_hours: formData.duration_hours,
+          price: formData.price,
+          discounted_price: formData.discounted_price || null,
+          thumbnail_url: formData.thumbnail_url?.trim() || null,
+          syllabus_pdf_url: formData.syllabus_pdf_url?.trim() || null,
+          featured: formData.featured,
+          status: formData.status,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id);
+
+      if (courseError) {
+        throw new Error(courseError.message);
       }
 
-      // Actualizar curso usando la API del backend
-      const response = await fetch(`${API_CONFIG.BASE_URL}/courses/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify(courseUpdateData)
-      });
+      // 2. Obtener módulos existentes para eliminarlos
+      const { data: existingModules } = await supabase
+        .from('modules')
+        .select('id')
+        .eq('course_id', id);
 
-      const result = await response.json();
+      // 3. Eliminar lecciones de los módulos existentes
+      if (existingModules && existingModules.length > 0) {
+        const moduleIds = existingModules.map(m => m.id);
+        await supabase
+          .from('lessons')
+          .delete()
+          .in('module_id', moduleIds);
+      }
 
-      if (!response.ok) {
-        throw new Error(result.error || 'Error al actualizar el curso');
+      // 4. Eliminar módulos existentes
+      await supabase
+        .from('modules')
+        .delete()
+        .eq('course_id', id);
+
+      // 5. Crear nuevos módulos y lecciones
+      for (let i = 0; i < formData.modules.length; i++) {
+        const module = formData.modules[i];
+        
+        // Crear módulo
+        const { data: moduleData, error: moduleError } = await supabase
+          .from('modules')
+          .insert({
+            course_id: id,
+            title: module.title,
+            description: module.description || '',
+            order_number: i + 1
+          })
+          .select()
+          .single();
+
+        if (moduleError) {
+          throw new Error(`Error al crear módulo: ${moduleError.message}`);
+        }
+
+        // Crear lecciones para este módulo
+        if (module.lessons && module.lessons.length > 0) {
+          const lessonsToInsert = module.lessons.map((lesson, j) => ({
+            course_id: id,
+            module_id: moduleData.id,
+            title: lesson.title,
+            description: lesson.description || '',
+            content: lesson.content || '',
+            video_url: lesson.video_url || '',
+            duration_minutes: lesson.duration_minutes || 0,
+            order_number: j + 1,
+            is_free: lesson.is_free || false
+          }));
+
+          const { error: lessonsError } = await supabase
+            .from('lessons')
+            .insert(lessonsToInsert);
+
+          if (lessonsError) {
+            throw new Error(`Error al crear lecciones: ${lessonsError.message}`);
+          }
+        }
       }
       
       toast({
