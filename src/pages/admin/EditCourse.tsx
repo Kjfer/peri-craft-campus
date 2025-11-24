@@ -23,6 +23,7 @@ import { ArrowLeft, Save, Plus, Trash2, ChevronDown, ChevronUp, GripVertical } f
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { VideoUpload } from "@/components/admin/VideoUpload";
+import { API_CONFIG } from "@/lib/api";
 import {
   DndContext,
   closestCenter,
@@ -542,7 +543,7 @@ function EditCourse() {
       }
 
       // Actualizar curso usando la API del backend
-      const response = await fetch(`/api/courses/${id}`, {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/courses/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
