@@ -140,23 +140,16 @@ export class SecureEnrollmentService {
         return true; // Free course
       }
 
-      // Check if user has purchased the course
-      const { data: order } = await supabase
-        .from('orders')
-        .select(`
-          id,
-          payment_status,
-          order_items (
-            course_id
-          )
-        `)
+      // Check if user already has an enrollment (created by external payment sync)
+      const { data: enrollment } = await supabase
+        .from('enrollments')
+        .select('id')
         .eq('user_id', userId)
-        .eq('payment_status', 'completed')
-        .eq('order_items.course_id', courseId)
-        .limit(1);
+        .eq('course_id', courseId)
+        .maybeSingle();
 
-      if (order && order.length > 0) {
-        return true; // User has purchased the course
+      if (enrollment) {
+        return true; // User already enrolled
       }
 
       // Check if user has active subscription that includes this course

@@ -7,9 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Save, Settings as SettingsIcon, Mail, CreditCard, Shield, Webhook } from "lucide-react";
+import { Save, Settings as SettingsIcon, Mail, Shield, Webhook, Video } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import WebhookSettings from './WebhookSettings';
+import { supabase } from "@/integrations/supabase/client";
 
 interface PlatformSettings {
   site_name: string;
@@ -46,8 +47,66 @@ function Settings() {
     }
   });
   
+  const [tutorialVideoUrl, setTutorialVideoUrl] = useState("");
+  const [loadingVideo, setLoadingVideo] = useState(true);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    fetchTutorialVideoUrl();
+  }, []);
+
+  const fetchTutorialVideoUrl = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('admin_settings')
+        .select('setting_value')
+        .eq('setting_key', 'tutorial_video_url')
+        .maybeSingle();
+
+      if (error) throw error;
+      
+      if (data?.setting_value) {
+        setTutorialVideoUrl(data.setting_value);
+      }
+    } catch (error) {
+      console.error('Error fetching video URL:', error);
+    } finally {
+      setLoadingVideo(false);
+    }
+  };
+
+  const saveTutorialVideoUrl = async () => {
+    try {
+      setSaving(true);
+      
+      const { error } = await supabase
+        .from('admin_settings')
+        .upsert({
+          setting_key: 'tutorial_video_url',
+          setting_value: tutorialVideoUrl,
+          description: 'URL del video tutorial de YouTube para la página de inicio'
+        }, {
+          onConflict: 'setting_key'
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Video guardado",
+        description: "El enlace del video tutorial se ha actualizado correctamente"
+      });
+    } catch (error) {
+      console.error('Error saving video URL:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo guardar el enlace del video",
+        variant: "destructive"
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleSave = async (section: string) => {
     try {
@@ -105,13 +164,13 @@ function Settings() {
               <SettingsIcon className="h-4 w-4 mr-2" />
               General
             </TabsTrigger>
+            <TabsTrigger value="tutorial">
+              <Video className="h-4 w-4 mr-2" />
+              Tutorial
+            </TabsTrigger>
             <TabsTrigger value="email">
               <Mail className="h-4 w-4 mr-2" />
               Email
-            </TabsTrigger>
-            <TabsTrigger value="payments">
-              <CreditCard className="h-4 w-4 mr-2" />
-              Pagos
             </TabsTrigger>
             <TabsTrigger value="webhooks">
               <Webhook className="h-4 w-4 mr-2" />
@@ -178,6 +237,55 @@ function Settings() {
             </Card>
           </TabsContent>
 
+          <TabsContent value="tutorial" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Video Tutorial</CardTitle>
+                <CardDescription>
+                  Configura el video de YouTube que se mostrará en la página de inicio explicando cómo comprar y acceder a los cursos
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label htmlFor="tutorial_video_url">URL del Video de YouTube</Label>
+                  <Input
+                    id="tutorial_video_url"
+                    type="url"
+                    placeholder="https://www.youtube.com/watch?v=..."
+                    value={tutorialVideoUrl}
+                    onChange={(e) => setTutorialVideoUrl(e.target.value)}
+                    disabled={loadingVideo}
+                  />
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Ingresa la URL completa del video de YouTube. Puede ser en formato: youtube.com/watch?v=... o youtu.be/...
+                  </p>
+                </div>
+
+                {tutorialVideoUrl && (
+                  <div className="border rounded-lg overflow-hidden">
+                    <div className="aspect-video bg-gray-100">
+                      <iframe
+                        src={tutorialVideoUrl.includes('youtube.com') || tutorialVideoUrl.includes('youtu.be') 
+                          ? `https://www.youtube.com/embed/${tutorialVideoUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/)?.[1] || ''}`
+                          : tutorialVideoUrl
+                        }
+                        title="Vista previa del video tutorial"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        className="w-full h-full"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <Button onClick={saveTutorialVideoUrl} disabled={saving || loadingVideo}>
+                  <Save className="h-4 w-4 mr-2" />
+                  {saving ? 'Guardando...' : 'Guardar Video'}
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           <TabsContent value="email" className="space-y-4">
             <Card>
               <CardHeader>
@@ -208,62 +316,6 @@ function Settings() {
                 </div>
 
                 <Button onClick={() => handleSave('email')} disabled={saving}>
-                  <Save className="h-4 w-4 mr-2" />
-                  {saving ? 'Guardando...' : 'Guardar Configuración'}
-                </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="payments" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Métodos de Pago</CardTitle>
-                <CardDescription>
-                  Configura los métodos de pago disponibles
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>PayPal</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Permitir pagos con PayPal
-                    </p>
-                  </div>
-                  <Switch
-                    checked={settings.payment_methods.paypal}
-                    onCheckedChange={(checked) => updatePaymentMethod('paypal', checked)}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>MercadoPago</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Permitir pagos con MercadoPago
-                    </p>
-                  </div>
-                  <Switch
-                    checked={settings.payment_methods.mercadopago}
-                    onCheckedChange={(checked) => updatePaymentMethod('mercadopago', checked)}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>Stripe</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Permitir pagos con Stripe
-                    </p>
-                  </div>
-                  <Switch
-                    checked={settings.payment_methods.stripe}
-                    onCheckedChange={(checked) => updatePaymentMethod('stripe', checked)}
-                  />
-                </div>
-
-                <Button onClick={() => handleSave('payments')} disabled={saving}>
                   <Save className="h-4 w-4 mr-2" />
                   {saving ? 'Guardando...' : 'Guardar Configuración'}
                 </Button>

@@ -3,13 +3,90 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Play, Users, Award, Star, ArrowRight, BookOpen, Clock, TrendingUp, Calendar as CalendarIcon, UserPlus, Mail, LogIn, ShoppingCart } from "lucide-react";
+import { Play, Users, Award, Star, ArrowRight, BookOpen, Clock, TrendingUp, Calendar as CalendarIcon, ShoppingCart } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import googleSheetsService, { type CursoEnVivo } from "@/services/googleSheetsService";
 import type { Course } from "@/types/course";
 import heroImage from "@/assets/hero-banner.jpg";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+
+// Component for Video Tutorial
+const VideoTutorial = () => {
+  const [videoUrl, setVideoUrl] = useState<string>("");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchVideoUrl = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('admin_settings')
+          .select('setting_value')
+          .eq('setting_key', 'tutorial_video_url')
+          .maybeSingle();
+
+        if (error) throw error;
+        
+        if (data?.setting_value) {
+          setVideoUrl(data.setting_value);
+        }
+      } catch (error) {
+        console.error('Error fetching video URL:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchVideoUrl();
+  }, []);
+
+  const getYouTubeEmbedUrl = (url: string) => {
+    if (!url) return "";
+    
+    // Extract video ID from various YouTube URL formats
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    const videoId = (match && match[2].length === 11) ? match[2] : null;
+    
+    return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
+  };
+
+  if (loading) {
+    return (
+      <Card className="bg-gray-100 animate-pulse">
+        <div className="aspect-video w-full"></div>
+      </Card>
+    );
+  }
+
+  if (!videoUrl) {
+    return (
+      <Card className="border-2 border-dashed">
+        <CardContent className="p-12 text-center">
+          <Play className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-xl font-semibold mb-2">Video Tutorial</h3>
+          <p className="text-muted-foreground">
+            El video tutorial estará disponible próximamente
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="overflow-hidden shadow-xl">
+      <div className="aspect-video w-full">
+        <iframe
+          src={getYouTubeEmbedUrl(videoUrl)}
+          title="Tutorial: Cómo comprar y acceder a los cursos"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+          className="w-full h-full"
+        />
+      </div>
+    </Card>
+  );
+};
 
 // Helper functions para el estado y visualización de cursos
 const getCursoStatus = (fecha: Date): 'futuro' | 'reciente' | 'pasado' => {
@@ -204,76 +281,15 @@ export default function Home() {
       <section className="py-20 bg-gradient-to-b from-background to-muted/20">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
-            <h2 className="text-3xl lg:text-4xl font-bold mb-4">¿Cómo Acceder a los Cursos Grabados?</h2>
+            <h2 className="text-3xl lg:text-4xl font-bold mb-4">¿Cómo Comprar y Acceder a los Cursos?</h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Sigue estos simples pasos y comienza tu aprendizaje hoy mismo
+              Mira este video tutorial con las instrucciones paso a paso
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-6xl mx-auto">
-            {/* Paso 1 */}
-            <Card className="relative border-2 border-primary/20 shadow-lg hover:shadow-xl transition-all duration-300">
-              <div className="absolute -top-4 -left-4 w-12 h-12 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold text-xl shadow-lg">
-                1
-              </div>
-              <CardContent className="p-6 pt-8">
-                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <UserPlus className="h-8 w-8 text-primary" />
-                </div>
-                <h3 className="text-xl font-bold text-center mb-3">Crea tu Cuenta</h3>
-                <p className="text-muted-foreground text-center text-sm">
-                  Regístrate en nuestra plataforma de forma gratuita y rápida
-                </p>
-              </CardContent>
-            </Card>
-
-            {/* Paso 2 */}
-            <Card className="relative border-2 border-primary/20 shadow-lg hover:shadow-xl transition-all duration-300">
-              <div className="absolute -top-4 -left-4 w-12 h-12 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold text-xl shadow-lg">
-                2
-              </div>
-              <CardContent className="p-6 pt-8">
-                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Mail className="h-8 w-8 text-primary" />
-                </div>
-                <h3 className="text-xl font-bold text-center mb-3">Verifica tu Email</h3>
-                <p className="text-muted-foreground text-center text-sm">
-                  Revisa tu correo y haz clic en el enlace de verificación
-                </p>
-              </CardContent>
-            </Card>
-
-            {/* Paso 3 */}
-            <Card className="relative border-2 border-primary/20 shadow-lg hover:shadow-xl transition-all duration-300">
-              <div className="absolute -top-4 -left-4 w-12 h-12 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold text-xl shadow-lg">
-                3
-              </div>
-              <CardContent className="p-6 pt-8">
-                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <LogIn className="h-8 w-8 text-primary" />
-                </div>
-                <h3 className="text-xl font-bold text-center mb-3">Inicia Sesión</h3>
-                <p className="text-muted-foreground text-center text-sm">
-                  Accede a tu cuenta con tu email y contraseña
-                </p>
-              </CardContent>
-            </Card>
-
-            {/* Paso 4 */}
-            <Card className="relative border-2 border-primary/20 shadow-lg hover:shadow-xl transition-all duration-300">
-              <div className="absolute -top-4 -left-4 w-12 h-12 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-bold text-xl shadow-lg">
-                4
-              </div>
-              <CardContent className="p-6 pt-8">
-                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <ShoppingCart className="h-8 w-8 text-primary" />
-                </div>
-                <h3 className="text-xl font-bold text-center mb-3">Compra y Aprende</h3>
-                <p className="text-muted-foreground text-center text-sm">
-                  Adquiere tu curso y accede de por vida a todo el contenido
-                </p>
-              </CardContent>
-            </Card>
+          {/* Video Tutorial */}
+          <div className="max-w-4xl mx-auto">
+            <VideoTutorial />
           </div>
 
           <div className="text-center mt-12">
