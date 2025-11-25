@@ -11,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 import { useEnrollments } from "@/hooks/useEnrollments";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Course } from "@/types/course";
+import { getDirectImageUrl } from "@/lib/imageUtils";
 
 export default function Courses() {
   const navigate = useNavigate();
@@ -155,7 +156,7 @@ export default function Courses() {
                     <div className="aspect-video relative overflow-hidden rounded-t-lg">
                       {course.thumbnail_url ? (
                         <img
-                          src={course.thumbnail_url}
+                          src={getDirectImageUrl(course.thumbnail_url)}
                           alt={course.title}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
