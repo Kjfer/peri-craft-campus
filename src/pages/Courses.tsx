@@ -234,18 +234,9 @@ export default function Courses() {
                         >
                           {isAuthenticated && isEnrolled(course.id) ? "Ir al Curso" : "Ver Curso"}
                         </Button>
-                        {course.price > 0 && !isAuthenticated && (
+                        {course.price > 0 && !isEnrolled(course.id) && course.external_purchase_url && (
                           <Button
-                            onClick={() => navigate(`/checkout/curso/${course.id}`)}
-                            size="sm"
-                            className="flex-1"
-                          >
-                            Comprar ahora
-                          </Button>
-                        )}
-                        {course.price > 0 && isAuthenticated && !isEnrolled(course.id) && (
-                          <Button
-                            onClick={() => navigate(`/checkout/curso/${course.id}`)}
+                            onClick={() => window.open(course.external_purchase_url, '_blank')}
                             size="sm"
                             className="flex-1"
                           >

@@ -608,14 +608,7 @@ export default function Home() {
           <p className="text-xl mb-8 max-w-2xl mx-auto opacity-90">
             Únete a miles de estudiantes que ya han transformado su pasión por la moda en una carrera exitosa.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button 
-              size="lg" 
-              className="bg-primary text-primary-foreground hover:bg-primary/90 px-8 py-6 text-lg"
-              onClick={() => navigate("/auth")}
-            >
-              Registrarse Gratis
-            </Button>
+          <div className="flex justify-center">
             <Button 
               size="lg" 
               variant="outline" 
