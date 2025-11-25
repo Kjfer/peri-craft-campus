@@ -85,7 +85,7 @@ function Settings() {
         .upsert({
           setting_key: 'tutorial_video_url',
           setting_value: tutorialVideoUrl,
-          description: 'URL del video tutorial de YouTube para la página de inicio'
+          description: 'URL del video (YouTube) o imagen (Google Drive) para el tutorial de la página de inicio'
         }, {
           onConflict: 'setting_key'
         });
@@ -93,8 +93,8 @@ function Settings() {
       if (error) throw error;
 
       toast({
-        title: "Video guardado",
-        description: "El enlace del video tutorial se ha actualizado correctamente"
+        title: "Contenido guardado",
+        description: "El enlace del tutorial se ha actualizado correctamente"
       });
     } catch (error) {
       console.error('Error saving video URL:', error);
@@ -240,47 +240,60 @@ function Settings() {
           <TabsContent value="tutorial" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Video Tutorial</CardTitle>
+                <CardTitle>Video Tutorial / Imagen Instructiva</CardTitle>
                 <CardDescription>
-                  Configura el video de YouTube que se mostrará en la página de inicio explicando cómo comprar y acceder a los cursos
+                  Configura el video de YouTube o imagen de Google Drive que se mostrará en la página de inicio explicando cómo comprar y acceder a los cursos
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <Label htmlFor="tutorial_video_url">URL del Video de YouTube</Label>
+                  <Label htmlFor="tutorial_video_url">URL del Video (YouTube) o Imagen (Google Drive)</Label>
                   <Input
                     id="tutorial_video_url"
                     type="url"
-                    placeholder="https://www.youtube.com/watch?v=..."
+                    placeholder="https://www.youtube.com/watch?v=... o https://drive.google.com/file/d/.../view"
                     value={tutorialVideoUrl}
                     onChange={(e) => setTutorialVideoUrl(e.target.value)}
                     disabled={loadingVideo}
                   />
                   <p className="text-sm text-muted-foreground mt-2">
-                    Ingresa la URL completa del video de YouTube. Puede ser en formato: youtube.com/watch?v=... o youtu.be/...
+                    Ingresa la URL completa del video de YouTube (youtube.com/watch?v=... o youtu.be/...) o una imagen de Google Drive (drive.google.com/file/d/.../view)
                   </p>
                 </div>
 
                 {tutorialVideoUrl && (
                   <div className="border rounded-lg overflow-hidden">
-                    <div className="aspect-video bg-gray-100">
-                      <iframe
-                        src={tutorialVideoUrl.includes('youtube.com') || tutorialVideoUrl.includes('youtu.be') 
-                          ? `https://www.youtube.com/embed/${tutorialVideoUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/)?.[1] || ''}`
-                          : tutorialVideoUrl
-                        }
-                        title="Vista previa del video tutorial"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                        className="w-full h-full"
-                      />
-                    </div>
+                    {tutorialVideoUrl.includes('drive.google.com') ? (
+                      <div className="bg-gray-100 p-4">
+                        <img
+                          src={tutorialVideoUrl.match(/\/d\/([^\/]+)/)?.[1] 
+                            ? `https://drive.google.com/uc?export=view&id=${tutorialVideoUrl.match(/\/d\/([^\/]+)/)?.[1]}`
+                            : tutorialVideoUrl
+                          }
+                          alt="Vista previa de la imagen"
+                          className="w-full h-auto"
+                        />
+                      </div>
+                    ) : (
+                      <div className="aspect-video bg-gray-100">
+                        <iframe
+                          src={tutorialVideoUrl.includes('youtube.com') || tutorialVideoUrl.includes('youtu.be') 
+                            ? `https://www.youtube.com/embed/${tutorialVideoUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/)?.[1] || ''}`
+                            : tutorialVideoUrl
+                          }
+                          title="Vista previa del video tutorial"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                          className="w-full h-full"
+                        />
+                      </div>
+                    )}
                   </div>
                 )}
 
                 <Button onClick={saveTutorialVideoUrl} disabled={saving || loadingVideo}>
                   <Save className="h-4 w-4 mr-2" />
-                  {saving ? 'Guardando...' : 'Guardar Video'}
+                  {saving ? 'Guardando...' : 'Guardar Contenido'}
                 </Button>
               </CardContent>
             </Card>
