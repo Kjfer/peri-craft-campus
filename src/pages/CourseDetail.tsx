@@ -30,6 +30,7 @@ import { useToast } from "@/hooks/use-toast";
 import useCourseAccess from "@/hooks/useCourseAccess";
 import type { Course } from "@/types/course";
 import { generateSyllabusPDF } from "@/utils/pdfGenerator";
+import { getDirectImageUrl } from "@/lib/imageUtils";
 
 interface Module {
   id: string;
@@ -424,7 +425,7 @@ export default function CourseDetail() {
               <Card>
                 <div className="relative">
                   <img
-                    src={course.thumbnail_url || '/placeholder.svg'}
+                    src={getDirectImageUrl(course.thumbnail_url)}
                     alt={course.title}
                     className="w-full h-48 object-cover rounded-t-lg"
                   />
