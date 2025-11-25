@@ -121,6 +121,7 @@ export type Database = {
           description: string
           discounted_price: number | null
           duration_hours: number
+          external_purchase_url: string | null
           featured: boolean
           id: string
           instructor_name: string
@@ -144,6 +145,7 @@ export type Database = {
           description: string
           discounted_price?: number | null
           duration_hours?: number
+          external_purchase_url?: string | null
           featured?: boolean
           id?: string
           instructor_name: string
@@ -167,6 +169,7 @@ export type Database = {
           description?: string
           discounted_price?: number | null
           duration_hours?: number
+          external_purchase_url?: string | null
           featured?: boolean
           id?: string
           instructor_name?: string
@@ -261,7 +264,7 @@ export type Database = {
           order_number: number
           title: string
           updated_at: string
-          video_url: string
+          video_url: string | null
         }
         Insert: {
           content?: string | null
@@ -275,7 +278,7 @@ export type Database = {
           order_number: number
           title: string
           updated_at?: string
-          video_url: string
+          video_url?: string | null
         }
         Update: {
           content?: string | null
@@ -289,7 +292,7 @@ export type Database = {
           order_number?: number
           title?: string
           updated_at?: string
-          video_url?: string
+          video_url?: string | null
         }
         Relationships: [
           {

@@ -13,6 +13,7 @@ export interface Course {
   discounted_price?: number | null;
   thumbnail_url?: string;
   syllabus_pdf_url?: string;
+  external_purchase_url?: string;
   what_you_learn?: string[];
   requirements?: string[];
   featured?: boolean;
