@@ -13,11 +13,11 @@ import { es } from "date-fns/locale";
 
 // Component for Video Tutorial
 const VideoTutorial = () => {
-  const [videoUrl, setVideoUrl] = useState<string>("");
+  const [mediaUrl, setMediaUrl] = useState<string>("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchVideoUrl = async () => {
+    const fetchMediaUrl = async () => {
       try {
         const { data, error } = await supabase
           .from('admin_settings')
@@ -28,27 +28,34 @@ const VideoTutorial = () => {
         if (error) throw error;
         
         if (data?.setting_value) {
-          setVideoUrl(data.setting_value);
+          setMediaUrl(data.setting_value);
         }
       } catch (error) {
-        console.error('Error fetching video URL:', error);
+        console.error('Error fetching media URL:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchVideoUrl();
+    fetchMediaUrl();
   }, []);
 
+  const getDriveImageUrl = (url: string) => {
+    // Extract file ID from Google Drive URL
+    const fileIdMatch = url.match(/\/d\/([^\/]+)/);
+    if (fileIdMatch) {
+      return `https://drive.google.com/uc?export=view&id=${fileIdMatch[1]}`;
+    }
+    return null;
+  };
+
   const getYouTubeEmbedUrl = (url: string) => {
-    if (!url) return "";
-    
     // Extract video ID from various YouTube URL formats
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
     const match = url.match(regExp);
     const videoId = (match && match[2].length === 11) ? match[2] : null;
     
-    return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
+    return videoId ? `https://www.youtube.com/embed/${videoId}` : null;
   };
 
   if (loading) {
@@ -59,7 +66,7 @@ const VideoTutorial = () => {
     );
   }
 
-  if (!videoUrl) {
+  if (!mediaUrl) {
     return (
       <Card className="border-2 border-dashed">
         <CardContent className="p-12 text-center">
@@ -73,17 +80,55 @@ const VideoTutorial = () => {
     );
   }
 
+  // Check if it's a Google Drive URL
+  const isDriveUrl = mediaUrl.includes('drive.google.com');
+  const driveImageUrl = isDriveUrl ? getDriveImageUrl(mediaUrl) : null;
+  
+  // Check if it's a YouTube URL
+  const youtubeEmbedUrl = getYouTubeEmbedUrl(mediaUrl);
+
+  // Render Google Drive image
+  if (driveImageUrl) {
+    return (
+      <Card className="overflow-hidden shadow-xl">
+        <div className="w-full">
+          <img
+            src={driveImageUrl}
+            alt="Tutorial: Cómo comprar y acceder a los cursos"
+            className="w-full h-auto"
+          />
+        </div>
+      </Card>
+    );
+  }
+
+  // Render YouTube video
+  if (youtubeEmbedUrl) {
+    return (
+      <Card className="overflow-hidden shadow-xl">
+        <div className="aspect-video w-full">
+          <iframe
+            src={youtubeEmbedUrl}
+            title="Tutorial: Cómo comprar y acceder a los cursos"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            className="w-full h-full"
+          />
+        </div>
+      </Card>
+    );
+  }
+
+  // If URL doesn't match any known format
   return (
-    <Card className="overflow-hidden shadow-xl">
-      <div className="aspect-video w-full">
-        <iframe
-          src={getYouTubeEmbedUrl(videoUrl)}
-          title="Tutorial: Cómo comprar y acceder a los cursos"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-          className="w-full h-full"
-        />
-      </div>
+    <Card className="border-2 border-destructive">
+      <CardContent className="p-12 text-center">
+        <Play className="h-16 w-16 text-destructive mx-auto mb-4" />
+        <h3 className="text-xl font-semibold mb-2">URL no válida</h3>
+        <p className="text-muted-foreground">
+          Por favor, proporciona una URL válida de YouTube o Google Drive
+        </p>
+      </CardContent>
     </Card>
   );
 };
