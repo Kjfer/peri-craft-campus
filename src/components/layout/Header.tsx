@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, User, LogOut, BookOpen, Award, Settings } from "lucide-react";
+import { Menu, User, LogOut, BookOpen, Award, Settings, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   DropdownMenu,
@@ -78,8 +78,9 @@ export function Header() {
                     variant="outline"
                     size="sm"
                     onClick={() => navigate("/admin")}
-                    className="hidden md:flex"
+                    className="hidden md:flex items-center gap-2"
                   >
+                    <ShieldCheck className="w-4 h-4" />
                     Admin
                   </Button>
                 )}
@@ -123,15 +124,26 @@ export function Header() {
                 </DropdownMenu>
               </>
             ) : (
-              <Button asChild>
-                <a 
-                  href="https://sso.hotmart.com/login?service=https%3A%2F%2Fsso.hotmart.com%2Foauth2.0%2FcallbackAuthorize%3Fclient_id%3D0fff6c2a-971c-4f7a-b0b3-3032b7a26319%26scope%3Dopenid%2Bprofile%2Bauthorities%2Bemail%2Buser%26redirect_uri%3Dhttps%253A%252F%252Fconsumer.hotmart.com%252Fauth%252Flogin%26response_type%3Dcode%26response_mode%3Dquery%26state%3D8b93495e25ae42728ba62b59f48a1be0%26client_name%3DCasOAuthClient"
-                  target="_blank"
-                  rel="noopener noreferrer"
+              <>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => navigate("/auth")}
+                  className="hidden md:flex"
+                  title="Acceso Administrador"
                 >
-                  Accede a tus cursos
-                </a>
-              </Button>
+                  <ShieldCheck className="w-5 h-5" />
+                </Button>
+                <Button asChild>
+                  <a 
+                    href="https://sso.hotmart.com/login?service=https%3A%2F%2Fsso.hotmart.com%2Foauth2.0%2FcallbackAuthorize%3Fclient_id%3D0fff6c2a-971c-4f7a-b0b3-3032b7a26319%26scope%3Dopenid%2Bprofile%2Bauthorities%2Bemail%2Buser%26redirect_uri%3Dhttps%253A%252F%252Fconsumer.hotmart.com%252Fauth%252Flogin%26response_type%3Dcode%26response_mode%3Dquery%26state%3D8b93495e25ae42728ba62b59f48a1be0%26client_name%3DCasOAuthClient"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Accede a tus cursos
+                  </a>
+                </Button>
+              </>
             )}
 
             {/* Mobile menu */}
@@ -181,15 +193,28 @@ export function Header() {
                       </Button>
                     </>
                   ) : (
-                    <Button
-                      onClick={() => {
-                        window.open('https://sso.hotmart.com/login?service=https%3A%2F%2Fsso.hotmart.com%2Foauth2.0%2FcallbackAuthorize%3Fclient_id%3D0fff6c2a-971c-4f7a-b0b3-3032b7a26319%26scope%3Dopenid%2Bprofile%2Bauthorities%2Bemail%2Buser%26redirect_uri%3Dhttps%253A%252F%252Fconsumer.hotmart.com%252Fauth%252Flogin%26response_type%3Dcode%26response_mode%3Dquery%26state%3D8b93495e25ae42728ba62b59f48a1be0%26client_name%3DCasOAuthClient', '_blank');
-                        setIsOpen(false);
-                      }}
-                      className="justify-start"
-                    >
-                      Accede a tus cursos
-                    </Button>
+                    <>
+                      <Button
+                        variant="ghost"
+                        onClick={() => {
+                          navigate("/auth");
+                          setIsOpen(false);
+                        }}
+                        className="justify-start"
+                      >
+                        <ShieldCheck className="mr-2 h-4 w-4" />
+                        Acceso Administrador
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          window.open('https://sso.hotmart.com/login?service=https%3A%2F%2Fsso.hotmart.com%2Foauth2.0%2FcallbackAuthorize%3Fclient_id%3D0fff6c2a-971c-4f7a-b0b3-3032b7a26319%26scope%3Dopenid%2Bprofile%2Bauthorities%2Bemail%2Buser%26redirect_uri%3Dhttps%253A%252F%252Fconsumer.hotmart.com%252Fauth%252Flogin%26response_type%3Dcode%26response_mode%3Dquery%26state%3D8b93495e25ae42728ba62b59f48a1be0%26client_name%3DCasOAuthClient', '_blank');
+                          setIsOpen(false);
+                        }}
+                        className="justify-start"
+                      >
+                        Accede a tus cursos
+                      </Button>
+                    </>
                   )}
                 </nav>
               </SheetContent>
