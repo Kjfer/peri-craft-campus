@@ -22,7 +22,6 @@ import {
 import { ArrowLeft, Save, Plus, Trash2, ChevronDown, ChevronUp, GripVertical } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { VideoUpload } from "@/components/admin/VideoUpload";
 import {
   DndContext,
   closestCenter,
@@ -46,7 +45,7 @@ interface Lesson {
   title: string;
   description: string;
   content: string;
-  video_url: string;
+  video_url?: string;
   duration_minutes: number;
   is_free: boolean;
 }
@@ -74,6 +73,7 @@ interface CourseFormData {
   discounted_price?: number;
   thumbnail_url?: string;
   syllabus_pdf_url?: string;
+  external_purchase_url?: string;
   featured: boolean;
   status: 'active' | 'inactive' | 'draft';
   modules: Module[];
@@ -281,24 +281,6 @@ function SortableLessonCard({
                   placeholder="Descripción de la lección"
                 />
               </div>
-              <div className="md:col-span-2">
-                <VideoUpload
-                  lessonId={lesson.id || `temp-${moduleIndex}-${lessonIndex}`}
-                  currentVideoUrl={lesson.video_url}
-                  onUploadComplete={(videoUrl) => updateLesson(moduleIndex, lessonIndex, 'video_url', videoUrl)}
-                />
-                <div className="mt-2">
-                  <Label className="text-xs text-muted-foreground">
-                    O usa URL de YouTube/Externo
-                  </Label>
-                  <Input
-                    value={lesson.video_url}
-                    onChange={(e) => updateLesson(moduleIndex, lessonIndex, 'video_url', e.target.value)}
-                    placeholder="https://youtube.com/watch?v=... (opcional)"
-                    className="mt-1"
-                  />
-                </div>
-              </div>
               <div className="space-y-2">
                 <Label>Duración (minutos)</Label>
                 <Input
@@ -375,6 +357,7 @@ function EditCourse() {
     discounted_price: undefined,
     thumbnail_url: "",
     syllabus_pdf_url: "",
+    external_purchase_url: "",
     featured: false,
     status: "active",
     modules: []
@@ -453,6 +436,7 @@ function EditCourse() {
           discounted_price: course.discounted_price || undefined,
           thumbnail_url: course.thumbnail_url || "",
           syllabus_pdf_url: course.syllabus_pdf_url || "",
+          external_purchase_url: course.external_purchase_url || "",
           featured: course.featured || false,
           status: course.status || "active",
           modules: modulesWithLessons
@@ -519,6 +503,7 @@ function EditCourse() {
           discounted_price: formData.discounted_price || null,
           thumbnail_url: formData.thumbnail_url?.trim() || null,
           syllabus_pdf_url: formData.syllabus_pdf_url?.trim() || null,
+          external_purchase_url: formData.external_purchase_url?.trim() || null,
           featured: formData.featured,
           status: formData.status,
           updated_at: new Date().toISOString()
@@ -1021,6 +1006,21 @@ function EditCourse() {
                 />
                 <p className="text-sm text-muted-foreground">
                   Si no se proporciona, se generará automáticamente un PDF con el contenido del curso
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="external_purchase_url">URL de Compra Externa (Hotmart) *</Label>
+                <Input
+                  id="external_purchase_url"
+                  type="url"
+                  value={formData.external_purchase_url}
+                  onChange={(e) => handleInputChange('external_purchase_url', e.target.value)}
+                  placeholder="https://hotmart.com/..."
+                  required
+                />
+                <p className="text-sm text-muted-foreground">
+                  Enlace de Hotmart donde los estudiantes comprarán el curso
                 </p>
               </div>
             </CardContent>

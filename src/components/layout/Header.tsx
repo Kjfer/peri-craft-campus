@@ -106,32 +106,15 @@ export function Header() {
                       </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => navigate("/dashboard")}>
-                      <User className="mr-2 h-4 w-4" />
-                      <span>Mi Dashboard</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate("/dashboard")}>
-                      <BookOpen className="mr-2 h-4 w-4" />
-                      <span>Mis Cursos</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate("/dashboard")}>
-                      <Award className="mr-2 h-4 w-4" />
-                      <span>Certificados</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate("/configuracion")}>
-                      <Settings className="mr-2 h-4 w-4" />
-                      <span>Configuración</span>
-                    </DropdownMenuItem>
                     {profile?.role === 'admin' && (
                       <>
-                        <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => navigate("/admin")}>
                           <Settings className="mr-2 h-4 w-4" />
                           <span>Panel de Administración</span>
                         </DropdownMenuItem>
+                        <DropdownMenuSeparator />
                       </>
                     )}
-                    <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleSignOut}>
                       <LogOut className="mr-2 h-4 w-4" />
                       <span>Cerrar Sesión</span>
@@ -140,18 +123,15 @@ export function Header() {
                 </DropdownMenu>
               </>
             ) : (
-              <>
-                <Button
-                  variant="ghost"
-                  onClick={() => navigate("/auth")}
-                  className="hidden md:flex"
+              <Button asChild>
+                <a 
+                  href="https://sso.hotmart.com/login?service=https%3A%2F%2Fsso.hotmart.com%2Foauth2.0%2FcallbackAuthorize%3Fclient_id%3D0fff6c2a-971c-4f7a-b0b3-3032b7a26319%26scope%3Dopenid%2Bprofile%2Bauthorities%2Bemail%2Buser%26redirect_uri%3Dhttps%253A%252F%252Fconsumer.hotmart.com%252Fauth%252Flogin%26response_type%3Dcode%26response_mode%3Dquery%26state%3D8b93495e25ae42728ba62b59f48a1be0%26client_name%3DCasOAuthClient"
+                  target="_blank"
+                  rel="noopener noreferrer"
                 >
-                  Iniciar Sesión
-                </Button>
-                <Button onClick={() => navigate("/auth")}>
-                  Registrarse
-                </Button>
-              </>
+                  Accede a tus cursos
+                </a>
+              </Button>
             )}
 
             {/* Mobile menu */}
@@ -201,27 +181,15 @@ export function Header() {
                       </Button>
                     </>
                   ) : (
-                    <>
-                      <Button
-                        variant="ghost"
-                        onClick={() => {
-                          navigate("/auth");
-                          setIsOpen(false);
-                        }}
-                        className="justify-start"
-                      >
-                        Iniciar Sesión
-                      </Button>
-                      <Button
-                        onClick={() => {
-                          navigate("/auth");
-                          setIsOpen(false);
-                        }}
-                        className="justify-start"
-                      >
-                        Registrarse
-                      </Button>
-                    </>
+                    <Button
+                      onClick={() => {
+                        window.open('https://sso.hotmart.com/login?service=https%3A%2F%2Fsso.hotmart.com%2Foauth2.0%2FcallbackAuthorize%3Fclient_id%3D0fff6c2a-971c-4f7a-b0b3-3032b7a26319%26scope%3Dopenid%2Bprofile%2Bauthorities%2Bemail%2Buser%26redirect_uri%3Dhttps%253A%252F%252Fconsumer.hotmart.com%252Fauth%252Flogin%26response_type%3Dcode%26response_mode%3Dquery%26state%3D8b93495e25ae42728ba62b59f48a1be0%26client_name%3DCasOAuthClient', '_blank');
+                        setIsOpen(false);
+                      }}
+                      className="justify-start"
+                    >
+                      Accede a tus cursos
+                    </Button>
                   )}
                 </nav>
               </SheetContent>

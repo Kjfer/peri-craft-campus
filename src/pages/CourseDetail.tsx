@@ -109,21 +109,18 @@ export default function CourseDetail() {
     }
   }, [id, fetchCourseData]);
 
-  const handleBuyNow = async () => {
-    if (!user) {
+  const handleBuyNow = () => {
+    if (!course?.external_purchase_url) {
       toast({
-        title: "Inicia sesión",
-        description: "Debes iniciar sesión para comprar cursos",
+        title: "Error",
+        description: "Este curso no tiene un enlace de compra configurado",
         variant: "destructive",
       });
-      navigate('/auth');
       return;
     }
 
-    if (!course) return;
-
-    // Ir directamente al checkout del curso
-    navigate(`/checkout/curso/${course.id}`);
+    // Redirigir a Hotmart o plataforma externa
+    window.open(course.external_purchase_url, '_blank');
   };
 
   const handleLessonClick = (lesson: Lesson) => {
@@ -451,35 +448,23 @@ export default function CourseDetail() {
                   </div>
 
                   <div className="space-y-3">
-                    {isPaid ? (
+                    {course.external_purchase_url ? (
                       <Button 
                         className="w-full" 
                         size="lg"
-                        onClick={handleStartCourse}
+                        onClick={handleBuyNow}
                       >
-                        <Play className="w-4 h-4 mr-2" />
-                        Continuar curso
-                      </Button>
-                    ) : isFree ? (
-                      <Button 
-                        className="w-full" 
-                        size="lg"
-                        onClick={handleStartCourse}
-                      >
-                        <Play className="w-4 h-4 mr-2" />
-                        Comenzar gratis
+                        <CreditCard className="w-4 h-4 mr-2" />
+                        Comprar ahora
                       </Button>
                     ) : (
-                      <>
-                        <Button 
-                          className="w-full" 
-                          size="lg"
-                          onClick={handleBuyNow}
-                        >
-                          <CreditCard className="w-4 h-4 mr-2" />
-                          Comprar ahora
-                        </Button>
-                      </>
+                      <Button 
+                        className="w-full" 
+                        size="lg"
+                        disabled
+                      >
+                        No disponible
+                      </Button>
                     )}
                   </div>
 

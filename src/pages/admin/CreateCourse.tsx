@@ -24,6 +24,7 @@ interface CourseFormData {
   discounted_price?: number | null;
   thumbnail_url: string;
   syllabus_pdf_url: string;
+  external_purchase_url: string;
   what_you_learn: string[];
   requirements: string[];
   featured: boolean;
@@ -41,7 +42,7 @@ interface Lesson {
   title: string;
   description: string;
   content: string;
-  video_url: string;
+  video_url?: string;
   duration_minutes: number;
   order_number: number;
   is_free: boolean;
@@ -67,6 +68,7 @@ export default function CreateCourse() {
     discounted_price: null,
     thumbnail_url: "",
     syllabus_pdf_url: "",
+    external_purchase_url: "",
     what_you_learn: [],
     requirements: [],
     featured: false,
@@ -219,6 +221,7 @@ export default function CreateCourse() {
           discounted_price: formData.discounted_price,
           thumbnail_url: formData.thumbnail_url,
           syllabus_pdf_url: formData.syllabus_pdf_url,
+          external_purchase_url: formData.external_purchase_url,
           what_you_learn: formData.what_you_learn,
           requirements: formData.requirements,
           featured: formData.featured,
@@ -262,7 +265,7 @@ export default function CreateCourse() {
               title: lesson.title,
               description: lesson.description,
               content: lesson.content,
-              video_url: lesson.video_url,
+              video_url: lesson.video_url || '',
               duration_minutes: lesson.duration_minutes,
               order_number: lesson.order_number,
               is_free: lesson.is_free
@@ -486,6 +489,21 @@ export default function CreateCourse() {
                 </p>
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="external_purchase">URL de Compra Externa (Hotmart) *</Label>
+                <Input
+                  id="external_purchase"
+                  type="url"
+                  value={formData.external_purchase_url}
+                  onChange={(e) => handleInputChange('external_purchase_url', e.target.value)}
+                  placeholder="https://hotmart.com/..."
+                  required
+                />
+                <p className="text-sm text-muted-foreground">
+                  Enlace de Hotmart donde los estudiantes comprarán el curso
+                </p>
+              </div>
+
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="featured"
@@ -700,16 +718,15 @@ export default function CreateCourse() {
                                 </div>
 
                                 <div className="space-y-1">
-                                  <Label htmlFor={`lesson-video-${moduleIndex}-${lessonIndex}`} className="text-xs">
-                                    URL del Video *
+                                  <Label htmlFor={`lesson-content-${moduleIndex}-${lessonIndex}`} className="text-xs">
+                                    Contenido Adicional
                                   </Label>
-                                  <Input
-                                    id={`lesson-video-${moduleIndex}-${lessonIndex}`}
-                                    type="url"
-                                    value={lesson.video_url}
-                                    onChange={(e) => updateLesson(moduleIndex, lessonIndex, 'video_url', e.target.value)}
-                                    placeholder="https://youtube.com/watch?v=... o https://vimeo.com/..."
-                                    required
+                                  <Textarea
+                                    id={`lesson-content-${moduleIndex}-${lessonIndex}`}
+                                    value={lesson.content}
+                                    onChange={(e) => updateLesson(moduleIndex, lessonIndex, 'content', e.target.value)}
+                                    placeholder="Recursos, enlaces o información adicional"
+                                    rows={3}
                                   />
                                 </div>
 
@@ -720,7 +737,7 @@ export default function CreateCourse() {
                                     onCheckedChange={(checked) => updateLesson(moduleIndex, lessonIndex, 'is_free', checked as boolean)}
                                   />
                                   <Label htmlFor={`lesson-free-${moduleIndex}-${lessonIndex}`} className="text-sm">
-                                    Lección gratuita (disponible sin inscripción)
+                                    Lección gratuita (vista previa)
                                   </Label>
                                 </div>
                               </CardContent>
