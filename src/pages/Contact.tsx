@@ -135,31 +135,31 @@ export default function Contact() {
 
   const faqItems = [
     {
-      question: "¿Cómo puedo inscribirme a un curso?",
-      answer: "Puedes inscribirte directamente desde la página del curso cuando hayas iniciado sesión. Si es gratuito, el acceso es inmediato. Para cursos pagos, serás dirigido al proceso de pago seguro."
+      question: "¿Cómo puedo comprar un curso?",
+      answer: "Al hacer clic en 'Comprar ahora' en cualquier curso, serás redirigido a nuestra plataforma de pagos segura en Hotmart donde podrás completar tu compra de forma segura."
     },
     {
-      question: "¿Puedo acceder a los cursos desde cualquier dispositivo?",
-      answer: "Sí, nuestra plataforma es completamente responsive y funciona en computadoras, tablets y móviles."
+      question: "¿Cómo accedo a mis cursos después de comprarlos?",
+      answer: "Una vez realizada la compra en Hotmart, recibirás un correo con las instrucciones de acceso. Podrás ingresar a tus cursos directamente desde la plataforma de Hotmart usando el botón 'Accede a tus cursos' en nuestro sitio web."
     },
     {
-      question: "¿Ofrecen soporte técnico?",
-      answer: "Sí, nuestro equipo de soporte está disponible para ayudarte con cualquier problema técnico que puedas tener."
+      question: "¿Necesito crear una cuenta en su sitio web?",
+      answer: "No es necesario. Todo el acceso a cursos y la gestión de tu cuenta se realiza a través de Hotmart. Solo necesitas tu cuenta de Hotmart para acceder a tus cursos adquiridos."
     }
   ];
 
   const certificationFaqItems = [
     {
-      question: "¿Cómo puedo solicitar mi certificado?",
-      answer: "Una vez completado el curso, contáctanos por WhatsApp o correo electrónico para iniciar el proceso de certificación. Nuestro equipo te guiará en los pasos necesarios."
+      question: "¿Los cursos incluyen certificado?",
+      answer: "Sí, todos nuestros cursos incluyen certificado de finalización una vez que completes el 100% del contenido. El certificado se gestiona a través de la plataforma de Hotmart."
     },
     {
       question: "¿El certificado es digital o físico?",
-      answer: "Ofrecemos ambas opciones. El certificado digital se entrega en formato PDF de alta calidad. Si prefieres un certificado físico impreso, tiene un costo adicional por impresión y envío."
+      answer: "El certificado se entrega en formato digital a través de Hotmart. Si deseas un certificado físico impreso, contáctanos para conocer las opciones disponibles y costos adicionales por impresión y envío."
     },
     {
-      question: "¿Puedo obtener un certificado si no completé el curso al 100%?",
-      answer: "No, el certificado solo se emite a estudiantes que hayan completado el 100% del contenido del curso. Esto asegura que el certificado represente un aprendizaje completo y de calidad."
+      question: "¿Cómo obtengo mi certificado?",
+      answer: "Una vez completes el 100% del curso en la plataforma de Hotmart, podrás descargar tu certificado directamente desde tu área de estudiante en Hotmart."
     }
   ];
 
