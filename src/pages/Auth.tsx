@@ -4,26 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Mail, Lock, User, Phone, Globe, Calendar } from "lucide-react";
-import { supabase } from "@/lib/supabaseClient";
+import { Loader2, Mail, Lock, ShieldCheck } from "lucide-react";
 
 export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
   const [signInData, setSignInData] = useState({ email: "", password: "" });
-  const [signUpData, setSignUpData] = useState({ 
-    email: "", 
-    password: "", 
-    fullName: "", 
-    confirmPassword: "",
-    phone: "",
-    country: "",
-    dateOfBirth: ""
-  });
   
-  const { signIn, signUp, refreshAuth } = useAuth();
+  const { signIn, refreshAuth } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -51,90 +40,8 @@ export default function Auth() {
         // Refresh auth state to ensure UI updates
         await refreshAuth();
         
-        // Navigate to dashboard
-        navigate("/dashboard");
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Ocurrió un error inesperado. Intenta nuevamente.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (signUpData.password !== signUpData.confirmPassword) {
-      toast({
-        title: "Error",
-        description: "Las contraseñas no coinciden.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (signUpData.password.length < 6) {
-      toast({
-        title: "Error",
-        description: "La contraseña debe tener al menos 6 caracteres.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      const redirectTo = import.meta.env.VITE_SITE_URL
-        ? `${import.meta.env.VITE_SITE_URL}/`
-        : window.location.origin + "/";
-
-      const { data, error } = await supabase.auth.signUp({
-        email: signUpData.email,
-        password: signUpData.password,
-        options: {
-          data: {
-            full_name: signUpData.fullName,
-            phone: signUpData.phone || null,
-            country: signUpData.country || null,
-            date_of_birth: signUpData.dateOfBirth || null
-          },
-          emailRedirectTo: redirectTo
-        }
-      });
-
-      if (error) {
-        if (error.message && error.message.toLowerCase().includes("already registered")) {
-          toast({
-            title: "Usuario ya existe",
-            description: "Este email ya está registrado. Intenta iniciar sesión.",
-            variant: "destructive",
-          });
-        } else {
-          toast({
-            title: "Error al registrarse",
-            description: error.message || "Error desconocido",
-            variant: "destructive",
-          });
-        }
-      } else {
-        toast({
-          title: "¡Registro exitoso!",
-          description: "Te enviamos un correo de confirmación. Por favor, verifica tu email para activar tu cuenta.",
-        });
-        setSignUpData({ 
-          email: "", 
-          password: "", 
-          fullName: "", 
-          confirmPassword: "",
-          phone: "",
-          country: "",
-          dateOfBirth: ""
-        });
+        // Navigate to admin dashboard
+        navigate("/admin");
       }
     } catch (error) {
       toast({
@@ -152,206 +59,64 @@ export default function Auth() {
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
           <div className="w-16 h-16 gradient-primary rounded-full flex items-center justify-center mx-auto mb-4">
-            <span className="text-2xl font-bold text-primary-foreground">P</span>
+            <ShieldCheck className="w-8 h-8 text-primary-foreground" />
           </div>
-          <h1 className="text-3xl font-bold">Peri Institute</h1>
-          <p className="text-muted-foreground mt-2">Tu academia de moda profesional</p>
+          <h1 className="text-3xl font-bold">Acceso Administrador</h1>
+          <p className="text-muted-foreground mt-2">Panel de gestión de Peri Institute</p>
         </div>
 
         <Card className="shadow-elegant">
           <CardHeader className="text-center">
-            <CardTitle>Acceder a tu cuenta</CardTitle>
+            <CardTitle>Iniciar Sesión</CardTitle>
             <CardDescription>
-              Ingresa tus credenciales o regístrate para comenzar
+              Ingresa tus credenciales de administrador
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="signin" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="signin">Iniciar Sesión</TabsTrigger>
-                <TabsTrigger value="signup">Registrarse</TabsTrigger>
-              </TabsList>
+            <form onSubmit={handleSignIn} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="signin-email">Email</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="signin-email"
+                    type="email"
+                    placeholder="admin@periinstitute.com"
+                    className="pl-10"
+                    value={signInData.email}
+                    onChange={(e) => setSignInData({ ...signInData, email: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
               
-              <TabsContent value="signin">
-                <p className="text-sm text-center text-muted-foreground mb-4">
-                  Inicia sesión para poder acceder a tus cursos online
-                </p>
-                <form onSubmit={handleSignIn} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="signin-email">Email</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="signin-email"
-                        type="email"
-                        placeholder="tu@email.com"
-                        className="pl-10"
-                        value={signInData.email}
-                        onChange={(e) => setSignInData({ ...signInData, email: e.target.value })}
-                        required
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="signin-password">Contraseña</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="signin-password"
-                        type="password"
-                        placeholder="••••••••"
-                        className="pl-10"
-                        value={signInData.password}
-                        onChange={(e) => setSignInData({ ...signInData, password: e.target.value })}
-                        required
-                      />
-                    </div>
-                  </div>
+              <div className="space-y-2">
+                <Label htmlFor="signin-password">Contraseña</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="signin-password"
+                    type="password"
+                    placeholder="••••••••"
+                    className="pl-10"
+                    value={signInData.password}
+                    onChange={(e) => setSignInData({ ...signInData, password: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
 
-                  <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Iniciar Sesión
-                  </Button>
-                </form>
-              </TabsContent>
-              
-              <TabsContent value="signup">
-                <form onSubmit={handleSignUp} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-name">Nombre Completo</Label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="signup-name"
-                        type="text"
-                        placeholder="Juan Pérez"
-                        className="pl-10"
-                        value={signUpData.fullName}
-                        onChange={(e) => setSignUpData({ ...signUpData, fullName: e.target.value })}
-                        required
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="signup-email"
-                        type="email"
-                        placeholder="tu@email.com"
-                        className="pl-10"
-                        value={signUpData.email}
-                        onChange={(e) => setSignUpData({ ...signUpData, email: e.target.value })}
-                        required
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-password">Contraseña</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="signup-password"
-                        type="password"
-                        placeholder="••••••••"
-                        className="pl-10"
-                        value={signUpData.password}
-                        onChange={(e) => setSignUpData({ ...signUpData, password: e.target.value })}
-                        required
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="confirm-password">Confirmar Contraseña</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="confirm-password"
-                        type="password"
-                        placeholder="••••••••"
-                        className="pl-10"
-                        value={signUpData.confirmPassword}
-                        onChange={(e) => setSignUpData({ ...signUpData, confirmPassword: e.target.value })}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-phone">Teléfono</Label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="signup-phone"
-                        type="tel"
-                        placeholder="+51 999 888 777"
-                        className="pl-10"
-                        value={signUpData.phone}
-                        onChange={(e) => setSignUpData({ ...signUpData, phone: e.target.value })}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-country">País</Label>
-                    <div className="relative">
-                      <Globe className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="signup-country"
-                        type="text"
-                        placeholder="Perú"
-                        className="pl-10"
-                        value={signUpData.country}
-                        onChange={(e) => setSignUpData({ ...signUpData, country: e.target.value })}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-dob">Fecha de Nacimiento</Label>
-                    <div className="relative">
-                      <Calendar className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="signup-dob"
-                        type="date"
-                        className="pl-10"
-                        value={signUpData.dateOfBirth}
-                        onChange={(e) => setSignUpData({ ...signUpData, dateOfBirth: e.target.value })}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Crear Cuenta
-                  </Button>
-                </form>
-              </TabsContent>
-            </Tabs>
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Iniciar Sesión
+              </Button>
+            </form>
           </CardContent>
         </Card>
 
         <p className="text-center text-sm text-muted-foreground">
-          ¿Aún no tienes cuenta? Regístrate con tus datos para acceder a todos los cursos online.
+          Acceso restringido solo para personal autorizado
         </p>
-        
-        {/* Development Tool */}
-        <div className="text-center">
-          <a 
-            href="/confirm-email" 
-            className="text-xs text-muted-foreground hover:text-primary underline"
-          >
-            Herramienta de confirmación de email (Dev)
-          </a>
-        </div>
       </div>
     </div>
   );
