@@ -72,9 +72,9 @@ export default function CourseContentGuard({
     return <>{children}</>;
   }
 
-  // If redirectToCheckout is true and user doesn't have access, redirect
+  // If redirectToCheckout is true and user doesn't have access, redirect to course detail
   if (redirectToCheckout && !access.hasAccess) {
-    return <Navigate to={`/courses/${courseId}?checkout=true`} replace />;
+    return <Navigate to={`/curso/${courseId}`} replace />;
   }
 
   // Render fallback content or default access denied content
@@ -141,17 +141,9 @@ export default function CourseContentGuard({
               <div className="space-y-2">
                 <Button 
                   className="w-full" 
-                  onClick={() => window.location.href = `/courses/${courseId}?checkout=true`}
+                  onClick={() => window.location.href = `/curso/${courseId}`}
                 >
                   <CreditCard className="w-4 h-4 mr-2" />
-                  Comprar Curso
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="w-full"
-                  onClick={() => window.location.href = `/courses/${courseId}`}
-                >
-                  <ShoppingCart className="w-4 h-4 mr-2" />
                   Ver Detalles del Curso
                 </Button>
               </div>

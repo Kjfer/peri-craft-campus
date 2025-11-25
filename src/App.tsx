@@ -19,16 +19,6 @@ import Contact from "./pages/Contact";
 import ClasesEnVivo from "./pages/ClasesEnVivo";
 import LessonPlayer from "./pages/LessonPlayer";
 import LearningPlatform from "./pages/LearningPlatform";
-
-import PaymentResult from "./pages/PaymentResult";
-import PaymentSuccess from "./pages/PaymentSuccess";
-import PaymentError from "./pages/PaymentError";
-import PaymentRedirect from "./pages/PaymentRedirect";
-import CheckoutSuccess from "./pages/CheckoutSuccess";
-import CourseCheckout from "./pages/CourseCheckout";
-import OrderHistory from "./pages/OrderHistory";
-import CheckoutFailed from "./pages/CheckoutFailed";
-import CheckoutPending from "./pages/CheckoutPending";
 import NotFound from "./pages/NotFound";
 import AccountSettings from "./pages/AccountSettings";
 import AdminDashboard from "./pages/admin/Dashboard";
@@ -42,7 +32,6 @@ import PlanManagement from "./pages/admin/PlanManagement";
 import SecurityDashboard from "./components/admin/SecurityDashboard";
 import ConfirmEmail from "./pages/ConfirmEmail";
 import Subscriptions from "./pages/Subscriptions";
-import SubscriptionCheckout from "./pages/SubscriptionCheckout";
 import MySubscriptions from "./pages/MySubscriptions";
 import NotificationCenter from "./pages/NotificationCenter";
 
@@ -79,31 +68,18 @@ const App = () => (
                       <Route path="/confirm-email" element={<ConfirmEmail />} />
                       <Route path="/dashboard" element={<Dashboard />} />
                       <Route path="/cursos" element={<Courses />} />
-                <Route path="/courses/:courseId/lessons/:lessonId" element={<LessonPlayer />} />
-                <Route path="/learn/:courseId" element={<LearningPlatform />} />
-                <Route path="/learn/:courseId/lesson/:lessonId" element={<LearningPlatform />} />
+                      <Route path="/courses/:courseId/lessons/:lessonId" element={<LessonPlayer />} />
+                      <Route path="/learn/:courseId" element={<LearningPlatform />} />
+                      <Route path="/learn/:courseId/lesson/:lessonId" element={<LearningPlatform />} />
                       <Route path="/curso/:id" element={<CourseDetail />} />
                       <Route path="/planes" element={<Plans />} />
                       <Route path="/subscriptions" element={<Subscriptions />} />
-                      <Route path="/subscription-checkout" element={<SubscriptionCheckout />} />
                       <Route path="/my-subscriptions" element={<MySubscriptions />} />
                       <Route path="/notifications" element={<NotificationCenter />} />
                       <Route path="/nosotros" element={<About />} />
                       <Route path="/contacto" element={<Contact />} />
                       <Route path="/clases-en-vivo" element={<ClasesEnVivo />} />
-                      <Route path="/checkout/curso/:courseId" element={<CourseCheckout />} />
-                      <Route path="/ordenes" element={<OrderHistory />} />
                       <Route path="/configuracion" element={<AccountSettings />} />
-                      <Route path="/checkout/success/:orderId" element={<CheckoutSuccess />} />
-                      <Route path="/checkout/failed" element={<CheckoutFailed />} />
-                      <Route path="/checkout/pending" element={<CheckoutPending />} />
-                      <Route path="/payment/redirect/:orderId" element={<PaymentRedirect />} />
-                      <Route path="/payment/success/:orderId" element={<PaymentSuccess />} />
-                      <Route path="/payment/success" element={<PaymentResult />} />
-                      <Route path="/payment-success" element={<PaymentSuccess />} />
-                      <Route path="/payment-error" element={<PaymentError />} />
-                      <Route path="/payment/failure" element={<PaymentResult />} />
-                      <Route path="/payment/pending" element={<PaymentResult />} />
                       
                       {/* Admin Routes */}
                       <Route path="/admin" element={<AdminDashboard />} />

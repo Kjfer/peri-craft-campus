@@ -105,18 +105,8 @@ const Plans = () => {
       return;
     }
 
-    setSelectedPlan(planId);
-
-    try {
-      // Aquí se integrará con el sistema de pagos
-      // Por ahora, redirigimos al checkout
-      navigate(`/checkout/plan/${planId}`);
-    } catch (error) {
-      console.error('Error al procesar suscripción:', error);
-      toast.error('Error al procesar la suscripción');
-    } finally {
-      setSelectedPlan(null);
-    }
+    // Las suscripciones ahora se manejan a través de Hotmart
+    toast.info('Las suscripciones se gestionan a través de nuestra plataforma externa. Por favor contacta a soporte para más información.');
   };
 
   const getMostPopularIndex = () => {

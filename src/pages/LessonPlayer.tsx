@@ -52,6 +52,7 @@ interface Course {
   id: string;
   title: string;
   instructor_name: string;
+  external_purchase_url?: string;
   modules: Module[];
 }
 
@@ -98,7 +99,7 @@ export default function LessonPlayer() {
       const { data: courseData, error: courseError } = await supabase
         .from('courses')
         .select(`
-          id, title, instructor_name,
+          id, title, instructor_name, external_purchase_url,
           modules:modules!course_id (
             id, title, description, order_number,
             lessons:lessons!module_id (
@@ -413,12 +414,21 @@ export default function LessonPlayer() {
                         <p className="text-gray-300 mb-4">
                           Compra el curso para acceder a este video
                         </p>
-                        <button
-                          onClick={() => navigate(`/checkout/curso/${courseId}`)}
-                          className="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors"
-                        >
-                          Comprar Curso
-                        </button>
+                        {course?.external_purchase_url ? (
+                          <button
+                            onClick={() => window.open(course.external_purchase_url, '_blank')}
+                            className="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors"
+                          >
+                            Comprar Curso
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => navigate(`/curso/${courseId}`)}
+                            className="bg-primary text-white px-6 py-2 rounded-lg hover:bg-primary/90 transition-colors"
+                          >
+                            Ver Detalles del Curso
+                          </button>
+                        )}
                       </div>
                     </div>
                   )}
