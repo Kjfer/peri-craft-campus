@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { checkoutService } from '@/lib/checkoutService';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   Check, 
   Star, 
@@ -59,10 +59,14 @@ export default function Subscriptions() {
 
   const loadSubscriptions = async () => {
     try {
-      const result = await checkoutService.getAvailableSubscriptions();
-      if (result.success) {
-        setPlans(result.subscriptions);
-      }
+      const { data, error } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('is_active', true)
+        .order('price', { ascending: true });
+
+      if (error) throw error;
+      setPlans(data || []);
     } catch (error) {
       console.error('Error loading subscriptions:', error);
       toast({
@@ -91,26 +95,11 @@ export default function Subscriptions() {
       return;
     }
 
-    setProcessingPlan(plan.id);
-    
-    try {
-      // Navegar al checkout con el plan seleccionado
-      navigate('/checkout/subscription', { 
-        state: { 
-          plan: plan,
-          mode: 'subscription'
-        }
-      });
-    } catch (error) {
-      console.error('Error starting subscription checkout:', error);
-      toast({
-        title: 'Error',
-        description: 'No se pudo iniciar el proceso de suscripción',
-        variant: 'destructive'
-      });
-    } finally {
-      setProcessingPlan(null);
-    }
+    // Redirigir a página de contacto o mensaje informativo
+    toast({
+      title: 'Suscripciones',
+      description: 'Las suscripciones se gestionan externamente a través de Hotmart. Por favor contacta con soporte.',
+    });
   };
 
   const getPlanIcon = (planName: string) => {
