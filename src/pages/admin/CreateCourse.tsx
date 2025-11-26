@@ -9,7 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Plus, X } from "lucide-react";
+import { ArrowLeft, Plus, X, Eye } from "lucide-react";
+import { getDirectImageUrl } from "@/lib/imageUtils";
 import { supabase } from "@/integrations/supabase/client";
 
 interface CourseFormData {
@@ -55,6 +56,7 @@ export default function CreateCourse() {
   const [newWhatYouLearn, setNewWhatYouLearn] = useState("");
   const [newRequirement, setNewRequirement] = useState("");
   const [modules, setModules] = useState<Module[]>([]);
+  const [showThumbnailPreview, setShowThumbnailPreview] = useState(false);
 
   const [formData, setFormData] = useState<CourseFormData>({
     title: "",
@@ -464,14 +466,47 @@ export default function CreateCourse() {
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="thumbnail">URL de Imagen</Label>
-                  <Input
-                    id="thumbnail"
-                    type="url"
-                    value={formData.thumbnail_url}
-                    onChange={(e) => handleInputChange('thumbnail_url', e.target.value)}
-                  />
+                <div className="space-y-2 md:col-span-3">
+                  <Label htmlFor="thumbnail">URL de Imagen (soporta Google Drive)</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="thumbnail"
+                      type="url"
+                      value={formData.thumbnail_url}
+                      onChange={(e) => {
+                        handleInputChange('thumbnail_url', e.target.value);
+                        setShowThumbnailPreview(false);
+                      }}
+                      placeholder="https://drive.google.com/file/d/... o https://ejemplo.com/imagen.jpg"
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowThumbnailPreview(!showThumbnailPreview)}
+                      disabled={!formData.thumbnail_url}
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      {showThumbnailPreview ? 'Ocultar' : 'Previsualizar'}
+                    </Button>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Puedes usar enlaces de Google Drive (formato: https://drive.google.com/file/d/ID/view)
+                  </p>
+                  {showThumbnailPreview && formData.thumbnail_url && (
+                    <div className="mt-3 border rounded-lg p-3 bg-muted/50">
+                      <p className="text-sm font-medium mb-2">Vista previa:</p>
+                      <img
+                        src={getDirectImageUrl(formData.thumbnail_url)}
+                        alt="Vista previa del curso"
+                        className="max-w-full h-auto max-h-64 rounded-md object-contain"
+                        onError={(e) => {
+                          e.currentTarget.src = '/placeholder.svg';
+                          e.currentTarget.alt = 'Error al cargar imagen';
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
 
