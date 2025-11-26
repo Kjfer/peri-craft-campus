@@ -12,19 +12,37 @@ export const getDirectImageUrl = (url: string | null | undefined): string => {
   
   // Si es una URL de Google Drive, convertirla
   if (url.includes('drive.google.com')) {
+    let fileId: string | null = null;
+    
     // Formato: /file/d/FILE_ID/
-    const fileIdMatch = url.match(/\/d\/([^\/]+)/);
+    const fileIdMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
     if (fileIdMatch) {
-      return `https://drive.google.com/uc?export=view&id=${fileIdMatch[1]}`;
+      fileId = fileIdMatch[1];
     }
     
     // Formato: ?id=FILE_ID o &id=FILE_ID
-    const idParamMatch = url.match(/[?&]id=([^&]+)/);
-    if (idParamMatch) {
-      return `https://drive.google.com/uc?export=view&id=${idParamMatch[1]}`;
+    if (!fileId) {
+      const idParamMatch = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+      if (idParamMatch) {
+        fileId = idParamMatch[1];
+      }
+    }
+    
+    if (fileId) {
+      // Usar lh3.googleusercontent.com para mejor compatibilidad CORS
+      return `https://lh3.googleusercontent.com/d/${fileId}`;
     }
   }
   
   // Si no es de Google Drive, retornar la URL original
   return url;
 };
+
+/**
+ * Props adicionales para imágenes de Google Drive
+ * Ayuda a evitar problemas de CORS
+ */
+export const getDriveImageProps = () => ({
+  referrerPolicy: 'no-referrer' as const,
+  crossOrigin: 'anonymous' as const,
+});

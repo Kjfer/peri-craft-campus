@@ -20,7 +20,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ArrowLeft, Save, Plus, Trash2, ChevronDown, ChevronUp, GripVertical, Eye } from "lucide-react";
-import { getDirectImageUrl } from "@/lib/imageUtils";
+import { getDirectImageUrl, getDriveImageProps } from "@/lib/imageUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -1020,6 +1020,7 @@ function EditCourse() {
                       src={getDirectImageUrl(formData.thumbnail_url)}
                       alt="Vista previa del curso"
                       className="max-w-full h-auto max-h-64 rounded-md object-contain"
+                      {...getDriveImageProps()}
                       onError={(e) => {
                         e.currentTarget.src = '/placeholder.svg';
                         e.currentTarget.alt = 'Error al cargar imagen';
