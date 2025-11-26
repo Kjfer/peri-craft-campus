@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Plus, X, Eye } from "lucide-react";
-import { getDirectImageUrl } from "@/lib/imageUtils";
+import { getDirectImageUrl, getDriveImageProps } from "@/lib/imageUtils";
 import { supabase } from "@/integrations/supabase/client";
 
 interface CourseFormData {
@@ -500,6 +500,7 @@ export default function CreateCourse() {
                         src={getDirectImageUrl(formData.thumbnail_url)}
                         alt="Vista previa del curso"
                         className="max-w-full h-auto max-h-64 rounded-md object-contain"
+                        {...getDriveImageProps()}
                         onError={(e) => {
                           e.currentTarget.src = '/placeholder.svg';
                           e.currentTarget.alt = 'Error al cargar imagen';

@@ -11,7 +11,7 @@ import { useNavigate } from "react-router-dom";
 import { useEnrollments } from "@/hooks/useEnrollments";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Course } from "@/types/course";
-import { getDirectImageUrl } from "@/lib/imageUtils";
+import { getDirectImageUrl, getDriveImageProps } from "@/lib/imageUtils";
 
 export default function Courses() {
   const navigate = useNavigate();
@@ -159,6 +159,7 @@ export default function Courses() {
                           src={getDirectImageUrl(course.thumbnail_url)}
                           alt={course.title}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          {...getDriveImageProps()}
                         />
                       ) : (
                         <div className="w-full h-full gradient-primary flex items-center justify-center">

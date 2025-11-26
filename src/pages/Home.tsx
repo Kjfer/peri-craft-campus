@@ -10,7 +10,7 @@ import type { Course } from "@/types/course";
 import heroImage from "@/assets/hero-banner.jpg";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { getDirectImageUrl } from "@/lib/imageUtils";
+import { getDirectImageUrl, getDriveImageProps } from "@/lib/imageUtils";
 
 // Component for Video Tutorial
 const VideoTutorial = () => {
@@ -41,14 +41,6 @@ const VideoTutorial = () => {
     fetchMediaUrl();
   }, []);
 
-  const getDriveImageUrl = (url: string) => {
-    // Extract file ID from Google Drive URL
-    const fileIdMatch = url.match(/\/d\/([^\/]+)/);
-    if (fileIdMatch) {
-      return `https://drive.google.com/uc?export=view&id=${fileIdMatch[1]}`;
-    }
-    return null;
-  };
 
   const getYouTubeEmbedUrl = (url: string) => {
     // Extract video ID from various YouTube URL formats
@@ -83,13 +75,13 @@ const VideoTutorial = () => {
 
   // Check if it's a Google Drive URL
   const isDriveUrl = mediaUrl.includes('drive.google.com');
-  const driveImageUrl = isDriveUrl ? getDriveImageUrl(mediaUrl) : null;
+  const driveImageUrl = isDriveUrl ? getDirectImageUrl(mediaUrl) : null;
   
   // Check if it's a YouTube URL
   const youtubeEmbedUrl = getYouTubeEmbedUrl(mediaUrl);
 
   // Render Google Drive image
-  if (driveImageUrl) {
+  if (isDriveUrl && driveImageUrl) {
     return (
       <Card className="overflow-hidden shadow-xl">
         <div className="w-full">
@@ -97,6 +89,7 @@ const VideoTutorial = () => {
             src={driveImageUrl}
             alt="Tutorial: Cómo comprar y acceder a los cursos"
             className="w-full h-auto"
+            {...getDriveImageProps()}
           />
         </div>
       </Card>
@@ -381,6 +374,7 @@ export default function Home() {
                       src={getDirectImageUrl(course?.thumbnail_url) || "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=225&fit=crop"} 
                       alt={course?.title || 'Curso'}
                       style={{ width: '100%', height: 225, objectFit: 'cover', transition: 'transform 0.3s' }}
+                      {...getDriveImageProps()}
                     />
                     <Badge className="absolute top-4 left-4 bg-primary text-primary-foreground">
                       {course.level}

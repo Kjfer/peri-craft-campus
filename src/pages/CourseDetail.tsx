@@ -30,7 +30,7 @@ import { useToast } from "@/hooks/use-toast";
 import useCourseAccess from "@/hooks/useCourseAccess";
 import type { Course } from "@/types/course";
 import { generateSyllabusPDF } from "@/utils/pdfGenerator";
-import { getDirectImageUrl } from "@/lib/imageUtils";
+import { getDirectImageUrl, getDriveImageProps } from "@/lib/imageUtils";
 
 interface Module {
   id: string;
@@ -428,6 +428,7 @@ export default function CourseDetail() {
                     src={getDirectImageUrl(course.thumbnail_url)}
                     alt={course.title}
                     className="w-full h-48 object-cover rounded-t-lg"
+                    {...getDriveImageProps()}
                   />
                   {!isPaid && (
                     <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center rounded-t-lg">

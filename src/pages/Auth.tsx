@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,9 +12,16 @@ export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
   const [signInData, setSignInData] = useState({ email: "", password: "" });
   
-  const { signIn, refreshAuth } = useAuth();
+  const { user, profile, loading, signIn } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (!loading && user && profile?.role === 'admin') {
+      navigate("/admin", { replace: true });
+    }
+  }, [user, profile, loading, navigate]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,11 +44,8 @@ export default function Auth() {
           description: "Has iniciado sesión exitosamente.",
         });
         
-        // Refresh auth state to ensure UI updates
-        await refreshAuth();
-        
-        // Navigate to admin dashboard
-        navigate("/admin");
+        // Navigate to admin dashboard immediately - auth state will update
+        navigate("/admin", { replace: true });
       }
     } catch (error) {
       toast({
