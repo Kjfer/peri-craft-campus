@@ -20,16 +20,25 @@ const VideoTutorial = () => {
   useEffect(() => {
     const fetchMediaUrl = async () => {
       try {
+        console.log('📺 Obteniendo URL del video tutorial...');
         const { data, error } = await supabase
           .from('admin_settings')
           .select('setting_value')
           .eq('setting_key', 'tutorial_video_url')
           .maybeSingle();
 
-        if (error) throw error;
+        console.log('📺 Respuesta de Supabase:', { data, error });
+
+        if (error) {
+          console.error('📺 Error al obtener URL:', error);
+          throw error;
+        }
         
         if (data?.setting_value) {
+          console.log('📺 Video URL encontrada:', data.setting_value);
           setMediaUrl(data.setting_value);
+        } else {
+          console.log('📺 No se encontró URL del video');
         }
       } catch (error) {
         console.error('Error fetching media URL:', error);
