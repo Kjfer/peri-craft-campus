@@ -320,9 +320,85 @@ export default function Home() {
       <section className="py-20 bg-gradient-to-b from-background to-muted/20">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
-            <h2 className="text-3xl lg:text-4xl font-bold mb-4">¿Cómo Comprar y Acceder a los Cursos?</h2>
+            <h2 className="text-3xl lg:text-4xl font-bold mb-4">¿Cómo Comprar y Acceder a tus Cursos?</h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Mira este video tutorial con las instrucciones paso a paso
+              Sigue estos sencillos pasos para comenzar tu aprendizaje
+            </p>
+          </div>
+
+          {/* Pasos de Compra */}
+          <div className="max-w-4xl mx-auto mb-12">
+            <Card className="overflow-hidden shadow-lg border-2 border-primary/20">
+              <CardHeader className="bg-primary/5 border-b border-primary/10">
+                <CardTitle className="text-2xl flex items-center gap-3">
+                  <ShoppingCart className="h-6 w-6 text-primary" />
+                  Guía Rápida de Compra
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-8">
+                <div className="space-y-6">
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-lg">
+                      1
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-lg mb-2">Explora nuestros cursos</h3>
+                      <p className="text-muted-foreground">
+                        Navega por la sección de Cursos y encuentra el programa ideal para ti.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-lg">
+                      2
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-lg mb-2">Realiza tu compra</h3>
+                      <p className="text-muted-foreground">
+                        Haz clic en "Comprar ahora" y serás redirigido a nuestra plataforma segura de pago Hotmart.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-lg">
+                      3
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-lg mb-2">Completa tus datos</h3>
+                      <p className="text-muted-foreground">
+                        En Hotmart, registra tus datos de acceso y selecciona tu método de pago preferido.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-lg">
+                      4
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-lg mb-2">¡Comienza a aprender!</h3>
+                      <p className="text-muted-foreground">
+                        Accede a tu curso ingresando con tu usuario de Hotmart desde el botón "Accede a tus cursos" ubicado en la parte superior de la página.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-8 p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <p className="text-sm text-center text-blue-800 dark:text-blue-200">
+                    <strong>💡 Tip:</strong> A continuación encontrarás un video tutorial que te muestra todo el proceso paso a paso para que no te pierdas ningún detalle.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="text-center mb-8">
+            <h3 className="text-2xl font-semibold mb-4">Video Tutorial</h3>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Observa cómo comprar y acceder a tus cursos en Hotmart
             </p>
           </div>
 
