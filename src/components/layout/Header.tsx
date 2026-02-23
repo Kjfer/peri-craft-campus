@@ -134,13 +134,22 @@ export function Header() {
                 >
                   <ShieldCheck className="w-5 h-5" />
                 </Button>
+                <Button variant="outline" asChild>
+                  <a 
+                    href="https://intranet.peri-institute.pericompanygroup.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Ingreso al Intranet
+                  </a>
+                </Button>
                 <Button asChild>
                   <a 
                     href="https://sso.hotmart.com/login?service=https%3A%2F%2Fsso.hotmart.com%2Foauth2.0%2FcallbackAuthorize%3Fclient_id%3D0fff6c2a-971c-4f7a-b0b3-3032b7a26319%26scope%3Dopenid%2Bprofile%2Bauthorities%2Bemail%2Buser%26redirect_uri%3Dhttps%253A%252F%252Fconsumer.hotmart.com%252Fauth%252Flogin%26response_type%3Dcode%26response_mode%3Dquery%26state%3D8b93495e25ae42728ba62b59f48a1be0%26client_name%3DCasOAuthClient"
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    Accede a tus cursos
+                    Accede a tus compras
                   </a>
                 </Button>
               </>
@@ -206,13 +215,23 @@ export function Header() {
                         Acceso Administrador
                       </Button>
                       <Button
+                        variant="outline"
+                        onClick={() => {
+                          window.open('https://intranet.peri-institute.pericompanygroup.com', '_blank');
+                          setIsOpen(false);
+                        }}
+                        className="justify-start"
+                      >
+                        Ingreso al Intranet
+                      </Button>
+                      <Button
                         onClick={() => {
                           window.open('https://sso.hotmart.com/login?service=https%3A%2F%2Fsso.hotmart.com%2Foauth2.0%2FcallbackAuthorize%3Fclient_id%3D0fff6c2a-971c-4f7a-b0b3-3032b7a26319%26scope%3Dopenid%2Bprofile%2Bauthorities%2Bemail%2Buser%26redirect_uri%3Dhttps%253A%252F%252Fconsumer.hotmart.com%252Fauth%252Flogin%26response_type%3Dcode%26response_mode%3Dquery%26state%3D8b93495e25ae42728ba62b59f48a1be0%26client_name%3DCasOAuthClient', '_blank');
                           setIsOpen(false);
                         }}
                         className="justify-start"
                       >
-                        Accede a tus cursos
+                        Accede a tus compras
                       </Button>
                     </>
                   )}
